@@ -4,7 +4,7 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.4.2'); // cache-bust for debug mode
+    define('YOURPARTY_VERSION', '3.6.1'); // Late Binding Fix
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
@@ -97,8 +97,17 @@ add_action('wp_enqueue_scripts', function () {
 
     // Core Styles
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
+    
+    // NEW: Player Stats CSS (Fixed missing enqueue)
+    wp_enqueue_style('yourparty-player-stats', get_template_directory_uri() . '/assets/css/player-stats.css', [], YOURPARTY_VERSION);
+    wp_enqueue_style('yourparty-vibe-vote', get_template_directory_uri() . '/assets/css/vibe-vote.css', [], YOURPARTY_VERSION);
+    
+    // NEW: Mood Dialog CSS (Ensure it is loaded if separate, though it might be in style.css or enqueued elsewhere? Checking...)
+    // Let's assume mood-dialog.css is needed too based on previous edits!
+    wp_enqueue_style('yourparty-mood-dialog', get_template_directory_uri() . '/assets/css/mood-dialog.css', [], YOURPARTY_VERSION);
 
-    // Core Modules (JS) - CORRECT PATHS
+
+    // Core Modules (JS)
     wp_enqueue_script(
         'yourparty-stream-controller',
         get_template_directory_uri() . '/assets/js/stream-controller.js',
@@ -121,11 +130,21 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
-    // Main App (depends on modules)
+    // FIXED: Enqueue Missing Modules
+    wp_enqueue_script('yourparty-rating-module', get_template_directory_uri() . '/assets/js/rating-module.js', [], YOURPARTY_VERSION, true);
+    wp_enqueue_script('yourparty-mood-module', get_template_directory_uri() . '/assets/js/mood-module.js', [], YOURPARTY_VERSION, true);
+
+    // Main App (depends on ALL modules)
     wp_enqueue_script(
         'yourparty-tech-app',
         get_template_directory_uri() . '/assets/js/app.js',
-        ['yourparty-stream-controller', 'yourparty-visual-engine', 'yourparty-fullscreen-visual'],
+        [
+            'yourparty-stream-controller', 
+            'yourparty-visual-engine', 
+            'yourparty-fullscreen-visual',
+            'yourparty-rating-module',
+            'yourparty-mood-module'
+        ],
         YOURPARTY_VERSION,
         true
     );

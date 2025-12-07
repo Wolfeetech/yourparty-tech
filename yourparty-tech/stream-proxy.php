@@ -1,55 +1,51 @@
 <?php
 /**
- * Stream Proxy for CORS support
+ * YourParty Stream Proxy
+ * Enables CORS for Audio Visualizer
  */
 
-// Disable error reporting to avoid corrupting the stream
+// Critical: Prevent PHP script timeout
+set_time_limit(0);
+// Close session just in case
+if(session_id()) session_write_close();
+
 error_reporting(0);
 
-// Target Stream URLs
-$urls = [
-    'http://192.168.178.210/listen/radio.yourparty/radio.mp3', // AzuraCast (Primary)
-    'http://192.168.178.206:8000/stream', // Custom Engine (Fallback)
-    'https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3' // Public DNS
-];
-
-// Headers
+// Headers for CORS and Streaming
 header('Access-Control-Allow-Origin: *');
-header('Content-Type: audio/mpeg');
-header('Cache-Control: no-cache');
+header('Access-Control-Allow-Methods: GET');
+header("Content-Type: audio/mpeg");
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
-// Context options
-$default_opts = [
+// The stable stream URL
+$target_url = 'https://radio.yourparty.tech/radio/8000/radio.mp3';
+
+// Open Stream
+$context = stream_context_create([
     'ssl' => [
         'verify_peer' => false,
         'verify_peer_name' => false,
     ],
     'http' => [
         'follow_location' => true,
-        'timeout' => 5 // Short timeout for internal
+        'timeout' => 15, // Connection timeout
+        'user_agent' => 'YourPartyProxy/1.0'
     ]
-];
+]);
 
-$fp = false;
-
-foreach ($urls as $url) {
-    if (strpos($url, 'https') === 0) {
-        $default_opts['http']['timeout'] = 15; // Longer timeout for public
-    }
-
-    $context = stream_context_create($default_opts);
-    $fp = @fopen($url, 'rb', false, $context);
-
-    if ($fp)
-        break; // Success
-}
+$fp = @fopen($target_url, 'rb', false, $context);
 
 if ($fp) {
+    // Disable output buffering
+    while (ob_get_level()) ob_end_clean();
+    
+    // Pass through data
     fpassthru($fp);
     fclose($fp);
 } else {
-    // Both failed
     header("HTTP/1.1 502 Bad Gateway");
-    echo "Stream unavailable";
+    echo "Stream Source Unreachable";
 }
 exit;

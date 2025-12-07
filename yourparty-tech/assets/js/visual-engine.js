@@ -27,6 +27,13 @@ const VisualEngine = (function () {
         { id: 'kaleidoscope', name: 'Kaleidoscope', type: 'audio' }
     ];
 
+    function setAnalyser(newAnalyser) {
+        if (!newAnalyser) return;
+        analyser = newAnalyser;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        startRendering();
+    }
+
     function init(canvasElement) {
         canvas = canvasElement || document.getElementById('audio-visualizer');
         if (!canvas) {
@@ -37,17 +44,13 @@ const VisualEngine = (function () {
         ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
         // Get AudioContext from StreamController
-        if (typeof StreamController !== 'undefined') {
-            analyser = StreamController.getAnalyser();
-            if (analyser) {
-                const bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-                resize();
-                startRendering();
-                return true;
-            }
+        if (typeof window.StreamController !== 'undefined') {
+            const a = window.StreamController.getAnalyser();
+            if (a) setAnalyser(a);
         }
-        return false;
+
+        resize();
+        return true;
     }
 
     function resize() {
@@ -342,7 +345,8 @@ const VisualEngine = (function () {
         nextMode,
         getModes,
         getCurrentMode,
-        getAnalyser: () => analyser
+        getAnalyser: () => analyser,
+        setAnalyser
     };
 })();
 

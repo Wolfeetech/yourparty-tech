@@ -1,7 +1,7 @@
 /**
  * YourParty Tech - Main Application
  * Orchestrates all modules
- * v3.4.2 Debug Mode
+ * v3.6.1 Visualizer Late Binding
  */
 
 (function (window, document) {
@@ -25,23 +25,28 @@
         let pollTimer = null;
 
         function init() {
-            console.log('[YourPartyApp] Initializing...');
+            console.log('[YourPartyApp] Initializing v3.6.1...');
             config = window.YourPartyConfig || {
-                restBase: 'https://yourparty.tech/wp-json/yourparty/v1', // Fallback
-                streamUrl: 'https://radio.yourparty.tech/radio/8000/radio.mp3' // Fallback
+                restBase: 'https://yourparty.tech/wp-json/yourparty/v1',
+                streamUrl: 'https://radio.yourparty.tech/radio/8000/radio.mp3'
             };
+
+            // Fail-safe: Ensure URL exists
+            if (!config.streamUrl) {
+                config.streamUrl = 'https://radio.yourparty.tech/radio/8000/radio.mp3';
+            }
 
             try {
                 initModules();
                 initToastSystem();
-                fetchStatus(); // Async, don't await
+                fetchStatus();
                 startPolling();
                 bindStreamEvents();
                 bindUIEvents();
                 fetchHistory(); // Async
             } catch (e) {
                 console.error('[YourPartyApp] Init Crash:', e);
-                throw e; // Rethrow to trigger visible error bar
+                throw e;
             }
         }
 
@@ -55,15 +60,11 @@
             const endpoint = config.restBase ? `${config.restBase}/status` : '/status';
             try {
                 const response = await fetch(endpoint);
-                if (!response.ok) {
-                    console.warn(`[YourPartyApp] Status fetch failed: ${response.status}`);
-                    return;
-                }
+                if (!response.ok) return;
                 const data = await response.json();
                 updateUI(data);
             } catch (error) {
                 console.error('[YourPartyApp] Status fetch error:', error);
-                // Don't throw, just log
             }
         }
 
@@ -144,7 +145,6 @@
             const totalEl = document.getElementById('rating-total');
             if (avgEl) avgEl.textContent = average > 0 ? average.toFixed(1) : '--';
             if (totalEl) totalEl.textContent = total > 0 ? `(${total})` : '';
-            // Force visible update
             if (avgEl) avgEl.style.display = 'inline-block';
         }
 
@@ -181,6 +181,39 @@
                     fetchHistory();
                 });
             }
+            bindVibeButtons();
+        }
+
+        function bindVibeButtons() {
+            document.querySelectorAll('.vibe-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const vote = btn.dataset.vote;
+                    if (!vote) return;
+
+                    try {
+                        btn.style.transform = 'scale(0.95)';
+                        setTimeout(() => btn.style.transform = '', 150);
+
+                        const url = 'https://api.yourparty.tech/control/vote-next';
+
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ vote })
+                        });
+
+                        if (res.ok) {
+                            window.showToast(`${vote.toUpperCase()} Vibe gewählt!`, 'success');
+                        } else {
+                            window.showToast("Nicht spammen! (5s Cooldown)", 'warning');
+                        }
+                    } catch (err) {
+                        console.error("Vibe Vote Error", err);
+                        window.showToast("Vote fehlgeschlagen (API Error)", 'error');
+                    }
+                });
+            });
         }
 
         function bindStreamEvents() {
@@ -194,9 +227,7 @@
                 const data = await response.json();
                 const list = Array.isArray(data) ? data : (data.history || []);
                 renderHistory(list);
-            } catch (error) {
-                // console.error('[YourPartyApp] History fetch error:', error);
-            }
+            } catch (error) { }
         }
 
         function renderHistory(items) {
@@ -213,13 +244,13 @@
                 const rating = song.rating?.average || 0;
                 const mood = song.top_mood || '';
                 return `<li class="history-item" style="display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <img src="${song.art || _generateFallbackGradient(song.title)}" style="width: 48px; height: 48px; border-radius: 4px;">
-                    <div style="flex:1;">
-                        <div style="color:#fff; font-weight:500;">${song.title} ${mood ? `<small>(${mood})</small>` : ''}</div>
-                        <div style="color:#888; font-size:12px;">${song.artist}</div>
-                    </div>
-                    <div style="color:#666; font-size:10px;">${timeStr}</div>
-                </li>`;
+                            <img src="${song.art || _generateFallbackGradient(song.title)}" style="width: 48px; height: 48px; border-radius: 4px;">
+                            <div style="flex:1;">
+                                <div style="color:#fff; font-weight:500;">${song.title} ${mood ? `<small>(${mood})</small>` : ''}</div>
+                                <div style="color:#888; font-size:12px;">${song.artist}</div>
+                            </div>
+                            <div style="color:#666; font-size:10px;">${timeStr}</div>
+                        </li>`;
             }).join('');
         }
 
@@ -262,16 +293,22 @@
     window.InlineVisualizerAdapter = (function () {
         function init() {
             const canvas = document.getElementById('inline-visualizer');
-            if (!canvas) {
-                console.warn("No inline visualizer canvas found.");
-                return;
-            }
+            if (!canvas) return;
+
             if (typeof window.VisualEngine === 'undefined') {
                 console.error("VisualEngine is missing!");
-                // Try to alert user visually?
                 return;
             }
 
+            // NEW: Late Binding for AudioContext
+            window.addEventListener('stream:audioContextReady', (e) => {
+                if (window.VisualEngine && e.detail.analyser) {
+                    console.log("[InlineVisualizer] Received AudioContext via Event");
+                    window.VisualEngine.setAnalyser(e.detail.analyser);
+                }
+            });
+
+            // Start Engine (idle mode if no analyser yet)
             if (window.VisualEngine.init(canvas)) {
                 window.VisualEngine.setMode(1); // Precision Wave
             }
@@ -335,7 +372,7 @@
 
     // 4. BOOTSTRAPPER
     function initAll() {
-        console.log('[App] Bootstrapping v3.4.2...');
+        console.log('[App] Bootstrapping v3.6.1...');
         try {
             if (window.YourPartyApp) window.YourPartyApp.init();
             if (window.InlineVisualizerAdapter) window.InlineVisualizerAdapter.init();
@@ -344,7 +381,6 @@
             if (window.FullscreenVisualPlayer) window.FullscreenVisualPlayer.init();
             if (window.RealtimeModule) window.RealtimeModule.init();
 
-            // Mood Button Binding
             const moodBtn = document.getElementById('mood-tag-button');
             if (moodBtn) {
                 moodBtn.addEventListener('click', (e) => {
@@ -353,13 +389,13 @@
                         window.MoodModule.openDialog(window.yourPartyCurrentSong);
                     } else {
                         window.showToast("Bitte warten... Songdaten laden", "warning");
-                        if (window.YourPartyApp) window.YourPartyApp.fetchStatus(); // Try force update
+                        if (window.YourPartyApp) window.YourPartyApp.fetchStatus();
                     }
                 });
             }
         } catch (e) {
             console.error("FATAL BOOTSTRAP ERROR", e);
-            throw e; // Show bar
+            throw e;
         }
     }
 
