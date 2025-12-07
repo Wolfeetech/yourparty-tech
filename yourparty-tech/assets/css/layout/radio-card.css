@@ -1,0 +1,196 @@
+/**
+ * YourParty Tech - Radio Card Layout
+ * Main player card component
+ */
+
+.radio-card {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-slow);
+}
+
+.radio-card:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Header with Cover */
+.radio-card__header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .radio-card__header {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+
+/* Cover Art */
+.radio-card__cover-wrapper {
+  position: relative;
+  width: 200px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--transition-slow);
+}
+
+.radio-card__cover-wrapper:hover {
+  transform: scale(1.02);
+}
+
+.radio-card__cover-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+@media (max-width: 640px) {
+  .radio-card__cover-wrapper {
+    width: 160px;
+    margin: 0 auto;
+  }
+}
+
+/* Info Section */
+.radio-card__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.radio-card__title-row h3 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.radio-card__artist-row p {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Meta Row - Status, Rating, Tags */
+.radio-card__meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.meta-center {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  justify-content: center;
+}
+
+.meta-right {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .radio-card__meta-row {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .meta-left,
+  .meta-center,
+  .meta-right {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Visualizer Container */
+.radio-card__visualizer-container {
+  position: relative;
+  height: 120px;
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.radio-card__visualizer-container canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Play Button Overlay */
+.radio-card__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  border: none;
+  color: white;
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.radio-card__play:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 0 40px rgba(46, 139, 87, 0.6);
+}
+
+.radio-card__play:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* Media section (legacy support) */
+.radio-card__media {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 300px;
+  margin: var(--space-8) auto;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+}
+
+.radio-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.radio-card__meta {
+  text-align: center;
+  padding: 0 var(--space-8) var(--space-8);
+}

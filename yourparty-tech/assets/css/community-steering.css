@@ -1,0 +1,235 @@
+/* Vibe Vote MTV Style */
+.vibe-vote-container {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2));
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.vibe-vote-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    letter-spacing: 0.1em;
+    color: var(--emerald);
+    text-transform: uppercase;
+}
+
+.vibe-vote-header p {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+}
+
+.vibe-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.vibe-btn {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.vibe-btn:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--emerald);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 139, 87, 0.2);
+}
+
+.vibe-btn.selected {
+    background: var(--emerald);
+    border-color: var(--emerald);
+    color: #000;
+}
+
+.vibe-btn .emoji {
+    font-size: 2rem;
+}
+
+.vibe-btn .label {
+    font-weight: bold;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+}
+
+.vibe-feedback {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+    min-height: 20px;
+}
+
+.vibe-feedback.success { color: var(--emerald); }
+.vibe-feedback.error { color: #ff4444; }
+
+.vibe-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* =========================================
+   Mood Dialog (Premium Glassmorphism)
+   ========================================= */
+.mood-dialog {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.mood-dialog.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mood-dialog__backdrop {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+}
+
+.mood-dialog__content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.mood-dialog.active .mood-dialog__content {
+    transform: scale(1);
+}
+
+.mood-dialog__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 1rem;
+}
+
+.mood-dialog__header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #fff;
+}
+
+.mood-dialog__close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.mood-dialog__close:hover {
+    color: #fff;
+}
+
+.mood-dialog__subtitle {
+    color: var(--color-emerald, #2e8b57);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.mood-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.75rem;
+}
+
+/* Mood Option Buttons */
+.mood-option {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+}
+
+.mood-option:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--mood-color, #fff);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.mood-option.selected {
+    background: var(--mood-color, #fff);
+    border-color: var(--mood-color, #fff);
+    color: #000;
+    box-shadow: 0 0 15px var(--mood-color);
+}
+
+/* Genre Buttons - Compact */
+.mood-option--genre {
+    flex-direction: row;
+    justify-content: center;
+    padding: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+}
+
+.mood-option__emoji {
+    font-size: 1.5rem;
+}
+
+.mood-option__label {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Submitting State */
+.mood-option.submitting {
+    animation: pulse 1s infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+

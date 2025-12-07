@@ -1,0 +1,142 @@
+/**
+ * YourParty Tech - Rating Stars Component
+ * Accessible, animated star rating system
+ */
+
+.rating-container {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-2xl);
+  transition: all var(--transition-base);
+}
+
+.rating-container:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.rating-container:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Stars Group */
+.rating-stars {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Individual Star */
+.rating-star {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-disabled);
+  font-size: var(--font-size-xl);
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: all var(--transition-fast);
+  transform-origin: center;
+  line-height: 1;
+}
+
+.rating-star:hover {
+  color: var(--color-primary-light);
+  transform: scale(1.25);
+}
+
+.rating-star:active {
+  transform: scale(0.95);
+}
+
+.rating-star.active {
+  color: var(--color-primary);
+  text-shadow: 0 0 8px var(--color-primary);
+}
+
+.rating-star:focus {
+  outline: none;
+}
+
+.rating-star:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Feedback Animation */
+@keyframes starPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.rating-star.just-rated {
+  animation: starPop 0.3s ease;
+}
+
+/* Average Display */
+.rating-average {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  min-width: 2rem;
+  text-align: center;
+}
+
+/* Vote Count */
+.rating-total {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Rating Feedback Message */
+.rating-feedback {
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-2);
+  transition: opacity var(--transition-base);
+}
+
+.rating-feedback.success {
+  color: var(--color-success);
+}
+
+.rating-feedback.error {
+  color: var(--color-error);
+}
+
+/* History Stars (smaller variant) */
+.history-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.history-star {
+  font-size: var(--font-size-sm);
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.history-star:hover,
+.history-star.filled {
+  color: var(--color-primary);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .rating-container {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--space-3);
+  }
+  
+  .rating-star {
+    font-size: var(--font-size-lg);
+  }
+}

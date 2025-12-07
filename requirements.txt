@@ -1,0 +1,10 @@
+mutagen
+pyacoustid
+musicbrainzngs
+fastapi
+uvicorn
+python-multipart
+aiofiles
+requests
+chromaprint
+pymongo
