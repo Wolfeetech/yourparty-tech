@@ -1,0 +1,443 @@
+[
+    {
+        "IP":  "192.168.178.1",
+        "Hostname":  "fritz.box",
+        "MAC":  "e0-08-55-13-7e-a6",
+        "Vendor":  "AVM/FritzBox",
+        "OpenPorts":  "21, 53, 80, 443",
+        "Function":  "GATEWAY/ROUTER",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.20",
+        "Hostname":  "shellyplugsg3-8cbfeaa05b20.fritz.box",
+        "MAC":  "8c-bf-ea-a0-5b-20",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.21",
+        "Hostname":  "routerschrankshelly.fritz.box",
+        "MAC":  "d4-d4-da-ed-1b-64",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.22",
+        "Hostname":  "switchwozi.fritz.box",
+        "MAC":  "98-8f-00-c3-8c-e2",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80, 443, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.23",
+        "Hostname":  "wolfkueche4pm.fritz.box",
+        "MAC":  "ac-15-18-6c-b4-1c",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.24",
+        "Hostname":  "brother-drucker.fritz.box",
+        "MAC":  "c8-94-02-c5-a2-a3",
+        "Vendor":  "Brother",
+        "OpenPorts":  "80, 443",
+        "Function":  "Printer",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.25",
+        "Hostname":  "schreibtischshelly.fritz.box",
+        "MAC":  "10-62-e5-14-97-ed",
+        "Vendor":  "Intel Server",
+        "OpenPorts":  "22, 80, 443, 3000, 3306, 8006, 8080",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.26",
+        "Hostname":  "shellythermo-gateway.fritz.box",
+        "MAC":  "34-cd-b0-78-97-c8",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.27",
+        "Hostname":  "elw-kuehlschrankshelly.fritz.box",
+        "MAC":  "8c-bf-ea-91-b1-5c",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.28",
+        "Hostname":  "Unknown",
+        "MAC":  "b0-4a-39-0e-38-84",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.29",
+        "Hostname":  "elwbadluefteri-o.fritz.box",
+        "MAC":  "34-cd-b0-7f-89-a4",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.33",
+        "Hostname":  "wolfstudioPC.fritz.box",
+        "MAC":  "---",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "445",
+        "Function":  "Unknown",
+        "Type":  "0x11"
+    },
+    {
+        "IP":  "192.168.178.35",
+        "Hostname":  "fritz.repeater",
+        "MAC":  "c2-39-6f-fe-b5-69",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "53, 80, 443",
+        "Function":  "WiFi Repeater",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.37",
+        "Hostname":  "proxmoxbackupserver.fritz.box",
+        "MAC":  "66-26-f8-0b-48-2b",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.38",
+        "Hostname":  "fritz.repeater",
+        "MAC":  "c6-25-06-ed-05-a8",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "53, 80, 443",
+        "Function":  "WiFi Repeater",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.40",
+        "Hostname":  "Pixel-8a.fritz.box",
+        "MAC":  "3e-e5-db-78-bf-10",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Smartphone",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.41",
+        "Hostname":  "shellyrgbw2-D88F55.fritz.box",
+        "MAC":  "58-bf-25-d8-8f-55",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.42",
+        "Hostname":  "applewatchultra2.fritz.box",
+        "MAC":  "a2-87-d4-51-3a-de",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.44",
+        "Hostname":  "Google-Home-Mini.fritz.box",
+        "MAC":  "48-d6-d5-da-6a-32",
+        "Vendor":  "Google",
+        "OpenPorts":  "8443",
+        "Function":  "Smart Speaker",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.45",
+        "Hostname":  "shellyplusplugs-d4d4daed0efc.fritz.box",
+        "MAC":  "d4-d4-da-ed-0e-fc",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.50",
+        "Hostname":  "shelly1g3-34cdb07f72d0.fritz.box",
+        "MAC":  "34-cd-b0-7f-72-d0",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.51",
+        "Hostname":  "Unknown",
+        "MAC":  "d8-1f-12-da-f8-f7",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.52",
+        "Hostname":  "shellyplugsg3-8cbfeaa3ace8.fritz.box",
+        "MAC":  "8c-bf-ea-a3-ac-e8",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.66",
+        "Hostname":  "Android.fritz.box",
+        "MAC":  "d8-fb-d6-46-00-e7",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.67",
+        "Hostname":  "homeassistant.fritz.box",
+        "MAC":  "bc-24-11-8e-fa-a9",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "3306, 8080, 8123",
+        "Function":  "HOME ASSISTANT",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.69",
+        "Hostname":  "H100.fritz.box",
+        "MAC":  "3c-64-cf-f6-a2-a9",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.74",
+        "Hostname":  "shellyplugsg3-8cbfea93c808.fritz.box",
+        "MAC":  "8c-bf-ea-93-c8-08",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.76",
+        "Hostname":  "wolfstudioPC.fritz.box",
+        "MAC":  "f0-a7-31-24-ce-01",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "443, 554",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.82",
+        "Hostname":  "FRITZ-Box-7590-NH.fritz.box",
+        "MAC":  "c4-82-e1-d7-39-ea",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.83",
+        "Hostname":  "Unknown",
+        "MAC":  "40-2a-8f-ab-7c-e2",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.90",
+        "Hostname":  "shellyoutdoorsg3-e4b063d552e4.fritz.box",
+        "MAC":  "e4-b0-63-d5-52-e4",
+        "Vendor":  "Samsung",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.97",
+        "Hostname":  "containershelly4pm.fritz.box",
+        "MAC":  "34-98-7a-a7-36-b8",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.98",
+        "Hostname":  "Luis-iPad-10.fritz.box",
+        "MAC":  "5a-ef-58-93-2d-a4",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.101",
+        "Hostname":  "shellyplugsg3-8cbfeaa03e04.fritz.box",
+        "MAC":  "8c-bf-ea-a0-3e-04",
+        "Vendor":  "Shelly",
+        "OpenPorts":  "80",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.110",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-6f-2b-f3",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 3306, 5678, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.113",
+        "Hostname":  "shellyplugsg3-e4b063d84240.fritz.box",
+        "MAC":  "e4-b0-63-d8-42-40",
+        "Vendor":  "Samsung",
+        "OpenPorts":  "",
+        "Function":  "Smart Home Switch",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.119",
+        "Hostname":  "Unknown",
+        "MAC":  "6c-b0-ce-fa-0c-fa",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "80",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.122",
+        "Hostname":  "QMN000BZP2N6L0KY.fritz.box",
+        "MAC":  "84-fc-e6-fa-76-48",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.136",
+        "Hostname":  "fritz.repeater",
+        "MAC":  "c2-39-6f-38-84-47",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "53, 80, 443",
+        "Function":  "WiFi Repeater",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.137",
+        "Hostname":  "Unknown",
+        "MAC":  "da-e5-c4-1f-e0-8b",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.140",
+        "Hostname":  "Unknown",
+        "MAC":  "86-bf-2d-32-8a-04",
+        "Vendor":  "Unknown",
+        "OpenPorts":  "",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.174",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-54-ea-b2",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 53, 3306, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.175",
+        "Hostname":  "yourparty.tech",
+        "MAC":  "bc-24-11-91-4e-6e",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 80, 443, 3306, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.200",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-69-38-b6",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 80, 3306, 8000, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.207",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-f0-ea-96",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 80, 3000, 3306, 8080, 9090",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.210",
+        "Hostname":  "Azurecast.fritz.box",
+        "MAC":  "bc-24-11-de-76-67",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 80, 443, 445, 3000, 3306, 8000, 8006, 8080, 9090",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.211",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-dc-21-af",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 3306, 8000, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.222",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-ad-21-4c",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 3306, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    },
+    {
+        "IP":  "192.168.178.228",
+        "Hostname":  "Unknown",
+        "MAC":  "bc-24-11-b6-19-69",
+        "Vendor":  "Proxmox/LXC",
+        "OpenPorts":  "22, 3306, 8080",
+        "Function":  "Unknown",
+        "Type":  "dynamisch"
+    }
+]

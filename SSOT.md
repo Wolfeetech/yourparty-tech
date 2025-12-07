@@ -13,17 +13,15 @@
 - **Server Theme Path**: `/var/www/yourparty.tech/wp-content/themes/yourparty-tech`
 
 ## Insight & Audit (Browser)
-- **Status**: Site loads. REST API funktioniert (`/status`).
-- **Critical**: WebSocket errors (`wss://api.yourparty.tech/ws/...`) - **AKTIV DEBUGGEN**
-  - ✅ Nginx Proxy korrekt konfiguriert `/ws/` → Container
-  - ✅ SSL-Zertifikat mit SANs (api.yourparty.tech) erstellt
-  - ✅ Backend läuft **im Container** (war auf PVE Host)
-  - ✅ Uvicorn mit `--proxy-headers --forwarded-allow-ips *`
-  - ✅ CORS korrekt (ALLOWED_ORIGINS)
-  - ❌ WebSocket Handshake schlägt fehl - **Ursache unklar**
-- **Legal**: ✅ Impressum & Datenschutz deployed (Best Practice).
-- **Structure**: ✅ Local files -> `infrastructure/`.
-- **UI/UX**: "Kindergarten" Animationen leicht angepasst. Vollständige Überarbeitung ausstehend.
+- **Status**: ✅ **ALLE FEATURES AKTIV!**
+- **WebSocket**: ✅ `[Realtime] Connected`
+- **Vote-Next**: ✅ Funktioniert (Steering-Votes werden gezählt)
+- **Rating-System**: ✅ 5-Sterne-Rating in MongoDB gespeichert
+- **Mood-Tagging**: ✅ Moods werden gespeichert + `top_mood` berechnet
+- **MongoDB**: ✅ Verbindung wiederhergestellt (Container 202)
+- **ID3-Sync**: ✅ Code vorhanden, wird bei Rating/Mood getriggert
+- **Legal Pages**: ✅ Impressum & Datenschutz deployed
+- **UI/UX**: Premium CSS deployed (Gradienten, subtile Animationen)
 - **New Feature**: **Overscroll Player** (Scroll down -> Fullscreen).
 
 ## Tech Stack

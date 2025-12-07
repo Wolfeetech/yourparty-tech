@@ -4,25 +4,45 @@
 const MoodModule = (function () {
   'use strict';
 
-  // Mood Definitions
+  //  Mood Definitions - Extended
   const MOODS = {
-    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' },
     'energetic': { label: 'Energetic', emoji: '⚡', color: '#f59e0b' },
     'chill': { label: 'Chill', emoji: '🌴', color: '#10b981' },
-    'startuppy': { label: 'Startuppy', emoji: '🚀', color: '#6366f1' },
+    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' },
     'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' },
+    'groovy': { label: 'Groovy', emoji: '💃', color: '#ec4899' },
     'melodic': { label: 'Melodic', emoji: '🎹', color: '#8b5cf6' },
-    'trashey': { label: 'Trashy', emoji: '🗑️', color: '#ef4444' }
+    'melancholic': { label: 'Melancholic', emoji: '😢', color: '#6366f1' },
+    'aggressive': { label: 'Aggressive', emoji: '😤', color: '#ef4444' },
+    'hypnotic': { label: 'Hypnotic', emoji: '🌀', color: '#a78bfa' },
+    'trippy': { label: 'Trippy', emoji: '🍄', color: '#c084fc' },
+    'warm': { label: 'Warm', emoji: '☀️', color: '#fb923c' },
+    'uplifting': { label: 'Uplifting', emoji: '🚀', color: '#3b82f6' }
   };
 
   const GENRES = {
     'house': 'House',
     'techno': 'Techno',
-    'dnb': 'DnB',
+    'tech-house': 'Tech House',
+    'deep-house': 'Deep House',
+    'progressive-house': 'Progressive House',
+    'afro-house': 'Afro House',
+    'bass-house': 'Bass House',
+    'dnb': 'Drum & Bass',
+    'trance': 'Trance',
+    'psytrance': 'Psytrance',
+    'disco': 'Disco',
+    'funk': 'Funk',
     'hiphop': 'HipHop',
+    'trap': 'Trap',
+    'dubstep': 'Dubstep',
+    'garage': 'UK Garage',
+    'breakbeat': 'Breakbeat',
+    'ambient': 'Ambient',
+    'downtempo': 'Downtempo',
+    'indie': 'Indie',
     'pop': 'Pop',
     'rock': 'Rock',
-    'indie': 'Indie',
     'schlager': 'Schlager'
   };
 

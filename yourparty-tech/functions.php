@@ -121,6 +121,28 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    // Visual System - NEW
+    wp_enqueue_style(
+        'yourparty-visual-player',
+        get_template_directory_uri() . '/assets/css/visual-player.css',
+        [],
+        YOURPARTY_VERSION
+    );
+    wp_enqueue_script(
+        'yourparty-visual-engine',
+        get_template_directory_uri() . '/assets/js/visual-engine.js',
+        ['yourparty-stream-controller'],
+        YOURPARTY_VERSION,
+        true
+    );
+    wp_enqueue_script(
+        'yourparty-fullscreen-visual',
+        get_template_directory_uri() . '/assets/js/fullscreen-visual-player.js',
+        ['yourparty-visual-engine'],
+        YOURPARTY_VERSION,
+        true
+    );
+
     // Main App (depends on modules)
     wp_enqueue_script(
         'yourparty-tech-app',
