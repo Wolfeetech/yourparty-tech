@@ -188,13 +188,25 @@ AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 MUSIC_DIR = Path(os.getenv("MUSIC_DIR", "/var/radio/music"))
 
 
+import smart_scheduler
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
     if not AZURACAST_URL or not AZURACAST_API_KEY:
         print("[WARN] AZURACAST_URL or AZURACAST_API_KEY missing  API will not function correctly.")
+    
+    # Start Smart Rotation Scheduler
+    scheduler_task = asyncio.create_task(smart_scheduler.task_loop())
+    print("[SYSTEM] Smart Scheduler started.")
+    
     yield
-    # shutdown (no-op)
+    # shutdown (graceful cancel)
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        print("[SYSTEM] Smart Scheduler stopped.")
 
 
 # attach lifespan to the app

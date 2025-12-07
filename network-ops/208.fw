@@ -1,0 +1,19 @@
+[OPTIONS]
+enable: 1
+
+[RULES]
+# Allow MySQL from WordPress Container (207)
+IN ACCEPT -source 192.168.178.207 -p tcp -dport 3306 -log nolog
+
+# Allow MySQL from Proxmox Host (Management)
+IN ACCEPT -source 192.168.178.25 -p tcp -dport 3306 -log nolog
+
+# Allow MySQL from Localhost (Internal)
+IN ACCEPT -source 127.0.0.0/8 -p tcp -dport 3306 -log nolog
+
+# DROP all other MySQL traffic
+IN DROP -p tcp -dport 3306 -log nolog
+
+# Default Policy (Allow other traffic like SSH/Ping for now to not break anything else)
+IN ACCEPT -p tcp -dport 22 -log nolog
+IN ACCEPT -p icmp -log nolog

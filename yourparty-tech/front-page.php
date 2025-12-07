@@ -115,15 +115,15 @@ $requests_url = apply_filters(
                                     <div class="rating-stars" id="rating-stars" role="radiogroup"
                                         aria-label="Bewertung">
                                         <button type="button" class="rating-star" data-value="1"
-                                            aria-label="1 Stern">★</button>
+                                            aria-label="1 Stern">?</button>
                                         <button type="button" class="rating-star" data-value="2"
-                                            aria-label="2 Sterne">★</button>
+                                            aria-label="2 Sterne">?</button>
                                         <button type="button" class="rating-star" data-value="3"
-                                            aria-label="3 Sterne">★</button>
+                                            aria-label="3 Sterne">?</button>
                                         <button type="button" class="rating-star" data-value="4"
-                                            aria-label="4 Sterne">★</button>
+                                            aria-label="4 Sterne">?</button>
                                         <button type="button" class="rating-star" data-value="5"
-                                            aria-label="5 Sterne">★</button>
+                                            aria-label="5 Sterne">?</button>
                                     </div>
                                     <span id="rating-average" class="rating-average">--</span>
                                     <span id="rating-total" class="rating-total"></span>
@@ -131,7 +131,7 @@ $requests_url = apply_filters(
                                 <div id="current-mood-tags" class="current-mood-tags"></div>
                             </div>
                             <div class="meta-right">
-                                <button id="mood-tag-button" class="mood-tag-btn" title="Mood Tagging">🏷️</button>
+                                <button id="mood-tag-button" class="mood-tag-btn" title="Mood Tagging">Tag</button>
                             </div>
                         </div>
                     </div>
@@ -196,11 +196,11 @@ $requests_url = apply_filters(
                                 <!-- Immersive Rating System -->
                                 <div class="rating-container immersive-rating">
                                     <div class="rating-stars" role="radiogroup" aria-label="Bewertung">
-                                        <button type="button" class="rating-star" data-value="1">★</button>
-                                        <button type="button" class="rating-star" data-value="2">★</button>
-                                        <button type="button" class="rating-star" data-value="3">★</button>
-                                        <button type="button" class="rating-star" data-value="4">★</button>
-                                        <button type="button" class="rating-star" data-value="5">★</button>
+                                        <button type="button" class="rating-star" data-value="1">?</button>
+                                        <button type="button" class="rating-star" data-value="2">?</button>
+                                        <button type="button" class="rating-star" data-value="3">?</button>
+                                        <button type="button" class="rating-star" data-value="4">?</button>
+                                        <button type="button" class="rating-star" data-value="5">?</button>
                                     </div>
                                     <!-- Optional: Mood Tags Display -->
                                     <div id="immersive-mood-tags" class="current-mood-tags" style="margin-top: 10px;">
@@ -211,8 +211,8 @@ $requests_url = apply_filters(
                         <div class="immersive-controls-row">
                             <!-- Cloned Play Button via JS or separate instance -->
                             <button id="immersive-play-btn" class="immersive-play-btn">
-                                <span class="icon-play">▶</span>
-                                <span class="icon-pause" style="display:none;">⏸</span>
+                                <span class="icon-play">?</span>
+                                <span class="icon-pause" style="display:none;">?</span>
                             </button>
                         </div>
                     </div>
@@ -221,7 +221,7 @@ $requests_url = apply_filters(
                 <div class="radio-card__controls-row">
                     <button id="play-toggle" class="play-btn-large"
                         aria-label="<?php esc_attr_e('Stream starten', 'yourparty-tech'); ?>">
-                        <span aria-hidden="true">▶</span>
+                        <span aria-hidden="true">?</span>
                     </button>
                     <div id="vote-feedback" class="vote-feedback"></div>
                 </div>
@@ -266,24 +266,24 @@ $requests_url = apply_filters(
         <div class="container" style="margin-top: 2rem;" data-aos="fade-up">
             <div class="vibe-vote-container">
                 <header class="vibe-vote-header">
-                    <h3>📢 VOTE NEXT VIBE</h3>
+                    <h3>?? VOTE NEXT VIBE</h3>
                     <p>Bestimme, was als nächstes läuft! (Community Vote)</p>
                 </header>
                 <div class="vibe-options">
                     <button class="vibe-btn" data-vote="energetic">
-                        <span class="emoji">🔥</span>
+                        <span class="emoji">??</span>
                         <span class="label">ENERGETIC</span>
                     </button>
                     <button class="vibe-btn" data-vote="chill">
-                        <span class="emoji">😎</span>
+                        <span class="emoji">??</span>
                         <span class="label">CHILL</span>
                     </button>
                     <button class="vibe-btn" data-vote="groovy">
-                        <span class="emoji">🕺</span>
+                        <span class="emoji">??</span>
                         <span class="label">GROOVY</span>
                     </button>
                     <button class="vibe-btn" data-vote="dark">
-                        <span class="emoji">🌑</span>
+                        <span class="emoji">??</span>
                         <span class="label">DARK</span>
                     </button>
                 </div>
@@ -314,3 +314,5 @@ $requests_url = apply_filters(
 
 <?php
 get_footer();
+
+

@@ -73,6 +73,15 @@ const FullscreenVisualPlayer = (function () {
     }
 
     function bindEvents() {
+        // Global Toggle Trigger
+        const toggleBtn = document.getElementById('visualizer-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                open();
+            });
+        }
+
         // Close button
         document.getElementById('visual-close-btn')?.addEventListener('click', close);
 

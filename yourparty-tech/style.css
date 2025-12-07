@@ -1655,126 +1655,302 @@ body.visualizer-active {
     background: rgba(255, 107, 53, 0.1); /* Subtle tint using primary color assumption */
 }
 
-/* === MOOD DIALOG (Restored Styles) === */
+/* === MOOD & GENRE TAGGING MODAL (Premium) === */
 .mood-dialog {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
     transition: opacity 0.3s ease;
 }
 
 .mood-dialog.open {
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
 }
 
 .mood-dialog__backdrop {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(8px);
 }
 
 .mood-dialog__content {
     position: relative;
-    background: #111;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
-    padding: 24px;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-    transform: translateY(20px);
-    transition: transform 0.3s ease;
+    background: radial-gradient(circle at 20% 20%, rgba(255,107,53,0.06), transparent 32%), #0b0f14;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    width: min(960px, 94vw);
+    max-height: 90vh;
+    padding: 28px;
+    box-shadow: 0 30px 120px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    transform: translateY(24px) scale(0.98);
+    transition: transform 0.3s ease, opacity 0.3s ease;
     z-index: 2;
+    overflow: auto;
+    padding-bottom: 32px;
 }
 
 .mood-dialog.open .mood-dialog__content {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
 .mood-dialog__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .mood-dialog__header h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.45rem;
     color: #fff;
+    letter-spacing: 0.01em;
+}
+
+.mood-dialog__subtitle {
+    margin: 6px 0 0;
+    color: var(--color-text-muted, #9ca3af);
+    font-size: 0.96rem;
+    letter-spacing: 0.01em;
 }
 
 .mood-dialog__close {
     background: none;
     border: none;
-    color: #888;
-    font-size: 24px;
+    color: #9ca3af;
+    font-size: 26px;
     cursor: pointer;
-    padding: 0;
-    line-height: 1;
+    padding: 4px 8px;
+    transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .mood-dialog__close:hover {
     color: #fff;
+    transform: scale(1.05);
 }
 
-.mood-dialog__subtitle {
-    color: var(--text-muted);
+.mood-dialog__track {
+    padding: 14px 16px;
+    background: linear-gradient(120deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
     margin-bottom: 20px;
-    text-align: center;
+}
+
+.mood-dialog__track-title {
+    font-weight: 700;
+    color: #fff;
+}
+
+.mood-dialog__track-artist {
+    color: var(--color-text-muted, #9ca3af);
+    font-size: 0.95rem;
 }
 
 .mood-dialog__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 4px;
+}
+
+.mood-dialog__section {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.mood-dialog__section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.mood-dialog__section h4 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.02rem;
+    letter-spacing: 0.01em;
+}
+
+.mood-dialog__pill {
+    font-size: 0.8rem;
+    color: var(--color-text-muted, #9ca3af);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+}
+
+.mood-dialog__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
+    max-height: 250px;
+    padding-right: 6px;
+    overflow-y: auto;
+    padding-bottom: 4px;
+}
+
+.mood-dialog__options::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mood-dialog__options::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.02);
+}
+
+.mood-dialog__options::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.18);
+    border-radius: 6px;
 }
 
 .mood-option {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
     gap: 8px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    padding: 12px 14px;
+    min-height: 54px;
+    background: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.10), rgba(255,255,255,0.025));
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: center;
     color: #fff;
+    transition: all 0.18s ease;
+    text-align: left;
 }
 
 .mood-option:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--mood-color, var(--purple));
-    transform: translateY(-2px);
-}
-
-.mood-option__emoji {
-    font-size: 24px;
-}
-
-.mood-option__label {
-    font-size: 12px;
-    font-weight: 500;
+    border-color: var(--mood-color, var(--color-primary, #ff6b35));
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-1px);
 }
 
 .mood-option.selected {
-    background: var(--mood-color, var(--purple));
-    border-color: var(--mood-color, var(--purple));
-    color: #000;
+    border-color: var(--mood-color, var(--color-primary, #ff6b35));
+    background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.mood-option__label {
+    font-weight: 600;
+    font-size: 0.97rem;
+}
+
+.mood-option__count {
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #9ca3af);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+}
+
+.mood-dialog__footer {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+}
+
+.mood-dialog__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    color: var(--color-text-muted, #9ca3af);
+    font-size: 0.95rem;
+}
+
+.mood-dialog__stat-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mood-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-primary,
+.btn-ghost {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-primary, #ff6b35);
+    background: var(--color-primary, #ff6b35);
+    color: #0b0b0d;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 10px 30px rgba(255,107,53,0.25);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #fff;
+    border-color: rgba(255,255,255,0.2);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-ghost:hover {
+    transform: translateY(-1px);
+}
+
+.mood-dialog__feedback {
+    min-height: 18px;
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #9ca3af);
+}
+
+.mood-dialog__feedback.success {
+    color: #10b981;
+}
+
+.mood-dialog__feedback.error {
+    color: #ef4444;
+}
+
+.mood-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 0.85rem;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.mood-badge.mood-genre {
+    background: rgba(80, 184, 255, 0.1);
+    border-color: rgba(80, 184, 255, 0.3);
+}
+
+.mood-badge.mood-empty {
+    color: var(--color-text-muted, #9ca3af);
 }

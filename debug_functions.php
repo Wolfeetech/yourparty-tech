@@ -4,7 +4,7 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.4.2'); // cache-bust for debug mode
+    define('YOURPARTY_VERSION', '3.4.1'); // cache-bust for JS fixes
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
