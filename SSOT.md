@@ -13,13 +13,17 @@
 - **Server Theme Path**: `/var/www/yourparty.tech/wp-content/themes/yourparty-tech`
 
 ## Insight & Audit (Browser)
-- **Status**: Site loads, but has issues.
-- **Critical**: WebSocket errors (`wss://api.yourparty.tech`) - **FIX APPLIED**: Added `--proxy-headers` to Uvicorn service. Verifying.
-- **Legal**: Impressum & Datenschutz deployed (Best Practice).
-- **Structure**: Local files organized into `infrastructure/`.
-- **Legal**: Impressum & Datenschutz are empty.
-- **UI/UX**: User feedback: "Kindergarten" animations. Buttons broken. `/control` broken.
-- **Visualizer**: Needs to be "Premium/Pro".
+- **Status**: Site loads. REST API funktioniert (`/status`).
+- **Critical**: WebSocket errors (`wss://api.yourparty.tech/ws/...`) - **AKTIV DEBUGGEN**
+  - ✅ Nginx Proxy korrekt konfiguriert `/ws/` → Container
+  - ✅ SSL-Zertifikat mit SANs (api.yourparty.tech) erstellt
+  - ✅ Backend läuft **im Container** (war auf PVE Host)
+  - ✅ Uvicorn mit `--proxy-headers --forwarded-allow-ips *`
+  - ✅ CORS korrekt (ALLOWED_ORIGINS)
+  - ❌ WebSocket Handshake schlägt fehl - **Ursache unklar**
+- **Legal**: ✅ Impressum & Datenschutz deployed (Best Practice).
+- **Structure**: ✅ Local files -> `infrastructure/`.
+- **UI/UX**: "Kindergarten" Animationen leicht angepasst. Vollständige Überarbeitung ausstehend.
 - **New Feature**: **Overscroll Player** (Scroll down -> Fullscreen).
 
 ## Tech Stack

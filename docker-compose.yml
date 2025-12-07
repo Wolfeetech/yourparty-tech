@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:4.4
+    container_name: radio-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - radio-net
+
+  # FastAPI Backend (Radio API)
+  backend:
+    build: ./backend
+    container_name: radio-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017/
+      - AZURACAST_URL=${AZURACAST_URL:-http://192.168.178.210}
+      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+      - MUSIC_DIR=/var/radio/music
+    volumes:
+      - ${MUSIC_PATH:-/var/radio/music}:/var/radio/music:ro
+    depends_on:
+      - mongo
+    networks:
+      - radio-net
+
+  # Nginx Reverse Proxy (API Gateway)
+  nginx:
+    image: nginx:alpine
+    container_name: radio-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${SSL_CERT_PATH:-./certs}:/etc/ssl/certs:ro
+      - ${SSL_KEY_PATH:-./certs}:/etc/ssl/private:ro
+    depends_on:
+      - backend
+    networks:
+      - radio-net
+
+volumes:
+  mongo_data:
+
+
+networks:
+  radio-net:
+    driver: bridge

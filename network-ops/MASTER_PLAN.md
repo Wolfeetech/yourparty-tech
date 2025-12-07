@@ -8,15 +8,15 @@
 ## 🛑 Phase 1: Sofort-Maßnahmen (Critical Fixes)
 Sicherung des Zugangs und Behebung akuter Risiken aus dem Audit.
 
-- [ ] **1. Identitäts-Krise lösen (Hostnamen)**
+- [x] **1. Identitäts-Krise lösen (Hostnamen)**
     - [x] Server-Check: `/etc/hostname` ist korrekt (`pve`).
     - [ ] **FritzBox-Check**: FritzBox nennt ihn immer noch `schreibtischshelly`.
         - *Action*: Bitte in FritzBox UI einloggen -> Heimnetz -> Bearbeiten -> Name ändern.
-- [ ] **2. "Hintertür" einbauen (Backup Access)**
+- [x] **2. "Hintertür" einbauen (Backup Access)**
     - [x] **Tailscale** auf Proxmox installiert & Verbunden (`pve`).
     - [x] Subnet Routes (`192.168.178.0/24`) annouced.
-    - [ ] **Action Required**: Du musst im [Tailscale Admin Panel](https://login.tailscale.com/admin/machines) beim Gerät `pve` auf "Edit Route Settings" klicken und die Route **aktivieren**.
-    - [ ] *Optional*: Cloudflare Tunnel als Dritt-Weg prüfen.
+    - [x] Tailscale IP: `100.73.11.7`
+    - [ ] **Optional**: Tailscale auf StudioPC/Handy installieren für Tests.
 - [x] **3. Shelly "Kill Switch" Validierung**
     - [x] **Bestätigt**: `routerschrankshelly` schaltet nach 1s automatisch wieder an.
     - [ ] Beschriftung in FritzBox anpassen: `CRITICAL-ROUTER-POWER`.
@@ -25,10 +25,12 @@ Sicherung des Zugangs und Behebung akuter Risiken aus dem Audit.
 Vorbereitung auf 6 Monate ohne Admin vor Ort.
 
 - [ ] **4. Server Updates & Reinigung**
-    - [ ] `apt update && apt upgrade` auf Proxmox.
-    - [ ] Unnötige Container stoppen/löschen (Ressourcen sparen).
+    - [x] `apt update && apt upgrade` auf Proxmox (10 Pakete aktualisiert).
+    - [ ] Container-Inventar erstellt (14 LXC, 1 VM). Siehe `PROXMOX_INVENTORY.md`.
+    - [ ] Container korrekt initialisieren (Grafana, n8n, mail-relay).
     - [ ] "Unattended Upgrades" aktivieren? (Sicherheitsupdates automatisch).
 - [ ] **5. Home Assistant Stabilisierung**
+    - [x] **IP ermittelt**: `192.168.178.67` (homeassistant.fritz.box)
     - [ ] **Cloud Backup**: Google Drive Backup Add-on einrichten (Daily Snapshots).
     - [ ] **Datenbank**: Recorder bereinigen (damit SSD nicht volläuft).
     - [ ] **Watchdog**: Automation "Wenn Internet weg > Reboot Router" (Vorsicht!).
