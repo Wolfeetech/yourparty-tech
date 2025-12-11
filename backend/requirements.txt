@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 pymongo==4.6.1
@@ -9,3 +10,19 @@ pyacoustid==1.3.0
 musicbrainzngs==0.7.1
 musicbrainzngs==0.7.1
 httpx
+=======
+fastapi
+uvicorn
+python-multipart
+aiofiles
+requests
+httpx
+motor
+pymongo
+mutagen
+pyacoustid
+musicbrainzngs
+chromaprint
+dnspython
+websockets
+>>>>>>> c56c5e38c7bdec486b44fa7d38fe126d7a47a7e2

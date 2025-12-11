@@ -1,0 +1,324 @@
+/* ====================================================================
+   FULLSCREEN VISUAL PLAYER
+   ==================================================================== */
+
+.fullscreen-visual-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 10000;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.fullscreen-visual-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+#fullscreen-visual-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Close Button */
+.visual-close-btn {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    z-index: 100;
+}
+
+.visual-close-btn:hover {
+    background: rgba(46, 139, 87, 0.8);
+    transform: scale(1.1);
+}
+
+/* Mode Selector */
+.visual-mode-selector {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 250px;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.mode-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-selector-header h4 {
+    margin: 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--emerald);
+}
+
+.mode-selector-toggle {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: none; /* Show on mobile */
+}
+
+.mode-selector-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mode-btn:hover {
+    background: rgba(46, 139, 87, 0.2);
+    border-color: var(--emerald);
+    transform: translateX(5px);
+}
+
+.mode-btn.active {
+    background: linear-gradient(135deg, rgba(46, 139, 87, 0.3), rgba(59, 130, 246, 0.3));
+    border-color: var(--emerald);
+}
+
+.mode-icon {
+    font-size: 20px;
+}
+
+.mode-label {
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+}
+
+/* Track Info Overlay */
+.visual-track-info {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px 30px;
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 90%;
+    z-index: 50;
+}
+
+#visual-cover {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.visual-track-meta h2 {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    color: #fff;
+}
+
+.visual-track-meta p {
+    margin: 0;
+    font-size: 16px;
+    color: var(--emerald);
+}
+
+/* Bottom Controls */
+.visual-controls {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background:rgba(0, 0, 0, 0.7);
+    padding: 15px 30px;
+    border-radius: 50px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 50;
+}
+
+.visual-control-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.visual-control-btn:hover {
+    background: var(--emerald);
+    transform: scale(1.1);
+}
+
+#visual-play-btn {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald-dark));
+    border: none;
+}
+
+#visual-play-btn:hover {
+    box-shadow: 0 0 30px rgba(46, 139, 87, 0.6);
+}
+
+.visual-mode-name {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    min-width: 150px;
+    text-align: center;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .mode-selector-toggle {
+        display: block;
+    }
+
+    .mode-selector-list {
+        display: none;
+    }
+
+    .mode-selector-list.active {
+        display: flex;
+    }
+
+    .visual-track-info {
+        bottom: 160px;
+        padding: 15px 20px;
+    }
+
+    #visual-cover {
+        width: 60px;
+        height: 60px;
+    }
+
+    .visual-track-meta h2 {
+        font-size: 18px;
+    }
+
+    .visual-track-meta p {
+        font-size: 14px;
+    }
+
+    .visual-controls {
+        gap: 12px;
+        padding: 10px 20px;
+    }
+
+    .visual-control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    #visual-play-btn {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Inline Visualizer (on Radio Card) */
+.radio-card__visualizer-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+#inline-visualizer {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.visualizer-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.vis-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.vis-btn:hover,
+.vis-btn.active {
+    background: var(--emerald);
+    border-color: var(--emerald);
+}

@@ -4,6 +4,7 @@
 const MoodModule = (function () {
   'use strict';
 
+<<<<<<< HEAD
   // Mood Definitions
   // Mood Definitions (Pro Electronic)
   const MOODS = {
@@ -15,6 +16,22 @@ const MoodModule = (function () {
     'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' }, // gray
     'atmospheric': { label: 'Atmospheric', emoji: '🌫️', color: '#3b82f6' }, // blue
     'raw': { label: 'Raw', emoji: '🏗️', color: '#78716c' } // stone
+=======
+  //  Mood Definitions - Extended
+  const MOODS = {
+    'energetic': { label: 'Energetic', emoji: '⚡', color: '#f59e0b' },
+    'chill': { label: 'Chill', emoji: '🌴', color: '#10b981' },
+    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' },
+    'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' },
+    'groovy': { label: 'Groovy', emoji: '💃', color: '#ec4899' },
+    'melodic': { label: 'Melodic', emoji: '🎹', color: '#8b5cf6' },
+    'melancholic': { label: 'Melancholic', emoji: '😢', color: '#6366f1' },
+    'aggressive': { label: 'Aggressive', emoji: '😤', color: '#ef4444' },
+    'hypnotic': { label: 'Hypnotic', emoji: '🌀', color: '#a78bfa' },
+    'trippy': { label: 'Trippy', emoji: '🍄', color: '#c084fc' },
+    'warm': { label: 'Warm', emoji: '☀️', color: '#fb923c' },
+    'uplifting': { label: 'Uplifting', emoji: '🚀', color: '#3b82f6' }
+>>>>>>> c56c5e38c7bdec486b44fa7d38fe126d7a47a7e2
   };
 
   const GENRES = {
@@ -24,8 +41,32 @@ const MoodModule = (function () {
     'progressive': 'Progressive',
     'organic_house': 'Organic House',
     'techno': 'Techno',
+<<<<<<< HEAD
     'minimal': 'Minimal',
     'afro_house': 'Afro House'
+=======
+    'tech-house': 'Tech House',
+    'deep-house': 'Deep House',
+    'progressive-house': 'Progressive House',
+    'afro-house': 'Afro House',
+    'bass-house': 'Bass House',
+    'dnb': 'Drum & Bass',
+    'trance': 'Trance',
+    'psytrance': 'Psytrance',
+    'disco': 'Disco',
+    'funk': 'Funk',
+    'hiphop': 'HipHop',
+    'trap': 'Trap',
+    'dubstep': 'Dubstep',
+    'garage': 'UK Garage',
+    'breakbeat': 'Breakbeat',
+    'ambient': 'Ambient',
+    'downtempo': 'Downtempo',
+    'indie': 'Indie',
+    'pop': 'Pop',
+    'rock': 'Rock',
+    'schlager': 'Schlager'
+>>>>>>> c56c5e38c7bdec486b44fa7d38fe126d7a47a7e2
   };
 
   let currentSongId = null;

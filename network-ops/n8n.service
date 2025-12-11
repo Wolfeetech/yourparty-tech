@@ -1,0 +1,17 @@
+[Unit]
+Description=n8n - Workflow Automation Tool
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root
+ExecStart=/usr/local/bin/n8n start
+Restart=always
+RestartSec=10
+Environment="N8N_PORT=5678"
+Environment="N8N_PROTOCOL=http"
+Environment="N8N_HOST=0.0.0.0"
+
+[Install]
+WantedBy=multi-user.target

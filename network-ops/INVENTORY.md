@@ -24,9 +24,10 @@
 
 ## 🏠 Smart Home (Shelly Army)
 Wichtig für "Self-Healing":
-*   `routerschrankshelly` (192.168.178.21): **Kritisch!** Hängt hier der Router dran?
-    *   Wenn ja -> Perfekt für Auto-Reboot Sktipt.
-    *   Wenn nein -> Unwichtig.
+*   `routerschrankshelly` (192.168.178.21): **CORE INFRASTRUCTURE POWER**.
+    *   **Funktion**: Misst und schaltet Strom für Router & Server.
+    *   **ACHTUNG**: Ein "Aus"-Schalten trennt die Verbindung dauerhaft, wenn kein "Auto-On" konfiguriert ist. **"Kill Switch" Gefahr!**
+    *   **Potenzial**: Perfekter Hard-Reset-Aktor, aber muss extrem vorsichtig konfiguriert werden (Auto-Timer).
 
 ## 🖨️ Peripherie
 *   `brother-drucker` (192.168.178.24): Firmware aktuell halten!

@@ -809,10 +809,14 @@ if (document.readyState === 'loading') {
         YourPartyApp.init();
         VisualizerController.init();
         FullscreenManager.init();
+        if (typeof RatingModule !== 'undefined') RatingModule.init();
+        if (typeof MoodModule !== 'undefined') MoodModule.init();
     });
 } else {
     console.log('[DEBUG] ReadyState Complete - Initializing YourPartyApp');
     YourPartyApp.init();
     VisualizerController.init();
     FullscreenManager.init();
+    if (typeof RatingModule !== 'undefined') RatingModule.init();
+    if (typeof MoodModule !== 'undefined') MoodModule.init();
 }

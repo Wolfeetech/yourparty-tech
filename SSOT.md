@@ -15,13 +15,15 @@
 - **Archive**: `_archive_frontend` (Unused React App).
 
 ## Insight & Audit (Browser)
-- **Status**: Site loads, but has issues.
-- **Critical**: WebSocket errors (`wss://api.yourparty.tech`) - **FIX APPLIED**: Added `--proxy-headers` to Uvicorn service. Verifying.
-- **Legal**: Impressum & Datenschutz deployed (Best Practice).
-- **Structure**: Local files organized into `infrastructure/`.
-- **Legal**: Impressum & Datenschutz are empty.
-- **UI/UX**: User feedback: "Kindergarten" animations. Buttons broken. `/control` broken.
-- **Visualizer**: Needs to be "Premium/Pro".
+- **Status**: ✅ **ALLE FEATURES AKTIV!**
+- **WebSocket**: ✅ `[Realtime] Connected`
+- **Vote-Next**: ✅ Funktioniert (Steering-Votes werden gezählt)
+- **Rating-System**: ✅ 5-Sterne-Rating in MongoDB gespeichert
+- **Mood-Tagging**: ✅ Moods werden gespeichert + `top_mood` berechnet
+- **MongoDB**: ✅ Verbindung wiederhergestellt (Container 202)
+- **ID3-Sync**: ✅ Code vorhanden, wird bei Rating/Mood getriggert
+- **Legal Pages**: ✅ Impressum & Datenschutz deployed
+- **UI/UX**: Premium CSS deployed (Gradienten, subtile Animationen)
 - **New Feature**: **Overscroll Player** (Scroll down -> Fullscreen).
 
 ## Tech Stack
