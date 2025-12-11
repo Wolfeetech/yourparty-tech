@@ -34,6 +34,16 @@ See [ROADMAP.md](ROADMAP.md) for detailed task list and priorities.
 - **PVE Access**: Goal is to allow `ssh pve` usage.
 - **Keys**: To be located/configured.
 
-## Design Guidelines
-- **Visuals**: Dark mode, vibrant accents, glassmorphism, micro-animations.
-- **UX**: Wow-factor on load, responsive, dynamic.
+## Design Guidelines (CI)
+- **Primary Color**: `#8b5cf6` (Violet) - used for primary actions and highlights.
+- **Accent Color**: `#ec4899` (Pink) - used for gradients and secondary highlights.
+- **Background**: `#0f0f13` (Dark) with subtle radial gradients.
+- **Typography**: 'Inter', sans-serif.
+- **Glassmorphism**: heavily used for cards (`rgba(30, 30, 35, 0.6)` + `blur(12px)`).
+
+## Communication Style & Philosophy
+- **Authentic Quality**: We are ambitious professionals (2-man team). No corporate "bullshit".
+- **Tone**: Friendly, professional, service-oriented.
+- **Focus**: Stage Management, FOH/Light Operating, 4K Drone Shots.
+- **Radio Stream**: Is a *feature* (technical reference/inspiration), NOT the main product.
+- **Headline**: "Wir machen Ihre Veranstaltung unvergesslich." (NOT "System Sound Precision").
