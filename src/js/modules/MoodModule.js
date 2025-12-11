@@ -74,11 +74,58 @@ class MoodModule {
 
     bindGlobalEvents() {
         document.addEventListener('click', (e) => {
+            // Tag Button
             if (e.target.closest('#mood-tag-button')) {
                 e.preventDefault();
                 this.openDialog();
             }
+
+            // Vibe/Steering Buttons
+            const vibeBtn = e.target.closest('.vibe-btn');
+            if (vibeBtn) {
+                e.preventDefault();
+                this.handleSteering(vibeBtn);
+            }
         });
+    }
+
+    async handleSteering(btn) {
+        const vote = btn.dataset.vote;
+        if (!vote) return;
+
+        // Visual Feedback
+        const allBtns = document.querySelectorAll('.vibe-btn');
+        allBtns.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+
+        try {
+            const baseUrl = this.config.restBase || '/api';
+            // Use prediction endpoint
+            const response = await fetch(`${baseUrl}/vote-next`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vote: vote, timestamp: Date.now() })
+            });
+
+            const feedbackVal = document.getElementById('vibe-feedback');
+
+            if (response.ok) {
+                const data = await response.json();
+                if (feedbackVal) {
+                    feedbackVal.innerHTML = `VOTE: ${vote.toUpperCase()}!`;
+                    if (data.prediction) {
+                        feedbackVal.innerHTML += ` <small>(Next: ${data.prediction.title})</small>`;
+                    }
+                    feedbackVal.className = 'vibe-feedback success';
+                    setTimeout(() => feedbackVal.textContent = '', 4000);
+                }
+            } else {
+                throw new Error('Vote failed');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showStatus('Steering failed.', 'error');
+        }
     }
 
     createDialog() {

@@ -102,88 +102,38 @@ add_action('wp_enqueue_scripts', function () {
     // Core Styles
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
 
-    // Core Modules (JS) - CORRECT PATHS
+    // BUNDLED FRONTEND ASSETS
+    $dist_path = get_template_directory_uri() . '/assets/dist/main.js';
+    $dist_ver = file_exists(get_template_directory() . '/assets/dist/main.js') 
+        ? filemtime(get_template_directory() . '/assets/dist/main.js') 
+        : YOURPARTY_VERSION;
+
+    // Load Main Application Bundle (Vite Build)
     wp_enqueue_script(
-        'yourparty-stream-controller',
-        get_template_directory_uri() . '/assets/js/stream-controller.js',
-        [],
-        YOURPARTY_VERSION,
-        true
-    );
-    wp_enqueue_script(
-        'yourparty-rating-module',
-        get_template_directory_uri() . '/assets/js/rating-module.js',
-        [],
-        YOURPARTY_VERSION,
-        true
-    );
-    wp_enqueue_script(
-        'yourparty-mood-module',
-        get_template_directory_uri() . '/assets/js/mood-module.js',
-        [],
-        YOURPARTY_VERSION,
+        'yourparty-app-bundle',
+        $dist_path,
+        [], // No dependencies, everything is bundled
+        $dist_ver,
         true
     );
 
-    // Mood Dialog (Tag Window)
+    // Load CSS (if any was extracted by Vite, usually style.css handles it, but check dist)
+    if (file_exists(get_template_directory() . '/assets/dist/style.css')) {
+         wp_enqueue_style(
+            'yourparty-app-style',
+            get_template_directory_uri() . '/assets/dist/style.css',
+            [],
+            $dist_ver
+        );
+    }
+    
+    // We still need the Mood Dialog CSS if not imported in JS (it's not imported in main.js yet)
+    // Actually, I should import it in JS, but for now keep it separate to be safe
     wp_enqueue_style(
         'yourparty-mood-dialog',
         get_template_directory_uri() . '/assets/mood-dialog.css',
         [],
-        time() // Cache bust
-    );
-    wp_enqueue_script(
-        'yourparty-mood-dialog',
-        get_template_directory_uri() . '/assets/mood-dialog.js',
-        [],
-        time(), // Cache bust
-        true
-    );
-
-    // Visual System - NEW
-    wp_enqueue_style(
-        'yourparty-visual-player',
-        get_template_directory_uri() . '/assets/css/visual-player.css',
-        [],
         YOURPARTY_VERSION
-    );
-    wp_enqueue_script(
-        'yourparty-visual-engine',
-        get_template_directory_uri() . '/assets/js/visual-engine.js',
-        ['yourparty-stream-controller'],
-        YOURPARTY_VERSION,
-        true
-    );
-    wp_enqueue_script(
-        'yourparty-fullscreen-visual',
-        get_template_directory_uri() . '/assets/js/fullscreen-visual-player.js',
-        ['yourparty-visual-engine'],
-        YOURPARTY_VERSION,
-        true
-    );
-
-    // Main App (depends on modules)
-    wp_enqueue_script(
-        'yourparty-tech-app',
-        get_template_directory_uri() . '/assets/js/app.js',
-        ['yourparty-stream-controller', 'yourparty-rating-module', 'yourparty-mood-module'],
-        time(), // FORCE CACHE BUST
-        true
-    );
-
-    // Community Steering
-    wp_enqueue_style(
-        'yourparty-steering',
-        get_template_directory_uri() . '/assets/css/community-steering.css',
-        [],
-        YOURPARTY_VERSION
-    );
-    wp_enqueue_script(
-        'yourparty-steering',
-        get_template_directory_uri() . '/assets/js/community-steering.js',
-        ['yourparty-tech-app'],
-        YOURPARTY_VERSION,
-        true
     );
 
     // Config & URLs
@@ -200,11 +150,8 @@ add_action('wp_enqueue_scripts', function () {
 
     $config = [
         // Point to Python Backend API
-        // We now have a ProxyPass in Apache on Container 207 (yourparty.tech)
-        // mapping /api/ -> http://192.168.178.211:8000/
-        // This solves HTTPS/CORS issues by serving it from the same domain.
         'restBase' => 'https://yourparty.tech/api', 
-        'wpRestBase' => esc_url_raw(rest_url('yourparty/v1')), // Keep WP separate
+        'wpRestBase' => esc_url_raw(rest_url('yourparty/v1')),
         'publicBase' => esc_url_raw(yourparty_public_url()),
         'streamUrl' => esc_url_raw($stream_url),
         'publicSchedule' => esc_url_raw($schedule_url),
@@ -213,8 +160,7 @@ add_action('wp_enqueue_scripts', function () {
         'nonce' => $nonce
     ];
 
-    wp_localize_script('yourparty-tech-app', 'YourPartyConfig', $config);
-    wp_localize_script('yourparty-steering', 'yourpartySettings', ['nonce' => $nonce]);
+    wp_localize_script('yourparty-app-bundle', 'YourPartyConfig', $config);
 });
 
 add_action(

@@ -2,12 +2,13 @@
  * YourParty Tech - Frontend Entry Point
  */
 import MoodModule from './modules/MoodModule.js';
-// We will import other modules as we create them
-// import StatusManager from './modules/StatusManager.js';
+import StatusManager from './modules/StatusManager.js';
 import PlayerControls from './modules/PlayerControls.js';
 import RealtimeModule from './modules/Realtime.js';
-import Visualizer from './modules/Visualizer.js';
+import VisualEngine from './modules/VisualEngine.js';
 import StreamController from './modules/StreamController.js';
+import RatingModule from './modules/RatingModule.js';
+import FullscreenManager from './modules/FullscreenManager.js';
 
 console.log('[Main] Initializing YourParty Frontend...');
 
@@ -21,19 +22,40 @@ class YourPartyApp {
             isConnected: false
         };
 
+        // Initialize Core State Managers
+        const status = new StatusManager(this.config);
+        const stream = new StreamController(this.config);
+        const visualEngine = new VisualEngine(); // Professional Engine
+
         this.modules = {
-            mood: new MoodModule(this.config),
-            status: new StatusManager(this.config),
+            status: status,
+            stream: stream,
             player: new PlayerControls(),
+            mood: new MoodModule(this.config),
+            rating: new RatingModule(this.config),
             realtime: new RealtimeModule(this.config),
-            visualizer: new Visualizer(),
-            stream: new StreamController(this.config)
+            visuals: visualEngine,
+            fullscreen: new FullscreenManager()
         };
 
         this.init();
     }
 
     init() {
+        // Stream -> Visuals binding
+        window.addEventListener('stream:audioContextReady', (e) => {
+            // Initialize main visualizer on the inline canvas
+            const inlineCanvas = document.getElementById('inline-visualizer') || document.getElementById('audio-visualizer');
+            if (inlineCanvas) {
+                this.modules.visuals.init(inlineCanvas, e.detail.analyser);
+            } else {
+                this.modules.visuals.setAnalyser(e.detail.analyser);
+            }
+        });
+
+        // Fullscreen integration
+        this.modules.fullscreen.init(this.modules.visuals, this.modules.stream);
+
         // Connect Status Manager to other modules
         this.modules.status.subscribe((data) => {
             this.handleStatusUpdate(data);
@@ -41,14 +63,9 @@ class YourPartyApp {
 
         this.modules.status.start();
 
-        // Global Error Handler
-        window.onclick = () => {
-            // Unlock Audio Context if needed
-        };
-
         console.log('[Main] App Ready');
 
-        // Expose for debugging
+        // Expose for debugging/legacy
         window.YourPartyAppInstance = this;
     }
 
@@ -62,10 +79,15 @@ class YourPartyApp {
             // Notify Modules
             this.modules.player.update(data);
             this.modules.mood.setCurrentSong(song.id, song.moods);
+            this.modules.rating.setInitialRating(
+                song.id,
+                data.now_playing.song.rating?.average,
+                data.now_playing.song.rating?.total
+            );
 
             // Fix Station Loading Bug by verifying we have real data
-            if (song.title === 'Unknown Title' && !data.is_live) {
-                // Keep loading state? No, render what we have.
+            if (song.title === 'Unknown Title' && !data.is_live && !data.now_playing?.song?.id) {
+                // Keep default state or show "Offline"
             }
         }
     }
