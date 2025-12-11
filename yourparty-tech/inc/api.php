@@ -553,7 +553,7 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
 
     // Proxy to FastAPI backend (MongoDB storage)
     // Using PVE Host IP (.25) via NAT because direct container access (.211) is bridged/isolated
-    $api_url = 'http://192.168.178.25:8080/mood-tag';
+    $api_url = 'http://192.168.178.211:8000/mood-tag';
 
     $body_args = [
         'song_id' => $song_id,
@@ -830,7 +830,7 @@ add_action('rest_api_init', function () {
                 }
 
                 // Proxy to FastAPI backend
-                $api_url = 'http://192.168.178.25:8080/vote-mood';
+                $api_url = 'http://192.168.178.211:8000/vote-mood';
 
                 $body_args = [
                     'song_id' => $song_id,

@@ -125,6 +125,21 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    // Mood Dialog (Tag Window)
+    wp_enqueue_style(
+        'yourparty-mood-dialog',
+        get_template_directory_uri() . '/assets/mood-dialog.css',
+        [],
+        time() // Cache bust
+    );
+    wp_enqueue_script(
+        'yourparty-mood-dialog',
+        get_template_directory_uri() . '/assets/mood-dialog.js',
+        [],
+        time(), // Cache bust
+        true
+    );
+
     // Visual System - NEW
     wp_enqueue_style(
         'yourparty-visual-player',

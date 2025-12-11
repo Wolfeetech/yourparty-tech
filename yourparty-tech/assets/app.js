@@ -395,10 +395,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const isOnline = detectOnlineState(data);
     currentSongId = song.id ?? null;
+
+    // EXPOSE GLOBALLY for mood-dialog.js
+    window.currentSongId = currentSongId;
+
     const trackTitle = fallback(song.title, "Titel unbekannt");
     const trackArtist = fallback(song.artist, "Künstler unbekannt");
     const trackAlbum = fallback(song.album, "Album unbekannt");
     let cover = fallback(normaliseUrl(song.art), PLACEHOLDER_COVER);
+
+    // EXPOSE TRACK INFO GLOBALLY for mood-dialog.js
+    window.currentTrackInfo = {
+      id: currentSongId,
+      title: trackTitle,
+      artist: trackArtist,
+      album: trackAlbum,
+      art: cover
+    };
 
     const isLive = Boolean(nowPlaying.live?.is_live);
     const statusLabel = isOnline ? (isLive ? "Live DJ" : "On Air") : "Offline";
