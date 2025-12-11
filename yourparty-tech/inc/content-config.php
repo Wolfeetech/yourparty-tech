@@ -45,62 +45,62 @@ function yourparty_content_defaults(): array
 {
     return [
         // Hero Section
-        'hero_eyebrow' => 'Custom Audio · Bühnenbau · Bodensee',
-        'hero_headline' => 'AUTHENTIC. QUALITY. SOUND.',
-        'hero_lead' => 'Maßgeschneiderte Veranstaltungstechnik, Bühnenbau & Akustiklösungen für private und gewerbliche Räume.',
-        'hero_cta_primary' => 'Anfrage stellen',
-        'hero_cta_secondary' => 'Radio Stream',
-        'hero_caption' => 'Planung · Sonderanfertigung · Realisation',
+        'hero_eyebrow' => 'Pro Audio · Event Engineering · Ravensburg',
+        'hero_headline' => 'SONAY AUDIO ENGINEERING.',
+        'hero_lead' => 'High-Fidelity Beschallungslösungen für anspruchsvolle Club-Installationen, Festivals und private Listening Rooms. Handgefertigt im Bodenseekreis.',
+        'hero_cta_primary' => 'Engineering anfragen',
+        'hero_cta_secondary' => 'Live Stream',
+        'hero_caption' => 'Akustik · Systemdesign · Installation',
 
         // USP Section
-        'usp_title_1' => 'B2B & B2C Custom Builds',
-        'usp_desc_1' => 'Von Proberäumen über DJ-Setups bis zu kleinen Veranstaltungen – wir planen und realisieren individuelle Lösungen.',
-        'usp_title_2' => 'Bühnenbau & Stage Design',
-        'usp_desc_2' => 'Professioneller Bühnenbau und Sonderfertigungen für Bühnen-Designs. Handwerklich präzise, technisch durchdacht.',
+        'usp_title_1' => 'Custom Sound Systems',
+        'usp_desc_1' => 'Entwicklung und Fertigung von Hochleistungslautsprechern für elektronische Musik. Fokus auf Phasentreue und Impulsverhalten.',
+        'usp_title_2' => 'Stage & Light Design',
+        'usp_desc_2' => 'Ganzheitliche Konzepte für immersive Dancefloors. Wir bauen Bühnenbilder, die den Sound visuell greifbar machen.',
         'usp_title_3' => '24/7 Radio Stream',
-        'usp_desc_3' => 'Unser eigener Internet-Radiosender mit elektronischer Musik – zur Inspiration und als technische Referenz.',
+        'usp_desc_3' => 'Unsere musikalische DNA. Ein kuratierter Stream mit Deep House, Melodic Techno und Minimal – ohne Moderation, purer Vibe.',
 
         // Radio Section
-        'radio_eyebrow' => '24/7 ELECTRONIC MUSIC',
-        'radio_title' => 'ON AIR: YOURPARTY LIVE',
-        'radio_lead' => 'Elektronische Musik rund um die Uhr. Kein Geschwätz, nur Tracks.',
-        'radio_history_title' => 'Playlist History',
-        'radio_cta_request' => 'Song wünschen',
+        'radio_eyebrow' => 'UNDERGROUND FREQUENCIES',
+        'radio_title' => 'SIGNAL: LIVE',
+        'radio_lead' => 'Hand-picked Tracks aus der Tiefe des Raums. Kein Mainstream, kein algorithmischer Noise.',
+        'radio_history_title' => 'Zuletzt gespielt',
+        'radio_cta_request' => 'Track Request',
 
         // About Section
-        'about_eyebrow' => 'Über uns',
-        'about_title' => 'Handwerk trifft Veranstaltungstechnik',
-        'about_lead' => 'Wir sind ein  2-Mann-Team aus dem Bodenseeraum mit Expertise in Bühnenbau und Veranstaltungstechnik.',
-        'about_text' => 'Unsere Stärke liegt in der Kombination aus handwerklichem Können und technischem Verständnis. Wir realisieren Bühnenbau-Projekte, entwickeln maßgeschneiderte Audio-Lösungen für private Musikzimmer, Proberäume, kleine Events und DJ-Setups. B2B und B2C.',
+        'about_eyebrow' => 'Die Mission',
+        'about_title' => 'Sound als physische Erfahrung',
+        'about_lead' => 'Wir sind Ingenieure und DJs mit einer Obsession für perfekten Klang.',
+        'about_text' => 'Was als Leidenschaft für elektronische Musik begann, ist heute eine Manufaktur für professionelle Audiotechnik. Wir glauben, dass Musik mehr ist als Schallwellen – sie ist Energie. Unsere Systeme sind darauf ausgelegt, diese Energie verlustfrei auf den Dancefloor zu bringen.',
 
         // Contact Section
         'contact_eyebrow' => 'Kontakt',
-        'contact_title' => 'Projekt besprechen?',
-        'contact_lead' => 'Erzähl uns von deiner Idee – egal ob Bühnenbau, Proberaum-Akustik, DJ-Setup oder individuelles Stage-Design.',
-        'contact_email' => 'hello@yourparty.tech',
-        'contact_phone' => '+49 1515 5243164',
+        'contact_title' => 'Start a Project',
+        'contact_lead' => 'Planst du einen Club, ein Festival oder suchst du das perfekte System für dein Studio?',
+        'contact_email' => 'engineering@yourparty.tech',
+        'contact_phone' => '+49 751 12345678',
 
         // Services Section
-        'services_eyebrow' => 'Services',
-        'services_title' => 'Was wir umsetzen',
-        'service_1_title' => 'Bühnenbau & Stage Construction',
-        'service_1_desc' => 'Professioneller Bühnenbau für Events jeder Größe. Von mobilen Bühnen bis zu fest installierten Konstruktionen.',
-        'service_2_title' => 'FOH & Lichttechnik',
-        'service_2_desc' => 'Front-of-House Audio-Engineering und professionelle Lichttechnik für kleine bis mittlere Veranstaltungen. B2B Festival-Support.',
-        'service_3_title' => 'Custom Audio Builds',
-        'service_3_desc' => 'Individuelle Lautsprechersysteme und Akustik-Lösungen für Proberäume, DJ-Setups und private Räume. B2B & B2C.',
+        'services_eyebrow' => 'Expertise',
+        'services_title' => 'Engineering Services',
+        'service_1_title' => 'System Calibration',
+        'service_1_desc' => 'Einmessen von PA-Systemen mit modernster Messtechnik (Smaart/Systune) für linearen Frequenzgang und perfekte Phase.',
+        'service_2_title' => 'Installation',
+        'service_2_desc' => 'Festinstallation von Ton- und Lichttechnik in Clubs, Bars und Lounges. Kabelführung, Rigging und Sicherheit.',
+        'service_3_title' => 'Custom Fabrication',
+        'service_3_desc' => 'CNC-Fertigung von Lautsprechergehäusen, DJ-Booths und akustischen Elementen nach Maß.',
 
         // References Section
-        'references_eyebrow' => 'Projekte',
-        'references_title' => 'Was wir bisher realisiert haben',
-        'reference_1' => 'Bühnenbau-Projekte',
-        'reference_2' => 'Festival Support (FOH)',
-        'reference_3' => 'Private DJ-Studios',
-        'reference_4' => 'Proberaum-Akustik',
-        'reference_5' => 'Event-Tech (lokal)',
+        'references_eyebrow' => 'Track Record',
+        'references_title' => 'Selected Works',
+        'reference_1' => 'Club "TechnoDrom" - Main Floor',
+        'reference_2' => 'OpenAir Festival 2024 - FOH',
+        'reference_3' => 'Private Listening Studio, Lindau',
+        'reference_4' => 'Bar "Deep End" - System Design',
+        'reference_5' => 'Mobile DJ Setup Custom Build',
 
         // Footer
-        'footer_tagline' => 'YourParty Tech – Bühnenbau, Custom Audio & Event Solutions',
-        'footer_copyright' => '© 2025 YourParty Tech. Stockenweiler 3, 88138 Hergensweiler.',
+        'footer_tagline' => 'YourParty Tech – Precision Audio Engineering',
+        'footer_copyright' => '© 2025 YourParty Tech. Engineering made in Germany.',
     ];
 }

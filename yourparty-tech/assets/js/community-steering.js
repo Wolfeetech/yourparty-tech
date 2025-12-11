@@ -17,8 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('selected');
 
             try {
+                // Use Payload from Config or fallback
+                const apiBase = (window.YourPartyConfig && window.YourPartyConfig.restBase)
+                    ? window.YourPartyConfig.restBase
+                    : 'https://api.yourparty.tech';
+
                 // Use Python API
-                const response = await fetch('https://api.yourparty.tech/vote-next', {
+                const response = await fetch(`${apiBase}/vote-next`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -1,0 +1,6 @@
+{
+    "song_id": "real_song_1",
+    "rating": 5,
+    "user_id": "test_user",
+    "file_path": "/var/radio/music/test.mp3"
+}

@@ -7,10 +7,9 @@ const RatingModule = (function () {
     'use strict';
 
     // Configuration
-    const CONFIG = {
-        apiEndpoint: (window.YourPartyConfig && window.YourPartyConfig.restBase)
-            ? window.YourPartyConfig.restBase + '/rate'
-            : 'https://api.yourparty.tech/rate',
+    // Configuration (will be populated in init)
+    let CONFIG = {
+        apiEndpoint: '/api/rate', // Default fallback
         selectors: {
             container: '.rating-container',
             stars: '.rating-stars',
@@ -41,25 +40,62 @@ const RatingModule = (function () {
      * Initialize rating system
      */
     function init() {
-        // Query ALL containers (inline + fullscreen)
-        const containers = document.querySelectorAll(CONFIG.selectors.container);
-        if (containers.length === 0) return;
+        // Load Configuration dynamically to avoid race conditions
+        if (window.YourPartyConfig && window.YourPartyConfig.restBase) {
+            CONFIG.apiEndpoint = window.YourPartyConfig.restBase + '/rate';
+        } else {
+            console.warn('[RatingModule] YourPartyConfig not found. Using fallback endpoint.');
+        }
+        // Use Event Delegation for robust handling of dynamic elements
+        document.body.addEventListener('click', (e) => {
+            const star = e.target.closest(CONFIG.selectors.star);
+            if (!star) return;
 
-        containers.forEach(container => bindEvents(container));
+            e.preventDefault();
+            const container = star.closest(CONFIG.selectors.container);
+            if (!container) return;
 
-        // Listen for song changes (Best Practice)
+            const stars = Array.from(container.querySelectorAll(CONFIG.selectors.star));
+            const index = stars.indexOf(star);
+
+            if (index !== -1) {
+                handleRate(index + 1);
+            }
+        });
+
+        // Delegate Hover Effects
+        document.body.addEventListener('mouseover', (e) => {
+            const star = e.target.closest(CONFIG.selectors.star);
+            if (star) {
+                const container = star.closest(CONFIG.selectors.container);
+                if (container) {
+                    const stars = Array.from(container.querySelectorAll(CONFIG.selectors.star));
+                    const index = stars.indexOf(star);
+                    highlightGlobal(index + 1, true);
+                }
+            }
+        });
+
+        document.body.addEventListener('mouseout', (e) => {
+            const star = e.target.closest(CONFIG.selectors.star);
+            if (star) {
+                highlightGlobal(currentRating, false);
+            }
+        });
+
+        // Listen for new song events
         window.addEventListener('songChange', (e) => {
             if (e.detail && e.detail.song) {
                 setNewSong(e.detail.song.id);
             }
         });
 
-        // Use global ID if already set
+        // Check global ID
         if (window.currentSongId) {
             setNewSong(window.currentSongId);
         }
 
-        console.log('[RatingModule] Initialized ' + containers.length + ' instances');
+        console.log('[RatingModule] Initialized with Event Delegation');
     }
 
     function setNewSong(id) {
@@ -68,35 +104,6 @@ const RatingModule = (function () {
             currentRating = 0;
             resetStars();
         }
-    }
-
-    // Removed observeSongChanges() hack
-
-    /**
-     * Bind event listeners for a specific container
-     */
-    function bindEvents(container) {
-        const stars = container.querySelectorAll(CONFIG.selectors.star);
-
-        stars.forEach((star, index) => {
-            // Click to rate
-            star.addEventListener('click', (e) => {
-                e.preventDefault();
-                handleRate(index + 1);
-            });
-
-            // Hover preview - Update ALL containers to sync hover state
-            star.addEventListener('mouseenter', () => highlightGlobal(index + 1, true));
-            star.addEventListener('mouseleave', () => highlightGlobal(currentRating, false));
-
-            // Keyboard support
-            star.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleRate(index + 1);
-                }
-            });
-        });
     }
 
     /**
@@ -127,7 +134,19 @@ const RatingModule = (function () {
      * Handle rating submission
      */
     async function handleRate(rating) {
-        if (isSubmitting || !currentSongId) return;
+        // Fallback to global ID if local is missing
+        if (!currentSongId && window.currentSongId) {
+            currentSongId = window.currentSongId;
+        }
+
+        if (isSubmitting) return;
+
+        if (!currentSongId) {
+            console.warn('[RatingModule] Cannot rate: No Song ID set.');
+            // Attempt to show feedback on the clicked container if possible?
+            // For now just warn.
+            return;
+        }
 
         isSubmitting = true;
 
@@ -189,11 +208,14 @@ const RatingModule = (function () {
         const avgEls = document.querySelectorAll(CONFIG.selectors.average);
         const totalEls = document.querySelectorAll(CONFIG.selectors.total);
 
-        if (average !== undefined) {
-            avgEls.forEach(el => {
-                el.textContent = average.toFixed(1);
-                el.setAttribute('aria-label', `Durchschnitt: ${average.toFixed(1)} Sterne`);
-            });
+        if (average !== undefined && average !== null) {
+            const numericAvg = parseFloat(average);
+            if (!isNaN(numericAvg)) {
+                avgEls.forEach(el => {
+                    el.textContent = numericAvg.toFixed(1);
+                    el.setAttribute('aria-label', `Durchschnitt: ${numericAvg.toFixed(1)} Sterne`);
+                });
+            }
         }
 
         if (total !== undefined) {

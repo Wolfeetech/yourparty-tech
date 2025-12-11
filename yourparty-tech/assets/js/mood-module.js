@@ -5,25 +5,27 @@ const MoodModule = (function () {
   'use strict';
 
   // Mood Definitions
+  // Mood Definitions (Pro Electronic)
   const MOODS = {
-    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' },
-    'energetic': { label: 'Energetic', emoji: '⚡', color: '#f59e0b' },
-    'chill': { label: 'Chill', emoji: '🌴', color: '#10b981' },
-    'startuppy': { label: 'Startuppy', emoji: '🚀', color: '#6366f1' },
-    'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' },
-    'melodic': { label: 'Melodic', emoji: '🎹', color: '#8b5cf6' },
-    'trashey': { label: 'Trashy', emoji: '🗑️', color: '#ef4444' }
+    'hypnotic': { label: 'Hypnotic', emoji: '🌀', color: '#8b5cf6' }, // violet
+    'driving': { label: 'Driving', emoji: '🏎️', color: '#ef4444' }, // red
+    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' }, // amber
+    'groovy': { label: 'Groovy', emoji: '🕺', color: '#f59e0b' }, // orange
+    'chill': { label: 'Chill', emoji: '🌴', color: '#10b981' }, // emerald
+    'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' }, // gray
+    'atmospheric': { label: 'Atmospheric', emoji: '🌫️', color: '#3b82f6' }, // blue
+    'raw': { label: 'Raw', emoji: '🏗️', color: '#78716c' } // stone
   };
 
   const GENRES = {
-    'house': 'House',
+    'deep_house': 'Deep House',
+    'melodic_techno': 'Melodic Techno',
+    'tech_house': 'Tech House',
+    'progressive': 'Progressive',
+    'organic_house': 'Organic House',
     'techno': 'Techno',
-    'dnb': 'DnB',
-    'hiphop': 'HipHop',
-    'pop': 'Pop',
-    'rock': 'Rock',
-    'indie': 'Indie',
-    'schlager': 'Schlager'
+    'minimal': 'Minimal',
+    'afro_house': 'Afro House'
   };
 
   let currentSongId = null;
@@ -58,123 +60,125 @@ const MoodModule = (function () {
     // HTML Structure
     dialog.innerHTML = `
             <div class="mood-dialog-content">
-                <button class="close-btn" onclick="MoodModule.closeDialog()">×</button>
-                <h3>Tag this Track!</h3>
-                <p class="track-info" id="dialog-track-info">Select Vibe & Genre</p>
-                
-                <div class="tag-section">
-                    <h4>Vibe</h4>
-                    <div class="mood-grid">
-                        ${Object.entries(MOODS).map(([key, data]) => `
-                            <button class="mood-btn" data-type="mood" data-value="${key}" style="--btn-color: ${data.color}">
-                                <span class="emoji">${data.emoji}</span>
-                                <span class="label">${data.label}</span>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
+      <div class="mood-dialog-backdrop" id="mood-backdrop"></div>
+      <div class="mood-dialog-content">
+        <button class="close-btn" id="mood-close">&times;</button>
+        <h3>Tag Verification</h3>
+        <p class="track-info" id="mood-track-info">Loading...</p>
+        
+        <div class="tag-section">
+          <h4>Vibe / Energy</h4>
+          <div class="mood-grid">${moodGrid}</div>
+        </div>
 
-                <div class="tag-section">
-                    <h4>Genre</h4>
-                     <div class="genre-grid">
-                        ${Object.entries(GENRES).map(([key, label]) => `
-                            <button class="mood-btn genre-btn" data-type="genre" data-value="${key}">
-                                <span class="label">${label}</span>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
+        <div class="tag-section">
+          <h4>Genre</h4>
+          <div class="genre-grid">${genreGrid}</div>
+        </div>
 
-                <div class="dialog-footer">
-                   <p class="status-msg" id="tag-status"></p>
-                </div>
-            </div>
-            <div class="mood-dialog-backdrop" onclick="MoodModule.closeDialog()"></div>
-        `;
+        <div class="status-msg" id="mood-status"></div>
+      </div>
+    `;
 
     document.body.appendChild(dialog);
 
-    // Bind clicks inside dialog
+    // Bind Dialog Events
+    document.getElementById('mood-close').addEventListener('click', closeDialog);
+    document.getElementById('mood-backdrop').addEventListener('click', closeDialog);
+
+    // Delegation for buttons
     dialog.querySelectorAll('.mood-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const type = btn.dataset.type;
-        const val = btn.dataset.value;
-        submitTag(type, val, btn);
-      });
+      btn.addEventListener('click', handleSelection);
     });
   }
 
   function openDialog() {
     const dialog = document.getElementById('mood-dialog');
-    if (dialog) {
-      dialog.classList.add('active');
-      dialog.style.display = 'flex';
+    const trackInfo = document.getElementById('mood-track-info');
+
+    // Get current track info from App state or DOM
+    const title = document.getElementById('track-title').textContent;
+    const artist = document.getElementById('track-artist').textContent;
+
+    // Safety check: Don't allow tagging "Waiting for signal..."
+    if (title.includes("WAITING") || title.includes("OFFLINE")) {
+      alert("Bitte warten bis ein Track läuft.");
+      return;
     }
+
+    trackInfo.textContent = `${artist} - ${title}`;
+
+    // Fetch currently active tags for this song if possible
+    // (Optimization: Passed in from API in future)
+
+    dialog.classList.add('active'); // Use class for animation
+    dialog.style.display = 'flex';
   }
 
   function closeDialog() {
     const dialog = document.getElementById('mood-dialog');
-    if (dialog) {
-      dialog.classList.remove('active');
-      setTimeout(() => dialog.style.display = 'none', 200);
-    }
+    dialog.classList.remove('active');
+    setTimeout(() => {
+      dialog.style.display = 'none';
+      document.getElementById('mood-status').textContent = '';
+    }, 200);
   }
 
-  async function submitTag(type, value, btnElement) {
-    if (!currentSongId) return;
+  function handleSelection(e) {
+    const btn = e.currentTarget;
+    const mood = btn.dataset.mood;
+    const genre = btn.dataset.genre;
 
-    // Feedback
-    btnElement.classList.add('loading');
+    if (mood) submitMood(mood, 'mood', btn);
+    if (genre) submitMood(genre, 'genre', btn);
+  }
 
-    const config = window.YourPartyConfig || {};
-    const endpoint = (config.restBase) ? `${config.restBase}/mood-tag` : 'https://api.yourparty.tech/mood-tag';
+  async function submitMood(val, type, btnElement) {
+    if (!YourPartyApp.currentSongId || YourPartyApp.currentSongId === '0') {
+      showStatus('Kein valider Song-ID!', 'error');
+      return;
+    }
 
-    // Construct payload for Python API
-    const payload = {
-      song_id: currentSongId,
-      title: document.getElementById('track-title')?.innerText || '',
-      artist: document.getElementById('track-artist')?.innerText || ''
-    };
-
-    if (type === 'mood') payload.mood = value;
-    if (type === 'genre') payload.genre = value;
+    // Visual feedback
+    btnElement.style.transform = 'scale(0.95)';
+    setTimeout(() => btnElement.style.transform = 'scale(1)', 100);
 
     try {
-      const response = await fetch(endpoint, {
+      // NOTE: Using window.YourPartyApp.currentSongId implies global access, 
+      // better to use the checking logic
+      const songId = currentSongId || (window.YourPartyApp ? window.YourPartyApp.currentSongId : '0');
+
+      // Use dynamic config or fallback to relative path (proxy)
+      const baseUrl = (window.YourPartyConfig && window.YourPartyConfig.restBase)
+        ? window.YourPartyConfig.restBase
+        : '/api'; // Fallback to relative proxy
+
+      const response = await fetch(`${baseUrl}/mood-tag`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          song_id: songId,
+          tag: val,
+          type: type
+        })
       });
 
-      const data = await response.json();
-
       if (response.ok) {
-        showStatus('Tag saved!', 'success');
-        btnElement.classList.add('active');
-
-        // Refresh status/moods after short delay
-        setTimeout(() => {
-          if (window.YourPartyApp) window.YourPartyApp.fetchStatus();
-        }, 1000);
+        showStatus(`${type === 'mood' ? 'Mood' : 'Genre'} gespeichert!`, 'success');
       } else {
-        showStatus(data.message || 'Error saving tag', 'error');
+        throw new Error('API Error');
       }
-
     } catch (err) {
       console.error(err);
-      showStatus('Network error', 'error');
-    } finally {
-      btnElement.classList.remove('loading');
+      showStatus('Fehler beim Speichern.', 'error');
     }
   }
 
   function showStatus(msg, type) {
-    const el = document.getElementById('tag-status');
+    const el = document.getElementById('mood-status');
     if (el) {
       el.textContent = msg;
-      el.className = `status-msg ${type}`;
+      el.className = 'status-msg ' + type;
       setTimeout(() => el.textContent = '', 3000);
     }
   }

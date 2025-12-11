@@ -1,12 +1,26 @@
-/* Vibe Vote MTV Style */
+/* Vibe Vote MTV Style - ENERGY MODE */
 .vibe-vote-container {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2));
-    border: 1px solid rgba(255,255,255,0.1);
+    background: #000;
+    border: 2px solid #222;
     border-radius: var(--radius-lg);
-    padding: 2rem;
+    padding: 3rem 2rem;
     text-align: center;
-    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
 }
+
+/* Flash effect background */
+.vibe-vote-container::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(46, 139, 87, 0.1) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+.vibe-vote-container:hover::before { opacity: 1; }
 
 .vibe-vote-header h3 {
     margin: 0 0 0.5rem 0;
@@ -31,31 +45,43 @@
 }
 
 .vibe-btn {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: var(--radius-md);
-    padding: 1.5rem;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 2rem 1rem; /* Bigger hit area */
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); /* Snappier */
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
     position: relative;
     overflow: hidden;
+    text-transform: uppercase;
+    color: #888;
 }
 
 .vibe-btn:hover {
-    background: rgba(255,255,255,0.05);
-    border-color: var(--emerald);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(46, 139, 87, 0.2);
+    background: #222;
+    border-color: #fff;
+    color: #fff;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
 }
 
 .vibe-btn.selected {
-    background: var(--emerald);
-    border-color: var(--emerald);
+    background: #fff;
+    border-color: #fff;
     color: #000;
+    box-shadow: 0 0 40px var(--emerald), inset 0 0 20px var(--emerald);
+    animation: flash 0.5s;
+    font-weight: 900;
+}
+
+@keyframes flash {
+    0% { background: #fff; transform: scale(1); }
+    50% { background: var(--emerald); transform: scale(1.1); }
+    100% { background: #fff; transform: scale(1); }
 }
 
 .vibe-btn .emoji {

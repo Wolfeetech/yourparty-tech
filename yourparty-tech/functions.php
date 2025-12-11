@@ -4,11 +4,15 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.3.19');
+    define('YOURPARTY_VERSION', '3.3.34');
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
-    define('YOURPARTY_AZURACAST_API_KEY', '9199dc63da623190:c9f8c3a22e25932753dd3f4d57fa0d9c');
+    // SECURITY: Keys must be defined in wp-config.php
+    // define('YOURPARTY_AZURACAST_API_KEY', 'Get-Key-From-Admin-Panel');
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('YOURPARTY SECURITY WARNING: AzuraCast API Key not defined in wp-config.php');
+    }
 }
 
 if (!defined('YOURPARTY_DEFAULT_HERO_IMAGE')) {
@@ -53,7 +57,7 @@ if (!defined('YOURPARTY_STREAM_URL')) {
     $stream_url_option = get_option('yourparty_stream_url');
     define(
         'YOURPARTY_STREAM_URL',
-        $stream_url_option ?: '/wp-content/themes/yourparty-tech/stream-proxy.php'
+        $stream_url_option ?: 'https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3'
     );
 }
 
@@ -126,7 +130,7 @@ add_action('wp_enqueue_scripts', function () {
         'yourparty-tech-app',
         get_template_directory_uri() . '/assets/js/app.js',
         ['yourparty-stream-controller', 'yourparty-rating-module', 'yourparty-mood-module'],
-        YOURPARTY_VERSION,
+        time(), // FORCE CACHE BUST
         true
     );
 
@@ -158,7 +162,12 @@ add_action('wp_enqueue_scripts', function () {
     $nonce = wp_create_nonce('wp_rest');
 
     $config = [
-        'restBase' => esc_url_raw(rest_url('yourparty/v1')),
+        // Point to Python Backend API
+        // We now have a ProxyPass in Apache on Container 207 (yourparty.tech)
+        // mapping /api/ -> http://192.168.178.211:8000/
+        // This solves HTTPS/CORS issues by serving it from the same domain.
+        'restBase' => 'https://yourparty.tech/api', 
+        'wpRestBase' => esc_url_raw(rest_url('yourparty/v1')), // Keep WP separate
         'publicBase' => esc_url_raw(yourparty_public_url()),
         'streamUrl' => esc_url_raw($stream_url),
         'publicSchedule' => esc_url_raw($schedule_url),

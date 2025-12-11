@@ -1,316 +1,392 @@
 ﻿<?php
 /**
  * Front page template for YourParty Tech.
- *
+ * DESIGN: IMMERSIVE RADIO (Premium/Club)
+ * 
  * @package YourPartyTech
  */
 
 get_header();
 
 $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
-$schedule_url = apply_filters(
-    'yourparty_schedule_url',
-    yourparty_public_url('/public/' . YOURPARTY_STATION_SLUG . '/schedule')
-);
-$requests_url = apply_filters(
-    'yourparty_requests_url',
-    yourparty_public_url('/public/' . YOURPARTY_STATION_SLUG . '/embed-requests')
-);
 ?>
 
-<main id="main" class="site-main">
-    <?php
-    $hero_background = yourparty_get_hero_background_url();
-    // Note: Background is now handled via CSS/Global styles, but we keep this if needed for inline overrides
-    ?>
-    <section id="hero" class="hero">
-        <div class="container">
-            <p class="hero__eyebrow" data-aos="fade-down"><?php echo esc_html(yourparty_get_content('hero_eyebrow')); ?>
-            </p>
-            <h1 class="hero__headline" data-aos="fade-up" data-aos-delay="100">
-                <?php echo esc_html(yourparty_get_content('hero_headline')); ?>
-            </h1>
-            <p class="hero__lead" data-aos="fade-up" data-aos-delay="200">
-                <?php echo esc_html(yourparty_get_content('hero_lead')); ?>
-            </p>
-            <div class="hero__actions" data-aos="fade-up" data-aos-delay="300">
-                <a class="btn btn--primary"
-                    href="#kontakt"><?php echo esc_html(yourparty_get_content('hero_cta_primary')); ?></a>
-                <a class="btn btn--ghost"
-                    href="#radio-live"><?php echo esc_html(yourparty_get_content('hero_cta_secondary')); ?></a>
-            </div>
-        </div>
-    </section>
-
-    <section id="usp" class="section section--muted">
-        <div class="container">
-            <div class="usp-grid">
-                <article class="usp-card" data-aos="fade-up" data-aos-delay="100">
-                    <h2><?php echo esc_html(yourparty_get_content('usp_title_1')); ?></h2>
-                    <p><?php echo esc_html(yourparty_get_content('usp_desc_1')); ?></p>
-                </article>
-                <article class="usp-card" data-aos="fade-up" data-aos-delay="200">
-                    <h2><?php echo esc_html(yourparty_get_content('usp_title_2')); ?></h2>
-                    <p><?php echo esc_html(yourparty_get_content('usp_desc_2')); ?></p>
-                </article>
-                <article class="usp-card" data-aos="fade-up" data-aos-delay="300">
-                    <h2><?php echo esc_html(yourparty_get_content('usp_title_3')); ?></h2>
-                    <p><?php echo esc_html(yourparty_get_content('usp_desc_3')); ?></p>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <section id="radio-live" class="section" aria-labelledby="radio-live-title">
-        <div class="container">
-            <header class="section__intro" style="text-align: center; margin-bottom: 3rem;" data-aos="fade-up">
-                <p class="section__eyebrow"
-                    style="color: var(--color-emerald); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-                    <?php echo esc_html(yourparty_get_content('radio_eyebrow')); ?>
-                </p>
-                <h2 id="radio-live-title" style="font-size: 2.5rem; margin-bottom: 1rem;">
-                    <?php echo esc_html(yourparty_get_content('radio_title')); ?>
-                </h2>
-                <p style="color: var(--color-text-muted); max-width: 60ch; margin: 0 auto;">
-                    <?php echo esc_html(yourparty_get_content('radio_lead')); ?>
-                </p>
-            </header>
-
-            <div class="radio-card radio-card--integrated" aria-live="polite" data-aos="zoom-in"
-                data-aos-duration="1000">
-                <div class="radio-card__header">
-                    <div class="radio-card__cover-wrapper">
-                        <img id="cover-art" src="https://placehold.co/600x600/10b981/ffffff?text=YourParty+Radio"
-                            alt="<?php esc_attr_e('Cover-Art des laufenden Tracks', 'yourparty-tech'); ?>"
-                            loading="lazy">
-                    </div>
-                    <div class="radio-card__info">
-                        <div class="radio-card__title-row">
-                            <h3 id="track-title"><?php esc_html_e('Lade Titel...', 'yourparty-tech'); ?></h3>
-                        </div>
-                        <div class="radio-card__artist-row">
-                            <p id="track-artist"><?php esc_html_e('Lade Künstler...', 'yourparty-tech'); ?></p>
-                        </div>
-
-                        <!-- NEW: Next Track Marquee -->
-                        <div class="radio-card__next-row"
-                            style="opacity: 0; transition: opacity 0.5s; margin-top: 0.5rem;">
-                            <p id="next-track-marquee"
-                                style="font-size: 0.85rem; color: var(--color-emerald); font-weight: 500;">
-                                <!-- JS Injects Coming Up -->
-                            </p>
-                        </div>
-
-                        <div class="radio-card__meta-row">
-                            <div class="meta-left">
-                                <span id="track-status"
-                                    class="status-badge"><?php esc_html_e('LIVE', 'yourparty-tech'); ?></span>
-                                <span class="listener-badge">
-                                    <strong id="listener-count">--</strong>
-                                    <?php esc_html_e('Zuhörer', 'yourparty-tech'); ?>
-                                </span>
-                            </div>
-                            <div class="meta-center">
-                                <div class="rating-container">
-                                    <div class="rating-stars" id="rating-stars" role="radiogroup"
-                                        aria-label="Bewertung">
-                                        <button type="button" class="rating-star" data-value="1"
-                                            aria-label="1 Stern">★</button>
-                                        <button type="button" class="rating-star" data-value="2"
-                                            aria-label="2 Sterne">★</button>
-                                        <button type="button" class="rating-star" data-value="3"
-                                            aria-label="3 Sterne">★</button>
-                                        <button type="button" class="rating-star" data-value="4"
-                                            aria-label="4 Sterne">★</button>
-                                        <button type="button" class="rating-star" data-value="5"
-                                            aria-label="5 Sterne">★</button>
-                                    </div>
-                                    <span id="rating-average" class="rating-average">--</span>
-                                    <span id="rating-total" class="rating-total"></span>
-                                </div>
-                                <div id="current-mood-tags" class="current-mood-tags"></div>
-                            </div>
-                            <div class="meta-right">
-                                <button id="mood-tag-button" class="mood-tag-btn" title="Mood Tagging">🏷️</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="radio-card__visualizer-container">
-                    <canvas id="inline-visualizer"></canvas>
-                    <div class="visualizer-controls"
-                        style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 10;">
-                        <button class="vis-btn active" data-mode="waveform" title="Waveform">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M2 12h3l2-9 4 18 4-18 2 9h3" />
-                            </svg>
-                        </button>
-                        <button class="vis-btn" data-mode="spectrum" title="Spectrum">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M12 20V10M6 20V16M18 20V4" />
-                            </svg>
-                        </button>
-                        <button class="vis-btn" data-mode="rgb_waveform" title="GFX Mode">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M4 4h16v16H4zM8 8v8M12 8v8M16 8v8" />
-                            </svg>
-                        </button>
-                        <button id="visualizer-toggle" class="vis-btn" title="Fullscreen">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Immersive Fullscreen Overlay -->
-                <div id="immersive-overlay" class="immersive-overlay">
-                    <div class="immersive-bg"></div>
-
-                    <!-- Close Button -->
-                    <button id="exit-fullscreen" class="immersive-close-btn" title="Exit Fullscreen">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M18 6L6 18M6 6l12 12"></path>
-                        </svg>
-                    </button>
-
-                    <!-- Main Visualizer Area -->
-                    <div class="immersive-visualizer-container">
-                        <canvas id="immersive-canvas"></canvas>
-                    </div>
-
-                    <!-- Track Info & Controls -->
-                    <div class="immersive-footer">
-                        <div class="immersive-track-row">
-                            <img id="immersive-cover-img" src="" alt="Cover" class="immersive-cover">
-                            <div class="immersive-meta">
-                                <h1 id="immersive-title">Waiting for Signal...</h1>
-                                <h2 id="immersive-artist">YourParty Radio</h2>
-
-                                <!-- Immersive Rating System -->
-                                <div class="rating-container immersive-rating">
-                                    <div class="rating-stars" role="radiogroup" aria-label="Bewertung">
-                                        <button type="button" class="rating-star" data-value="1">★</button>
-                                        <button type="button" class="rating-star" data-value="2">★</button>
-                                        <button type="button" class="rating-star" data-value="3">★</button>
-                                        <button type="button" class="rating-star" data-value="4">★</button>
-                                        <button type="button" class="rating-star" data-value="5">★</button>
-                                    </div>
-                                    <!-- Optional: Mood Tags Display -->
-                                    <div id="immersive-mood-tags" class="current-mood-tags" style="margin-top: 10px;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="immersive-controls-row">
-                            <!-- Cloned Play Button via JS or separate instance -->
-                            <button id="immersive-play-btn" class="immersive-play-btn">
-                                <span class="icon-play">▶</span>
-                                <span class="icon-pause" style="display:none;">⏸</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="radio-card__controls-row">
-                    <button id="play-toggle" class="play-btn-large"
-                        aria-label="<?php esc_attr_e('Stream starten', 'yourparty-tech'); ?>">
-                        <span aria-hidden="true">▶</span>
-                    </button>
-                    <div id="vote-feedback" class="vote-feedback"></div>
-                </div>
-            </div>
-
-            <div
-                style="margin-top: 3rem; display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-                <aside class="radio-history"
-                    style="background: var(--color-glass); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--color-glass-border);">
-                    <header
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="font-size: 1.25rem; margin: 0;">
-                            <?php echo esc_html(yourparty_get_content('radio_history_title')); ?>
-                        </h3>
-                        <button class="btn btn--ghost btn--small" id="refresh-history"
-                            style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
-                            <?php esc_html_e('Aktualisieren', 'yourparty-tech'); ?>
-                        </button>
-                    </header>
-                    <ul id="history-list" class="history-list" aria-live="polite"
-                        style="list-style: none; padding: 0; margin: 0;">
-                        <li class="history-item"
-                            style="padding: 0.75rem 0; border-bottom: 1px solid var(--color-glass-border); color: var(--color-text-muted);">
-                            Lade Verlauf...</li>
-                    </ul>
-                </aside>
-
-                <div
-                    style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1rem; padding: 1.5rem; background: var(--color-glass); border-radius: var(--radius-lg); border: 1px solid var(--color-glass-border);">
-                    <h3 style="font-size: 1.25rem; margin: 0;">Musikwünsche?</h3>
-                    <p style="color: var(--color-text-muted); margin: 0;">Wünsche dir deine Lieblingstracks direkt in
-                        den Stream.</p>
-                    <a class="btn btn--primary" href="<?php echo esc_url($requests_url); ?>" target="_blank"
-                        rel="noopener">
-                        <?php echo esc_html(yourparty_get_content('radio_cta_request')); ?>
-                    </a>
-                </div>
-            </div>
+<main id="main" class="site-main immersive-mode">
+    
+    <!-- FULLSCREEN HERO / PLAYER -->
+    <section id="hero-player" class="hero-fullscreen">
+        
+        <!-- BACKGROUND VISUALIZER -->
+        <div class="vis-bg-container">
+            <!-- ID must match app.js VisualizerController -->
+            <canvas id="inline-visualizer"></canvas>
+            <div class="vis-overlay-gradient"></div>
         </div>
 
-        <!-- MTV STYLE VOTE NEXT -->
-        <div class="container" style="margin-top: 2rem;" data-aos="fade-up">
-            <div class="vibe-vote-container">
-                <header class="vibe-vote-header">
-                    <h3>📢 VOTE NEXT VIBE</h3>
-                    <p>Bestimme, was als nächstes läuft! (Community Vote)</p>
-                </header>
-                <div class="vibe-options">
-                    <button class="vibe-btn" data-vote="energetic">
-                        <span class="emoji">🔥</span>
-                        <span class="label">ENERGETIC</span>
-                    </button>
-                    <button class="vibe-btn" data-vote="chill">
-                        <span class="emoji">😎</span>
-                        <span class="label">CHILL</span>
-                    </button>
-                    <button class="vibe-btn" data-vote="groovy">
-                        <span class="emoji">🕺</span>
-                        <span class="label">GROOVY</span>
-                    </button>
-                    <button class="vibe-btn" data-vote="dark">
-                        <span class="emoji">🌑</span>
-                        <span class="label">DARK</span>
-                    </button>
+        <div class="container hero-container">
+            
+            <!-- TOP BRANDING -->
+            <div class="hero-branding" data-aos="fade-down">
+                <h1 class="hero-logo">YOURPARTY<span class="highlight">RADIO</span></h1>
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span> ON AIR
+                </div>
+            </div>
+
+            <!-- CENTER: THE GLASS PLAYER -->
+            <div class="glass-player-wrapper" data-aos="zoom-in" data-aos-duration="1000">
+                <div class="glass-player">
+                    
+                    <!-- Cover Art (Floating) -->
+                    <div class="player-cover">
+                        <img id="cover-art" src="https://placehold.co/600x600/10b981/ffffff?text=YourParty" alt="Cover" loading="eager">
+                        <div class="cover-glow"></div>
+                    </div>
+
+                    <!-- Track Info -->
+                    <div class="player-info">
+                        <h2 id="track-title" class="track-title">STATION LOADING...</h2> <!-- Updated fallback -->
+                        <p id="track-artist" class="track-artist">YourParty Tech</p>
+                        
+                        <!-- Rating Structure must match rating-module.js -->
+                        <div class="rating-strip rating-container">
+                            <div class="rating-stars" id="rating-stars" role="radiogroup">
+                                <button class="rating-star" data-value="1">★</button>
+                                <button class="rating-star" data-value="2">★</button>
+                                <button class="rating-star" data-value="3">★</button>
+                                <button class="rating-star" data-value="4">★</button>
+                                <button class="rating-star" data-value="5">★</button>
+                            </div>
+                            <span id="rating-average" class="rating-score rating-average">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Mood/Rating Actions -->
+                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 5;">
+                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre">
+                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px;">🏷️</span> TAG VIBE
+                         </button>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="player-controls">
+                        <button id="play-toggle" class="play-fab" aria-label="Play">
+                            <span class="icon-play">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </span>
+                            <span class="icon-pause" style="display:none;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Next Track Preview (Marquee) -->
+                    <div class="next-track-preview">
+                        <span class="label">NEXT:</span>
+                        <span id="next-track-marquee">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM: VIBE CONTROL DECK -->
+            <div class="vibe-deck" data-aos="fade-up">
+                <div class="deck-header">
+                    <h3>CONTROL THE VIBE</h3>
+                    <div class="deck-line"></div>
+                    <!-- VOTE STATUS INDICATOR -->
+                    <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;">AUTO MODE</div>
+                </div>
+                <div class="vibe-buttons">
+                    <button class="vibe-btn" data-vote="energetic" title="More Energy"><span class="emoji">🔥</span> <span class="lbl">ENERGY</span></button>
+                    <button class="vibe-btn" data-vote="chill" title="Chill Out"><span class="emoji">🧊</span> <span class="lbl">CHILL</span></button>
+                    <button class="vibe-btn" data-vote="groovy" title="Groove"><span class="emoji">🕺</span> <span class="lbl">GROOVE</span></button>
+                    <button class="vibe-btn" data-vote="dark" title="Dark Mode"><span class="emoji">🌑</span> <span class="lbl">DARK</span></button>
                 </div>
                 <div id="vibe-feedback" class="vibe-feedback"></div>
             </div>
+
         </div>
     </section>
 
-
-
-    <?php get_template_part('template-parts/sections/references'); ?>
-    <?php get_template_part('template-parts/sections/services'); ?>
-    <?php get_template_part('template-parts/sections/about'); ?>
-    <?php
-    get_template_part(
-        'template-parts/sections/contact',
-        null,
-        [
-            'requests_url' => $requests_url,
-        ]
-    );
-    ?>
-    <!-- Audio Source (Hidden) -->
+    <!-- HIDDEN AUDIO -->
     <audio id="radio-audio" crossorigin="anonymous" preload="none" style="display:none;">
-        <source src="<?php echo esc_url(YOURPARTY_STREAM_URL); ?>" type="audio/mpeg">
+        <source src="<?php echo esc_url($stream_url); ?>" type="audio/mpeg">
     </audio>
+
+    <!-- SCROLL INDICATOR -->
+    <div class="scroll-indicator" data-aos="fade-up" data-aos-delay="1000">
+        <span class="mouse-icon"></span>
+        <span class="text">DETAILS</span>
+    </div>
+
+        <!-- SECONDARY SECTIONS (Revealed on Scroll) -->
+    <div id="more-content" class="content-below">
+        <div class="container section-spacer">
+             <!-- SERVICES / FEATURES -->
+             <?php get_template_part('template-parts/sections/services'); ?>
+        </div>
+        
+        <div class="container section-spacer">
+             <!-- REFERENCES / TRACK RECORD -->
+             <?php get_template_part('template-parts/sections/references'); ?>
+        </div>
+
+        <div class="container section-spacer">
+             <!-- ABOUT -->
+             <?php get_template_part('template-parts/sections/about'); ?>
+        </div>
+
+        <div class="container section-spacer">
+             <!-- CONTACT -->
+             <?php get_template_part('template-parts/sections/contact'); ?>
+        </div>
+    </div>
+
 </main>
 
-<?php
-get_footer();
+<style>
+/* CRITICAL INLINE CSS FOR HERO LAYOUT */
+:root {
+    --neon-green: #00ff88;
+    --neon-blue: #00ccff;
+    --glass-bg: rgba(20, 20, 20, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sans-serif; color: #eee; }
+
+/* Hero Fullscreen */
+.hero-fullscreen {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.7;
+    animation: bounce 2s infinite;
+    cursor: pointer;
+    z-index: 20;
+}
+.scroll-indicator .mouse-icon {
+    width: 20px; height: 32px; border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; position: relative;
+}
+.scroll-indicator .mouse-icon::before {
+    content: ''; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #fff; border-radius: 50%;
+}
+.scroll-indicator .text { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; }
+
+@keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);} 40% {transform: translateX(-50%) translateY(-10px);} 60% {transform: translateX(-50%) translateY(-5px);} }
+
+
+/* Background Visualizer */
+.vis-bg-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+}
+#inline-visualizer { width: 100%; height: 100%; opacity: 0.4; }
+.vis-overlay-gradient {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at center, transparent 0%, #000 90%);
+    pointer-events: none;
+}
+
+/* Container */
+.hero-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 90vh; /* Keep it constrained so scroll indicator fits */
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px 20px 80px 20px; /* More bottom padding for scroll indicator */
+}
+
+/* Branding */
+.hero-branding { text-align: center; margin-bottom: 20px; z-index: 20; position: relative; }
+.hero-logo { 
+    font-size: 3rem; font-weight: 800; letter-spacing: -0.05em; margin: 0; color: #fff; text-shadow: 0 0 30px rgba(255,255,255,0.2); 
+    font-family: 'Outfit', sans-serif;
+}
+.hero-logo .highlight { color: var(--neon-green); }
+.live-indicator { 
+    font-size: 0.8rem; letter-spacing: 0.3em; color: var(--neon-green); font-weight: bold; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.pulse-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: 0 0 10px var(--neon-green); animation: pulse 2s infinite; }
+
+/* Glass Player (Centerpiece) */
+.glass-player-wrapper { width: 100%; max-width: 500px; perspective: 1000px; margin-top: -20px; }
+.glass-player {
+    background: var(--glass-bg);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--glass-border);
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+    position: relative;
+    transition: transform 0.3s ease;
+}
+/* Album Art */
+.player-cover {
+    width: 250px; height: 250px; margin: 0 auto 30px; position: relative;
+}
+.player-cover img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    position: relative; z-index: 2;
+}
+.cover-glow { 
+    position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; 
+    background: var(--neon-green); filter: blur(50px); opacity: 0.4; z-index: 1;
+    animation: glow-breathe 4s infinite alternate;
+}
+
+/* Info */
+.track-title { font-size: 2rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: #fff; }
+.track-artist { font-size: 1.1rem; color: #aaa; margin: 5px 0 20px; font-weight: 500; }
+
+/* Controls */
+.play-fab {
+    width: 80px; height: 80px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, var(--neon-green), #00ccaa);
+    color: #000; font-size: 30px; cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0,255,136,0.3);
+    transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    z-index: 100;
+    position: relative;
+}
+.play-fab:hover { transform: scale(1.1); box-shadow: 0 0 50px rgba(0,255,136,0.6); }
+
+.btn-glass-small {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.2s; font-weight: bold; letter-spacing: 0.05em;
+}
+.btn-glass-small:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
+
+/* Vibe Deck */
+.vibe-deck { width: 100%; max-width: 600px; text-align: center; }
+.deck-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+.deck-header h3 { font-size: 0.8rem; color: #666; letter-spacing: 0.2em; margin: 0; white-space: nowrap; }
+.deck-line { width: 100%; height: 1px; background: rgba(255,255,255,0.1); }
+.vibe-buttons { display: flex; justify-content: space-between; gap: 10px; }
+.vibe-btn {
+    flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: #fff; padding: 15px 0; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.vibe-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); border-color: #fff; }
+.vibe-btn .emoji { font-size: 1.5rem; }
+.vibe-btn .lbl { font-size: 0.6rem; font-weight: bold; letter-spacing: 0.1em; opacity: 0.7; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+@keyframes glow-breathe { 0% { opacity: 0.3; transform: scale(0.9); } 100% { opacity: 0.6; transform: scale(1.1); } }
+
+/* Rating Stars */
+.rating-strip { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
+.rating-stars button { background: none; border: none; color: #444; font-size: 24px; cursor: pointer; transition: color 0.1s; padding: 0 2px; }
+.rating-stars button:hover, .rating-stars button.active { color: #ffbb00; }
+.rating-score { font-size: 1.2rem; font-weight: bold; color: #fff; }
+
+/* Content Below Styling */
+.content-below {
+    position: relative;
+    z-index: 10;
+    background: #050505;
+    background: linear-gradient(to bottom, #000 0%, #0a0a0a 100%);
+    padding-top: 50px;
+}
+.section-spacer { padding: 40px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+/* Mobile */
+@media(max-width: 600px) {
+    .glass-player { padding: 20px; }
+    .player-cover { width: 180px; height: 180px; }
+    .track-title { font-size: 1.5rem; }
+    .vibe-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+    .hero-container { padding-bottom: 100px; } 
+}
+
+/* === MOOD DIALOG / MODAL === */
+.mood-dialog {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10000;
+    display: none; align-items: center; justify-content: center;
+}
+.mood-dialog.active { display: flex; }
+
+.mood-dialog-backdrop {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 1;
+}
+
+.mood-dialog-content {
+    position: relative; z-index: 10;
+    background: rgba(20,20,20,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%; max-width: 500px;
+    text-align: center;
+    color: #fff;
+    animation: zoomIn 0.3s ease;
+}
+
+@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.mood-dialog h3 { font-size: 1.5rem; margin-bottom: 5px; }
+.track-info { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
+
+.tag-section { margin-bottom: 20px; }
+.tag-section h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--neon-green); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+
+.mood-grid, .genre-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;
+}
+
+.mood-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px; border-radius: 10px; cursor: pointer; color: #fff;
+    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.mood-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: #fff; }
+.mood-btn .emoji { font-size: 1.5rem; }
+.mood-btn .label { font-size: 0.8rem; font-weight: bold; }
+
+.genre-grid .mood-btn { padding: 8px; }
+
+.status-msg { margin-top: 15px; font-weight: bold; min-height: 20px; }
+.status-msg.success { color: #00ff88; }
+.status-msg.error { color: #ff4444; }
+
+.close-btn {
+    position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7;
+}
+.close-btn:hover { opacity: 1; color: var(--neon-green); }
+</style>
+
+<?php get_footer(); ?>

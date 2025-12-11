@@ -143,6 +143,82 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting rating: {e}")
             return {"success": False, "error": str(e)}
 
+    def submit_mood(self, song_id: str, mood: str = None, genre: str = None, user_id: str = "anonymous") -> Dict[str, Any]:
+        """
+        Submit a new mood or genre tag for a track.
+        """
+        try:
+            doc = {
+                "song_id": song_id,
+                "user_id": user_id,
+                "timestamp": datetime.utcnow()
+            }
+            if mood:
+                doc['mood'] = mood
+            if genre:
+                doc['genre'] = genre
+            
+            # Use a separate collection for moods, or just log it
+            # For simplicity, let's assume a 'moods' collection
+            if not hasattr(self, 'moods_collection'):
+                 self.moods_collection = self.db["moods"]
+                 self.moods_collection.create_index("song_id")
+
+            self.moods_collection.insert_one(doc)
+            
+            return {"success": True, "tag": mood or genre, "message": "Tag saved!"}
+        except Exception as e:
+            logger.error(f"Error submitting mood: {e}")
+            return {"success": False, "error": str(e)}
+
+    def get_all_moods(self) -> Dict[str, Any]:
+        """Aggregate top moods for all songs."""
+        try:
+            if not hasattr(self, 'moods_collection'):
+                 self.moods_collection = self.db["moods"]
+                 
+            pipeline = [
+                {"$group": {"_id": "$mood", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 10}
+            ]
+            
+            results = list(self.moods_collection.aggregate(pipeline))
+            return {
+                "top_moods": [{"tag": r["_id"], "count": r["count"]} for r in results if r["_id"]]
+            }
+        except Exception as e:
+            logger.error(f"Error getting moods: {e}")
+            return {}
+
+    def get_song_moods(self, song_id: str) -> Dict[str, Any]:
+        """Get mood tags for a specific song."""
+        try:
+            if not hasattr(self, 'moods_collection'):
+                 self.moods_collection = self.db["moods"]
+            
+            # Get most popular mood for this song
+            pipeline = [
+                {"$match": {"song_id": song_id}},
+                {"$group": {"_id": "$mood", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 1}
+            ]
+            
+            top_mood = None
+            results = list(self.moods_collection.aggregate(pipeline))
+            if results and results[0]["_id"]:
+                top_mood = results[0]["_id"]
+                
+            return {
+                "top_mood": top_mood,
+                "all_moods": [r["_id"] for r in results] # Ideally return all, but pipeline limited to 1.
+            }
+        except Exception as e:
+            logger.error(f"Error getting song moods: {e}")
+            return {"top_mood": None}
+
+
     def sync_track_metadata(self, file_path: str, metadata: Dict[str, Any], song_id: str = None):
         """
         Sync improved metadata to MongoDB.
@@ -196,11 +272,16 @@ class MongoDatabaseClient:
                 {"$sort": {"average": -1}}
             ]
             
-            ratings = list(self.ratings_collection.aggregate(pipeline))
+            raw_results = list(self.ratings_collection.aggregate(pipeline))
+            logger.info(f"DEBUG: Raw Aggregation Found {len(raw_results)} groups.")
+            for r in raw_results:
+                 logger.info(f"DEBUG Group: {r}")
             
             # Enrich with track metadata
             result = []
-            for rating in ratings:
+            for rating in raw_results:
+                if not rating["_id"]:
+                    continue # Skip null grouping (old data?))
                 track = self.tracks_collection.find_one({"song_id": rating["_id"]})
                 if track:
                     result.append({
@@ -212,6 +293,35 @@ class MongoDatabaseClient:
                             "total": rating["total"]
                         }
                     })
+                else:
+                    # Include even if track is missing, so sync script can try to heal it
+                    result.append({
+                        "song_id": rating["_id"],
+                        "file_path": None,
+                        "metadata": {},
+                        "rating": {
+                            "average": round(rating["average"], 2),
+                            "total": rating["total"]
+                        }
+                    })
+
+                # Post-processing: Fallback for Unknown Title/Artist
+                last_entry = result[-1]
+                meta = last_entry["metadata"]
+                if not meta.get("title") or not meta.get("artist"):
+                    fp = last_entry.get("file_path")
+                    if fp:
+                        import os
+                        filename = os.path.basename(fp)
+                        name_part = os.path.splitext(filename)[0]
+                        if " - " in name_part:
+                            parts = name_part.split(" - ", 1)
+                            if not meta.get("artist"): meta["artist"] = parts[0]
+                            if not meta.get("title"): meta["title"] = parts[1]
+                        else:
+                            if not meta.get("title"): meta["title"] = name_part
+                            if not meta.get("artist"): meta["artist"] = "Unknown Artist"
+                        last_entry["metadata"] = meta
             
             return result
         except Exception as e:

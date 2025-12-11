@@ -79,45 +79,87 @@ const StreamController = (function () {
     /**
      * Toggle play/pause
      */
-    async function togglePlay() {
-        if (!audioElement) return;
+    // Playback State Management
+    let isLocked = false; // Prevents rapid re-triggering (debounce)
+    let playQueue = Promise.resolve(); // Promise queue for sequential execution
 
-        try {
-            if (audioElement.paused) {
-                await play();
-            } else {
-                pause();
-            }
-        } catch (error) {
-            console.error('[StreamController] Playback error:', error);
+    /**
+     * Toggle play/pause (Debounced)
+     */
+    function togglePlay() {
+        if (!audioElement || isLocked) return;
+
+        isLocked = true;
+        setTimeout(() => isLocked = false, 300); // Simple 300ms debounce
+
+        if (audioElement.paused) {
+            queueAction('play');
+        } else {
+            queueAction('pause');
         }
     }
 
     /**
-     * Start playback with live sync
+     * Queue a playback action to ensure sequential execution
      */
-    async function play() {
-        // Reload stream for live sync
-        reloadStream();
+    function queueAction(action) {
+        console.log(`[StreamController] Queueing action: ${action}`);
 
-        // Initialize audio context for visualizer
-        initAudioContext();
-
-        await audioElement.play();
-        isPlaying = true;
-
-        // Fetch latest track info
-        dispatchEvent('stream:play');
+        playQueue = playQueue.then(async () => {
+            try {
+                if (action === 'play') {
+                    await performPlay();
+                } else {
+                    performPause(); // Pause is synchronous/instant usually
+                }
+            } catch (err) {
+                console.error(`[StreamController] Action ${action} failed:`, err);
+            }
+        });
     }
 
     /**
-     * Pause playback
+     * Perform Play Logic
      */
-    function pause() {
+    async function performPlay() {
+        console.log('[StreamController] Performing Play...');
+
+        // Optimistic UI
+        updatePlayButtons(true);
+
+        // Ensure AudioContext
+        initAudioContext();
+
+        try {
+            await audioElement.play();
+            console.log('[StreamController] Playback started');
+            isPlaying = true;
+            dispatchEvent('stream:play');
+        } catch (error) {
+            console.warn('[StreamController] Play failed:', error);
+            isPlaying = false;
+            updatePlayButtons(false); // Revert UI
+
+            if (error.name !== 'AbortError') {
+                dispatchEvent('stream:error', { error });
+            }
+        }
+    }
+
+    /**
+     * Perform Pause Logic
+     */
+    function performPause() {
+        console.log('[StreamController] Performing Pause...');
         audioElement.pause();
         isPlaying = false;
+        updatePlayButtons(false);
         dispatchEvent('stream:pause');
     }
+
+    // Public API Methods (mapped to queue)
+    function play() { queueAction('play'); }
+    function pause() { queueAction('pause'); }
 
     /**
      * Reload stream source for live sync
@@ -125,16 +167,15 @@ const StreamController = (function () {
     function reloadStream() {
         if (!streamUrl) return;
 
-        const sourceEl = audioElement.querySelector('source');
         const cleanUrl = streamUrl.split('?')[0];
+        // Timestamp prevents caching
         const newUrl = `${cleanUrl}?_=${Date.now()}`;
 
-        if (sourceEl) {
-            sourceEl.src = newUrl;
+        if (audioElement.querySelector('source')) {
+            audioElement.querySelector('source').src = newUrl;
         } else {
             audioElement.src = newUrl;
         }
-
         audioElement.load();
     }
 
@@ -213,12 +254,28 @@ const StreamController = (function () {
      * Update all play buttons
      */
     function updatePlayButtons(playing) {
-        const icon = playing ? '❚❚' : '▶';
         const label = playing ? 'Pausieren' : 'Abspielen';
 
         document.querySelectorAll(`${SELECTORS.playBtn}, ${SELECTORS.miniPlayBtn}`).forEach(btn => {
-            const iconEl = btn.querySelector('span') || btn;
-            if (iconEl) iconEl.textContent = icon;
+            if (!btn) return;
+
+            // Logic for buttons with dedicated icon spans (Front Page)
+            const playIcon = btn.querySelector('.icon-play');
+            const pauseIcon = btn.querySelector('.icon-pause');
+
+            if (playIcon && pauseIcon) {
+                playIcon.style.display = playing ? 'none' : 'inline';
+                pauseIcon.style.display = playing ? 'inline' : 'none';
+            } else {
+                // Fallback for simple buttons (Mini Player often just has text or one icon)
+                const icon = playing ? '❚❚' : '▶';
+                const iconEl = btn.querySelector('span') || btn;
+                // Only replace text if it looks like an icon (short) to avoid wiping text buttons
+                if (iconEl.textContent.length < 3) {
+                    iconEl.textContent = icon;
+                }
+            }
+
             btn.setAttribute('aria-label', label);
             btn.classList.toggle('playing', playing);
         });
@@ -243,7 +300,9 @@ const StreamController = (function () {
     };
 })();
 
-// Export
+// Export and Global Attachment
+window.StreamController = StreamController;
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = StreamController;
 }
