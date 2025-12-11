@@ -797,6 +797,88 @@ add_action('rest_api_init', function () {
         ]
     );
 
+    // NEW: Dual Mood Voting Endpoint (current + next)
+    register_rest_route(
+        'yourparty/v1',
+        '/vote-mood',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $song_id = preg_replace('/[^a-zA-Z0-9]/', '', (string) $request->get_param('song_id'));
+                $mood_current = sanitize_text_field((string) $request->get_param('mood_current'));
+                $mood_next = sanitize_text_field((string) $request->get_param('mood_next'));
+                $title = sanitize_text_field((string) $request->get_param('title'));
+                $artist = sanitize_text_field((string) $request->get_param('artist'));
+
+                if (empty($song_id)) {
+                    return new WP_Error('yourparty_invalid_payload', 'Song ID erforderlich.', ['status' => 400]);
+                }
+
+                if (empty($mood_current) && empty($mood_next)) {
+                    return new WP_Error('yourparty_invalid_payload', 'Mindestens ein Mood erforderlich.', ['status' => 400]);
+                }
+
+                // Valid moods (matching backend)
+                $valid_moods = ['energy', 'chill', 'groove', 'dark', 'euphoric', 'melancholic', 'hypnotic', 'aggressive', 'trippy', 'warm'];
+
+                if (!empty($mood_current) && !in_array($mood_current, $valid_moods, true)) {
+                    return new WP_Error('yourparty_invalid_mood', 'Ungültiger mood_current: ' . $mood_current, ['status' => 400]);
+                }
+
+                if (!empty($mood_next) && !in_array($mood_next, $valid_moods, true)) {
+                    return new WP_Error('yourparty_invalid_mood', 'Ungültiger mood_next: ' . $mood_next, ['status' => 400]);
+                }
+
+                // Proxy to FastAPI backend
+                $api_url = 'http://192.168.178.25:8080/vote-mood';
+
+                $body_args = [
+                    'song_id' => $song_id,
+                    'title' => $title,
+                    'artist' => $artist
+                ];
+
+                if (!empty($mood_current)) {
+                    $body_args['mood_current'] = $mood_current;
+                }
+                if (!empty($mood_next)) {
+                    $body_args['mood_next'] = $mood_next;
+                }
+
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode($body_args),
+                    'timeout' => 5
+                ]);
+
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Backend nicht erreichbar: ' . $response->get_error_message(), ['status' => 503]);
+                }
+
+                $code = wp_remote_retrieve_response_code($response);
+                $body = wp_remote_retrieve_body($response);
+
+                if ($code !== 200) {
+                    return new WP_Error('api_error', 'Backend Fehler: ' . $body, ['status' => $code]);
+                }
+
+                $data = json_decode($body, true);
+                return rest_ensure_response($data ?: [
+                    'success' => true,
+                    'song_id' => $song_id,
+                    'mood_current' => $mood_current,
+                    'mood_next' => $mood_next
+                ]);
+            },
+            'permission_callback' => '__return_true',
+            'args' => [
+                'song_id' => ['required' => true, 'type' => 'string'],
+                'mood_current' => ['required' => false, 'type' => 'string'],
+                'mood_next' => ['required' => false, 'type' => 'string'],
+            ],
+        ]
+    );
+
     // Get all mood tags (Admin only)
     register_rest_route(
         'yourparty/v1',

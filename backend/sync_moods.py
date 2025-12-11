@@ -10,10 +10,14 @@ from backend.azuracast_client import AzuraCastClient
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("MoodSync")
 
-# Configuration
+# Configuration - SECURITY: No hardcoded defaults for sensitive values
 AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "http://192.168.178.210")
-AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY", "9199dc63da623190:c9f8c3a22e25932753dd3f4d57fa0d9c")
+AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
+
+# Validate required credentials
+if not AZURACAST_API_KEY:
+    raise ValueError("AZURACAST_API_KEY environment variable is required")
 
 class MoodSyncer:
     def __init__(self):

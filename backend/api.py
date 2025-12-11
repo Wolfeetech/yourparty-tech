@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# ========== FEATURE FLAGS ==========
+FEATURE_MOOD_VOTES = os.getenv("FEATURE_MOOD_VOTES", "true").lower() == "true"
+FEATURE_MOOD_SYNC = os.getenv("FEATURE_MOOD_SYNC", "false").lower() == "true"
+FEATURE_MOOD_AUTODJ = os.getenv("FEATURE_MOOD_AUTODJ", "false").lower() == "true"
+MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
+MOOD_VOTE_COOLDOWN_MINUTES = int(os.getenv("MOOD_VOTE_COOLDOWN_MINUTES", "5"))
+
 from music_scanner import MusicScanner
 from tag_improver import TagImprover
 from genre_organizer import GenreOrganizer
@@ -439,6 +446,9 @@ async def websocket_endpoint(websocket: WebSocket):
 async def startup_event():
     logger.info("Starting Radio API...")
     
+    # Log feature flag status
+    logger.info(f"Feature Flags: MOOD_VOTES={FEATURE_MOOD_VOTES}, MOOD_SYNC={FEATURE_MOOD_SYNC}, MOOD_AUTODJ={FEATURE_MOOD_AUTODJ}")
+    
     # 1. Start Polling Loop IMMEDIATELY (Critical for UI)
     logger.info("Launching Public Status Loop...")
     asyncio.create_task(public_status_loop())
@@ -464,6 +474,22 @@ async def startup_event():
         logger.info("Connected to MongoDB.")
     except Exception as e:
         logger.error(f"Failed to connect to Mongo (Non-critical for Playback): {e}")
+
+    # 3. Start Mood Auto-DJ Scheduler (if enabled)
+    if FEATURE_MOOD_AUTODJ and state.mongo_client:
+        try:
+            from mood_scheduler import schedule_mood_queue_worker
+            from azuracast_client import AzuraCastClient
+            
+            azura_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+            azura_key = os.getenv("AZURACAST_API_KEY", "")
+            
+            azura_client = AzuraCastClient(azura_url, azura_key, 1)
+            
+            logger.info(f"Starting Mood Auto-DJ (cycle: {MOOD_CYCLE_SECONDS}s)...")
+            asyncio.create_task(schedule_mood_queue_worker(state.mongo_client, azura_client))
+        except Exception as e:
+            logger.error(f"Failed to start Mood Auto-DJ: {e}")
 
 @app.get("/debug/status")
 async def debug_status():
@@ -641,6 +667,105 @@ async def tag_mood(request: MoodRequest):
         )
     
     return {"success": True, "warning": "Mock Success - DB Missing"}
+
+# ========== MOOD VOTING SYSTEM ==========
+class MoodVoteRequest(BaseModel):
+    """Request model for dual mood voting (current + next)."""
+    song_id: str
+    mood_current: Optional[str] = None  # What mood IS this song?
+    mood_next: Optional[str] = None     # What mood do you WANT next?
+    rating: Optional[int] = None        # 1-5 star rating
+    vote: Optional[str] = None          # like/dislike
+    user_id: str = "anonymous"
+
+VALID_MOODS = [
+    "energy", "chill", "groove", "dark", "euphoric",
+    "melancholic", "hypnotic", "aggressive", "trippy", "warm"
+]
+
+@app.post("/vote-mood")
+async def vote_mood(request: MoodVoteRequest):
+    """
+    Handle dual mood voting from frontend.
+    
+    - mood_current: User's perception of current song's mood
+    - mood_next: User's preference for the next song's mood
+    
+    This data is used to:
+    1. Update the song's mood aggregates
+    2. Influence automatic DJ decisions (when FEATURE_MOOD_AUTODJ is enabled)
+    """
+    # Feature flag check
+    if not FEATURE_MOOD_VOTES:
+        raise HTTPException(status_code=503, detail="Mood voting is currently disabled")
+    
+    # Validate moods
+    if request.mood_current and request.mood_current not in VALID_MOODS:
+        raise HTTPException(status_code=400, detail=f"Invalid mood_current: {request.mood_current}")
+    if request.mood_next and request.mood_next not in VALID_MOODS:
+        raise HTTPException(status_code=400, detail=f"Invalid mood_next: {request.mood_next}")
+    
+    if not request.mood_current and not request.mood_next and not request.rating:
+        raise HTTPException(status_code=400, detail="At least one of mood_current, mood_next, or rating required")
+    
+    logger.info(f"Mood vote: song={request.song_id}, current={request.mood_current}, next={request.mood_next}")
+    
+    result = {
+        "success": True,
+        "song_id": request.song_id,
+        "mood_current": request.mood_current,
+        "mood_next": request.mood_next
+    }
+    
+    if state.mongo_client:
+        # Store mood vote for current song perception
+        if request.mood_current:
+            state.mongo_client.submit_mood(
+                song_id=request.song_id,
+                mood=request.mood_current
+            )
+        
+        # Store mood_next preference in a separate collection for DJ decisions
+        if request.mood_next:
+            state.mongo_client.submit_mood_next_vote(
+                song_id=request.song_id,
+                mood_next=request.mood_next,
+                user_id=request.user_id
+            )
+        
+        # Handle rating if provided
+        if request.rating:
+            state.mongo_client.submit_rating(
+                song_id=request.song_id,
+                rating=request.rating,
+                user_id=request.user_id
+            )
+            result["rating"] = request.rating
+        
+        # Get updated aggregates
+        mood_data = state.mongo_client.get_song_moods(request.song_id)
+        result["mood_counts"] = mood_data.get("mood_counts", {})
+        result["dominant_mood"] = mood_data.get("top_mood")
+    else:
+        result["warning"] = "Database not connected - vote not persisted"
+    
+    return result
+
+@app.get("/mood-stats")
+async def get_mood_stats():
+    """Get aggregated mood statistics for the current time window."""
+    if not state.mongo_client:
+        return {"error": "Database not connected"}
+    
+    return {
+        "dominant_next_mood": state.mongo_client.get_dominant_next_mood(time_window_minutes=10),
+        "feature_flags": {
+            "FEATURE_MOOD_VOTES": FEATURE_MOOD_VOTES,
+            "FEATURE_MOOD_SYNC": FEATURE_MOOD_SYNC,
+            "FEATURE_MOOD_AUTODJ": FEATURE_MOOD_AUTODJ,
+            "MOOD_CYCLE_SECONDS": MOOD_CYCLE_SECONDS
+        }
+    }
 
 @app.get("/history")
 async def get_history():

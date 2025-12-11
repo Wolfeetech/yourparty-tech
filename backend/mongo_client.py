@@ -192,31 +192,147 @@ class MongoDatabaseClient:
             return {}
 
     def get_song_moods(self, song_id: str) -> Dict[str, Any]:
-        """Get mood tags for a specific song."""
+        """Get mood tags for a specific song with counts."""
         try:
             if not hasattr(self, 'moods_collection'):
                  self.moods_collection = self.db["moods"]
             
-            # Get most popular mood for this song
+            # Get all mood counts for this song
             pipeline = [
                 {"$match": {"song_id": song_id}},
                 {"$group": {"_id": "$mood", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}}
+            ]
+            
+            results = list(self.moods_collection.aggregate(pipeline))
+            
+            mood_counts = {}
+            top_mood = None
+            for r in results:
+                if r["_id"]:
+                    mood_counts[r["_id"]] = r["count"]
+                    if top_mood is None:
+                        top_mood = r["_id"]
+                
+            return {
+                "top_mood": top_mood,
+                "mood_counts": mood_counts,
+                "all_moods": [r["_id"] for r in results if r["_id"]]
+            }
+        except Exception as e:
+            logger.error(f"Error getting song moods: {e}")
+            return {"top_mood": None, "mood_counts": {}}
+
+    # ========== MOOD VOTING SYSTEM ==========
+    
+    def submit_mood_next_vote(self, song_id: str, mood_next: str, user_id: str = "anonymous") -> Dict[str, Any]:
+        """
+        Store a user's preference for what mood they want next.
+        Used by the auto-DJ to influence track selection.
+        
+        Args:
+            song_id: Current song ID (for context)
+            mood_next: Desired mood for next track
+            user_id: User identifier
+        """
+        try:
+            if not hasattr(self, 'mood_next_votes_collection'):
+                self.mood_next_votes_collection = self.db["mood_next_votes"]
+                self.mood_next_votes_collection.create_index("timestamp")
+                self.mood_next_votes_collection.create_index("mood_next")
+            
+            vote_doc = {
+                "song_id": song_id,  # What was playing when vote was cast
+                "mood_next": mood_next,
+                "user_id": user_id,
+                "timestamp": datetime.utcnow()
+            }
+            
+            self.mood_next_votes_collection.insert_one(vote_doc)
+            logger.info(f"Mood next vote stored: {mood_next}")
+            
+            return {"success": True, "mood_next": mood_next}
+        except Exception as e:
+            logger.error(f"Error submitting mood_next vote: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def get_dominant_next_mood(self, time_window_minutes: int = 10) -> Optional[str]:
+        """
+        Get the dominant mood preference from recent votes.
+        Used by auto-DJ to select the next track.
+        
+        Args:
+            time_window_minutes: How far back to look for votes
+            
+        Returns:
+            Most voted mood in the time window, or None
+        """
+        try:
+            if not hasattr(self, 'mood_next_votes_collection'):
+                self.mood_next_votes_collection = self.db["mood_next_votes"]
+            
+            from datetime import timedelta
+            cutoff = datetime.utcnow() - timedelta(minutes=time_window_minutes)
+            
+            pipeline = [
+                {"$match": {"timestamp": {"$gte": cutoff}}},
+                {"$group": {"_id": "$mood_next", "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}},
                 {"$limit": 1}
             ]
             
-            top_mood = None
-            results = list(self.moods_collection.aggregate(pipeline))
+            results = list(self.mood_next_votes_collection.aggregate(pipeline))
+            
             if results and results[0]["_id"]:
-                top_mood = results[0]["_id"]
-                
-            return {
-                "top_mood": top_mood,
-                "all_moods": [r["_id"] for r in results] # Ideally return all, but pipeline limited to 1.
-            }
+                logger.info(f"Dominant next mood: {results[0]['_id']} ({results[0]['count']} votes)")
+                return results[0]["_id"]
+            
+            return None
         except Exception as e:
-            logger.error(f"Error getting song moods: {e}")
-            return {"top_mood": None}
+            logger.error(f"Error getting dominant next mood: {e}")
+            return None
+    
+    def get_tracks_by_mood(self, mood: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get tracks tagged with a specific mood.
+        Used for auto-DJ track selection.
+        
+        Args:
+            mood: Target mood
+            limit: Maximum tracks to return
+            
+        Returns:
+            List of track documents with that mood
+        """
+        try:
+            if not hasattr(self, 'moods_collection'):
+                self.moods_collection = self.db["moods"]
+            
+            # Get all song_ids with this mood
+            mood_docs = list(self.moods_collection.find(
+                {"mood": mood},
+                {"song_id": 1}
+            ).limit(limit * 2))  # Get more to filter
+            
+            song_ids = list(set(doc["song_id"] for doc in mood_docs if doc.get("song_id")))
+            
+            # Enrich with track metadata
+            tracks = []
+            for song_id in song_ids[:limit]:
+                track = self.tracks_collection.find_one({"song_id": song_id})
+                if track:
+                    tracks.append({
+                        "song_id": song_id,
+                        "file_path": track.get("file_path"),
+                        "metadata": track.get("metadata", {}),
+                        "mood": mood
+                    })
+            
+            logger.info(f"Found {len(tracks)} tracks with mood: {mood}")
+            return tracks
+        except Exception as e:
+            logger.error(f"Error getting tracks by mood: {e}")
+            return []
 
 
     def sync_track_metadata(self, file_path: str, metadata: Dict[str, Any], song_id: str = None):

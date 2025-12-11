@@ -267,3 +267,102 @@
     height: 1px;
     background: rgba(255,255,255,0.05);
 }
+
+/* ========== TAB SYSTEM FOR DUAL VOTING ========== */
+.mood-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mood-tab {
+    flex: 1;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #666;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mood-tab:hover {
+    color: #999;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.mood-tab.active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--emerald);
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+/* ========== PANELS ========== */
+.mood-panel {
+    display: none;
+    animation: fadeIn 0.2s ease;
+}
+
+.mood-panel.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.mood-panel__hint {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 16px;
+    text-align: center;
+    font-family: var(--font-display);
+}
+
+/* ========== SELECTION INDICATOR ========== */
+.mood-dialog__selection {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    min-height: 20px;
+}
+
+.mood-dialog__selection span {
+    font-size: 11px;
+    font-family: var(--font-display);
+    color: var(--emerald);
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.mood-dialog__selection span:empty {
+    display: none;
+}
+
+/* ========== FOCUS STYLES FOR ACCESSIBILITY ========== */
+.mood-btn:focus-visible,
+.mood-tab:focus-visible {
+    outline: 2px solid var(--emerald);
+    outline-offset: 2px;
+}
+
+.mood-dialog__btn-submit:focus-visible,
+.mood-dialog__btn-cancel:focus-visible {
+    outline: 2px solid var(--emerald);
+    outline-offset: 2px;
+}
+
