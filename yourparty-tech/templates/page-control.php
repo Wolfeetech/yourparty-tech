@@ -50,13 +50,8 @@ $current_user = wp_get_current_user();
 $is_admin = current_user_can('manage_options');
 
 // --- ACTIONS (Skip, Sync, Steer) ---
-// [Logic kept same as before, just removed inline HTML/CSS handling for brevity in this replace block, expecting Logic is stable]
-// ... (Logic for handling POST requests would ideally be here or in a separate handler file. For this view replacement, we assume the logic exists or we re-inject key parts).
-// RE-INJECTING CRITICAL LOGIC:
-
 // Handle Skip
 if ($is_admin && isset($_POST['skip_track']) && wp_verify_nonce($_POST['_wpnonce'], 'yourparty_control_action')) {
-    // ... skipping logic (simplified for view) ...
     if (defined('YOURPARTY_AZURACAST_API_KEY')) {
         $api_url = rtrim(yourparty_azuracast_base_url(), '/') . "/api/station/1/backend/skip";
         wp_remote_post($api_url, array_merge(yourparty_http_defaults(), ['timeout' => 5]));
@@ -72,8 +67,6 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 }
 
 // --- DATA FETCH ---
-// --- DATA FETCH ---
-// Use internal IP to avoid loopback NAT issues
 $api_base = 'http://192.168.178.211:8000'; 
 
 $ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => false, 'timeout' => 5]));
@@ -91,21 +84,34 @@ if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' 
 
 // Combine Data
 $combined_data = [];
-$all_ids = array_unique(array_merge(array_keys($ratings_data), array_keys($moods_data)));
-foreach ($all_ids as $id) {
-    if (!$id) continue;
-    $combined_data[$id] = [
-        'title' => $moods_data[$id]['title'] ?? $ratings_data[$id]['title'] ?? 'Unknown Track',
-        'artist' => $moods_data[$id]['artist'] ?? $ratings_data[$id]['artist'] ?? 'Unknown Artist',
-        'path' => $moods_data[$id]['path'] ?? $ratings_data[$id]['path'] ?? '',
-        'rating_avg' => $ratings_data[$id]['average'] ?? 0,
-        'rating_total' => $ratings_data[$id]['total'] ?? 0,
-        'top_mood' => $moods_data[$id]['top_mood'] ?? '-',
-        'votes' => ($ratings_data[$id]['total'] ?? 0) + ($moods_data[$id]['total_votes'] ?? 0)
-    ];
+// Use ratings as base
+if (isset($ratings_data) && is_array($ratings_data)) {
+    foreach ($ratings_data as $id => $data) {
+        if (!$id) continue;
+        
+        $title = $data['title'] ?? 'Unknown';
+        $artist = $data['artist'] ?? 'Unknown';
+        
+        // FILTER: Skip useless data (User Request)
+        if ($title === 'Unknown' && $artist === 'Unknown') continue;
+        if ($title === 'Unknown Track' && $artist === 'Unknown Artist') continue;
+
+        $combined_data[$id] = [
+            'title' => $title,
+            'artist' => $artist,
+            'path' => $data['path'] ?? '',
+            'rating_avg' => $data['average'] ?? 0,
+            'rating_total' => $data['total'] ?? 0,
+            'top_mood' => $moods_data[$id]['top_mood'] ?? '-',
+            'votes' => ($data['total'] ?? 0) + ($moods_data[$id]['total_votes'] ?? 0)
+        ];
+    }
 }
-// Sort by Votes
-uasort($combined_data, function ($a, $b) { return $b['rating_avg'] <=> $a['rating_avg']; });
+
+// Sort by Votes (Rating * Total roughly, or just Avg)
+uasort($combined_data, function ($a, $b) { 
+    return $b['rating_avg'] <=> $a['rating_avg']; 
+});
 
 
 get_header(); 
@@ -135,7 +141,7 @@ get_header();
             </div>
             
             <div class="scrollable-table">
-                <table class="cyber-table">
+                <table class="cyber-table control-table">
                     <thead>
                         <tr>
                             <th>TRACK</th>
@@ -176,6 +182,9 @@ get_header();
                             </td>
                         </tr>
                         <?php endforeach; ?>
+                        <?php if (empty($combined_data)): ?>
+                            <tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">NO DATA AVAILABLE (Wait for Votes)</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -246,6 +255,12 @@ get_header();
             <span class="now-label">ON AIR</span>
             <span id="monitor-title" class="scrolling-text">WAITING FOR SIGNAL...</span>
         </div>
+        <div class="control-actions" style="margin-left: 15px;">
+            <button id="monitor-play-btn" class="footer-btn">▶ MONITOR</button>
+        </div>
+        <div class="volume-control">
+            VOL <input type="range" id="monitor-volume" min="0" max="100" value="80">
+        </div>
     </div>
     <div class="ft-right">
         <div class="stat">
@@ -267,6 +282,7 @@ get_header();
     --border: rgba(255,255,255,0.08);
     --primary: #00ff88;
     --danger: #ff4444;
+    --emerald: #00ff88;
 }
 
 body { background: var(--bg-dark); }
@@ -379,728 +395,188 @@ body { background: var(--bg-dark); }
 .stat .val.ok { color: var(--primary); }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+/* USER CSS (Injected) */
+.mood-btn { background: #1a1a1a; border: 1px solid #333; color: #ccc; padding: 8px; font-size: 11px; cursor: pointer; border-radius: 4px; text-align: left; } 
+.mood-btn:hover { border-color: #666; } 
+.nav-tabs { display: flex; gap: 2px; background: #111; padding: 4px; border-radius: 4px; } 
+.tab-btn { background: transparent; border: none; color: #666; padding: 6px 12px; font-family: var(--font-display); font-size: 10px; font-weight: bold; cursor: pointer; border-radius: 2px; } 
+.tab-btn.active { background: #222; color: #fff; } 
+.tab-btn:hover:not(.active) { color: #999; } 
+.data-table-wrapper { display: none; } 
+.data-table-wrapper.active { display: block; } 
+.mood-btn.active { border-color: var(--emerald); color: var(--emerald); background: rgba(16, 185, 129, 0.1); } 
+.control-footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(10, 10, 10, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 1000; backdrop-filter: blur(10px); } 
+.footer-left, .footer-center, .footer-right { display: flex; align-items: center; gap: 20px; } 
+.footer-btn { background: #222; border: 1px solid #333; color: #fff; padding: 6px 12px; font-family: var(--font-display); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; border-radius: 2px; transition: all 0.2s; } 
+.footer-btn:hover { background: #333; border-color: #555; } 
+.footer-btn.danger { border-color: #aa0000; color: #ff4444; } 
+.footer-btn.danger:hover { background: #330000; } 
+.footer-btn.warning { border-color: #aa5500; color: #ffaa00; } 
+.now-playing-monitor { display: flex; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.5); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.05); } 
+.monitor-info { display: flex; flex-direction: column; line-height: 1.1; width: 150px; } 
+#monitor-title { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } 
+.volume-control { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #666; } 
+input[type=range] { height: 4px; -webkit-appearance: none; background: #333; border-radius: 2px; width: 80px; } 
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: var(--emerald); border-radius: 50%; cursor: pointer; } 
+.status-metric { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; } 
+.status-metric .label { font-size: 9px; color: #666; } 
+.status-metric .value { font-size: 12px; color: var(--emerald); font-family: monospace; } 
 </style>
 
 <?php get_footer(); ?>
 
-    .mood-btn {
-        background: #1a1a1a;
-        border: 1px solid #333;
-        color: #ccc;
-        padding: 8px;
-        font-size: 11px;
-        cursor: pointer;
-        border-radius: 4px;
-        text-align: left;
-    }
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tableBody=document.querySelector('.control-table tbody');
+    const apiBase='<?php echo esc_js($api_base); ?>';
 
-    .mood-btn:hover {
-        border-color: #666;
-    }
+    function updateData() {
+        Promise.all([ 
+            fetch(`${apiBase}/ratings`).then(r=> r.json()),
+            fetch(`${apiBase}/moods`).then(r=> r.json())
+        ]).then(([ratings, moods])=> {
+            const allIds=new Set([...Object.keys(ratings), ...Object.keys(moods)]);
 
-    /* Tabs */
-    .nav-tabs {
-        display: flex;
-        gap: 2px;
-        background: #111;
-        padding: 4px;
-        border-radius: 4px;
-    }
-
-    .tab-btn {
-        background: transparent;
-        border: none;
-        color: #666;
-        padding: 6px 12px;
-        font-family: var(--font-display);
-        font-size: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        border-radius: 2px;
-    }
-
-    .tab-btn.active {
-        background: #222;
-        color: #fff;
-    }
-
-    .tab-btn:hover:not(.active) {
-        color: #999;
-    }
-
-    .data-table-wrapper {
-        display: none;
-        /* Hidden by default, JS toggles */
-    }
-
-    .data-table-wrapper.active {
-        display: block;
-    }
-
-    .mood-btn.active {
-        border-color: var(--emerald);
-        color: var(--emerald);
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    /* Footer Controls */
-    .control-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 60px;
-        background: rgba(10, 10, 10, 0.95);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 20px;
-        z-index: 1000;
-        backdrop-filter: blur(10px);
-    }
-
-    .footer-left,
-    .footer-center,
-    .footer-right {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .footer-btn {
-        background: #222;
-        border: 1px solid #333;
-        color: #fff;
-        padding: 6px 12px;
-        font-family: var(--font-display);
-        font-size: 11px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        cursor: pointer;
-        border-radius: 2px;
-        transition: all 0.2s;
-    }
-
-    .footer-btn:hover {
-        background: #333;
-        border-color: #555;
-    }
-
-    .footer-btn.danger {
-        border-color: #aa0000;
-        color: #ff4444;
-    }
-
-    .footer-btn.danger:hover {
-        background: #330000;
-    }
-
-    .footer-btn.warning {
-        border-color: #aa5500;
-        color: #ffaa00;
-    }
-
-    .now-playing-monitor {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 4px 10px;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .monitor-info {
-        display: flex;
-        flex-direction: column;
-        line-height: 1.1;
-        width: 150px;
-    }
-
-    #monitor-title {
-        font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .volume-control {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 10px;
-        color: #666;
-    }
-
-    input[type=range] {
-        height: 4px;
-        -webkit-appearance: none;
-        background: #333;
-        border-radius: 2px;
-        width: 80px;
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 10px;
-        height: 10px;
-        background: var(--emerald);
-        border-radius: 50%;
-        cursor: pointer;
-    }
-
-    .status-metric {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        line-height: 1.1;
-    }
-
-    .status-metric .label {
-        font-size: 9px;
-        color: #666;
-    }
-
-    .status-metric .value {
-        font-size: 12px;
-        color: var(--emerald);
-        font-family: monospace;
-    }
-
-    /* Adjust main content padding to prevent overlap */
-    .control-dashboard {
-        padding-bottom: 80px;
-    }
-
-    <script>document.addEventListener('DOMContentLoaded', function () {
-            const tableBody=document.querySelector('.control-table tbody');
-            const apiBase='<?php echo esc_js($api_base); ?>';
-
-            function updateData() {
-                Promise.all([ fetch(`$ {
-                            apiBase
-                        }
-
-                        /ratings`).then(r=> r.json()),
-                    fetch(`$ {
-                            apiBase
-                        }
-
-                        /moods`).then(r=> r.json())]).then(([ratings, moods])=> {
-                        const allIds=new Set([...Object.keys(ratings), ...Object.keys(moods)]);
-
-                        // If empty
-                        if (allIds.size===0) {
-                            if ( !tableBody.querySelector('.empty-state')) {
-                                tableBody.innerHTML='<tr><td colspan="5" class="empty-state">NO DATA YET</td></tr>';
-                            }
-
-                            return;
-                        }
-
-                        // Map data
-                        const rows=Array.from(allIds).map(id=> {
-                                const r=ratings[id] || {}
-
-                                ;
-
-                                const m=moods[id] || {}
-
-                                ;
-
-                                return {
-                                    id,
-                                    title: m.title,
-                                    artist: m.artist,
-                                    top: m.top_mood || '-',
-                                    genre: m.top_genre || '-',
-                                    avg: parseFloat(r.average || 0),
-                                    total: parseInt(r.total || 0),
-                                    votes: parseInt(m.total_votes || 0),
-                                    combinedScore: (parseInt(m.total_votes || 0) + parseInt(r.total || 0))
-                                }
-
-                                ;
-                            });
-
-                        // Sort
-                        rows.sort((a, b)=> b.combinedScore - a.combinedScore);
-
-                        // Rebuild HTML (Cleanest way without VDOM)
-                        // Note: In production you might want to update cells individually to avoid flicker,
-                        // but for this dashboard a simple rebuild is fine and robust.
-                        const html=rows.map(row=> {
-                                const color=row.avg >=4 ? 'var(--emerald)' : (row.avg <=2 ? '#ff4444' : '#888');
-
-                                const display=(row.title && row.artist) ? `$ {
-                                    row.artist
-                                }
-
-                                - $ {
-                                    row.title
-                                }
-
-                                ` : (row.id.substring(0, 8) + '...');
-                                // Escape HTML function
-                                const e=str=> str ? str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
-
-                                return ` <tr> <td class="mono-font" title="${e(row.id)}" >$ {
-                                    e(display)
-                                }
-
-                                </td> <td style="color: #aaa; font-size: 11px;" >$ {
-                                    e(row.genre)
-                                }
-
-                                </td> <td><span class="mood-badge" >$ {
-                                    e(row.top.charAt(0).toUpperCase() + row.top.slice(1))
-                                }
-
-                                </span></td> <td> <span style="color: ${color}; font-weight: bold;" >★ $ {
-                                    row.avg.toFixed(1)
-                                }
-
-                                </span> <small>($ {
-                                        row.total
-
-                                    })</small> </td> <td class="text-right" >$ {
-                                    row.votes
-                                }
-
-                                </td> </tr> `;
-                            }).join('');
-
-                        tableBody.innerHTML=html;
-                    }).catch(err=> console.error('Data pull failed', err));
+            // If empty
+            if (allIds.size===0) {
+                if (!tableBody.querySelector('.empty-state')) {
+                    tableBody.innerHTML='<tr><td colspan="5" class="empty-state">NO DATA YET</td></tr>';
+                }
+                return;
             }
 
-            // Update every 5 seconds
-            setInterval(updateData, 5000);
-
-            // --- FOOTER CONTROLS ---
-            const monitorPlayBtn=document.getElementById('monitor-play-btn');
-            const volSlider=document.getElementById('monitor-volume');
-            const monitorTitle=document.getElementById('monitor-title');
-            const monitorArtist=document.getElementById('monitor-artist');
-            const listenerVal=document.getElementById('monitor-listeners');
-            const monitorCanvas=document.getElementById('monitor-visualizer');
-            let monitorCtx;
-
-            if(monitorCanvas) monitorCtx=monitorCanvas.getContext('2d');
-
-            // Check StreamController availability
-            let sc=window.StreamController;
-            if ( !sc && window.YourPartyApp) sc=window.YourPartyApp.getStreamController();
-
-            if (monitorPlayBtn && sc) {
-                monitorPlayBtn.addEventListener('click', ()=> sc.togglePlay());
-
-                // Sync Play State
-                window.addEventListener('stream:playing', ()=> {
-                        monitorPlayBtn.textContent='⏸ PAUSE';
-                        monitorPlayBtn.style.color='var(--emerald)';
-                        monitorPlayBtn.style.borderColor='var(--emerald)';
-                    });
-
-                window.addEventListener('stream:paused', ()=> {
-                        monitorPlayBtn.textContent='▶ MONITOR';
-                        monitorPlayBtn.style.color='';
-                        monitorPlayBtn.style.borderColor='';
-                    });
-            }
-
-            if (volSlider) {
-                volSlider.addEventListener('input', (e)=> {
-                        const audio=document.getElementById('radio-audio');
-                        if(audio) audio.volume=e.target.value / 100;
-                    });
-            }
-
-            // Sync Metadata
-            window.addEventListener('songChange', (e)=> {
-                    const song=e.detail.song;
-
-                    if(song) {
-                        if(monitorTitle) monitorTitle.textContent=song.title;
-                        if(monitorArtist) monitorArtist.textContent=song.artist;
-                    }
-                });
-
-            // Listeners (Quick Hack using existing update logic or polling)
-            // Ideally we grab it from the main update loop, but for now let's just use the main UI elem
-            setInterval(()=> {
-                    const mainCount=document.getElementById('listener-count');
-
-                    if(mainCount && listenerVal) {
-                        listenerVal.textContent=mainCount.textContent || '--';
-                    }
-                }
-
-                , 2000);
-
-            // Mini Visualizer Loop
-            function drawMiniVis() {
-                requestAnimationFrame(drawMiniVis);
-                if( !monitorCtx || !sc) return;
-                const analyser=sc.getAnalyser();
-
-                if( !analyser) {
-                    // Idle noise
-                    monitorCtx.clearRect(0, 0, 100, 30);
-                    monitorCtx.fillStyle='#222';
-                    monitorCtx.fillRect(0, 14, 100, 2);
-                    return;
-                }
-
-                const bufferValid=analyser.frequencyBinCount;
-                if( !bufferValid) return;
-
-                const data=new Uint8Array(bufferValid);
-                analyser.getByteFrequencyData(data);
-
-                monitorCtx.clearRect(0, 0, 100, 30);
-                monitorCtx.fillStyle='var(--emerald)';
-
-                const barW=3;
-                const gap=1;
-                const count=Math.floor(100 / (barW+gap));
-                const step=Math.floor(data.length / count);
-
-                for(let i=0; i<count; i++) {
-                    let sum=0; for(let j=0; j<step; j++) sum+=data[i*step+j];
-                    const val=sum/step;
-                    const h=(val/255)*25;
-
-                    monitorCtx.fillRect(i*(barW+gap), 30-h, barW, h);
-                }
-            }
-
-            drawMiniVis();
-
-            function updateData() {
-                Promise.all([ fetch(`$ {
-                            apiBase
-                        }
-
-                        /ratings`).then(r=> r.json()),
-                    fetch(`$ {
-                            apiBase
-                        }
-
-                        /moods`).then(r=> r.json())]).then(([ratings, moods])=> {
-                        const allIds=new Set([...Object.keys(ratings), ...Object.keys(moods)]);
-
-                        // If empty
-                        if (allIds.size===0) {
-                            if ( !tableBody.querySelector('.empty-state')) {
-                                tableBody.innerHTML='<tr><td colspan="5" class="empty-state">NO DATA YET</td></tr>';
-                            }
-
-                            return;
-                        }
-
-                        // Map data
-                        const rows=Array.from(allIds).map(id=> {
-                                const r=ratings[id] || {}
-
-                                ;
-
-                                const m=moods[id] || {}
-
-                                ;
-
-                                // Clean up title/artist display
-                                let displayTitle=(m.title && m.artist) ? `$ {
-                                    m.artist
-                                }
-
-                                - $ {
-                                    m.title
-                                }
-
-                                ` : (m.title || 'Unknown Track');
-
-                                if ( !m.title && !m.artist) {
-
-                                    // Fallback to ID if absolutely nothing else
-                                    displayTitle=`Track $ {
-                                        id.substring(0, 8)
-                                    }
-
-                                    ...`;
-                                }
-
-                                return {
-                                    id,
-                                    title: m.title,
-                                    artist: m.artist,
-                                    display: displayTitle,
-                                    top: m.top_mood || '-',
-                                    genre: m.top_genre || '-',
-                                    avg: parseFloat(r.average || 0),
-                                    total: parseInt(r.total || 0),
-                                    votes: parseInt(m.total_votes || 0),
-                                    combinedScore: (parseInt(m.total_votes || 0) + parseInt(r.total || 0))
-                                }
-
-                                ;
-                            });
-
-                        // Sort
-                        rows.sort((a, b)=> b.combinedScore - a.combinedScore);
-
-                        // Rebuild HTML
-                        const e=str=> str ? str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
-
-                        const html=rows.map(row=> {
-                                const color=row.avg >=4 ? 'var(--emerald)' : (row.avg <=2 ? '#ff4444' : '#888');
-
-                                return ` <tr> <td class="mono-font" title="${e(row.id)}" > $ {
-                                    e(row.display)
-                                }
-
-                                </td> <td style="color: #aaa; font-size: 11px;" >$ {
-                                    e(row.genre)
-                                }
-
-                                </td> <td> <span class="mood-badge" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" > $ {
-                                    e(row.top !=='-' ? row.top.toUpperCase() : '-')
-                                }
-
-                                </span> </td> <td> <span style="color: ${color}; font-weight: bold;" >★ $ {
-                                    row.avg.toFixed(1)
-                                }
-
-                                </span> <small>($ {
-                                        row.total
-
-                                    })</small> </td> <td class="text-right" >$ {
-                                    row.votes
-                                }
-
-                                </td> </tr> `;
-                            }).join('');
-
-                        tableBody.innerHTML=html;
-                    }).catch(err=> console.error('Data pull failed', err));
-            }
-
-            // Update every 5 seconds
-            setInterval(updateData, 5000);
-
-            // --- FOOTER CONTROLS ---
-            const monitorPlayBtn=document.getElementById('monitor-play-btn');
-            const volSlider=document.getElementById('monitor-volume');
-            const monitorTitle=document.getElementById('monitor-title');
-            const monitorArtist=document.getElementById('monitor-artist');
-            const listenerVal=document.getElementById('monitor-listeners');
-            const monitorCanvas=document.getElementById('monitor-visualizer');
-            let monitorCtx;
-
-            if(monitorCanvas) monitorCtx=monitorCanvas.getContext('2d');
-
-            // Check StreamController availability
-            let sc=window.StreamController;
-            if ( !sc && window.YourPartyApp) sc=window.YourPartyApp.getStreamController();
-
-            if (monitorPlayBtn && sc) {
-                monitorPlayBtn.addEventListener('click', ()=> sc.togglePlay());
-
-                // Sync Play State
-                window.addEventListener('stream:playing', ()=> {
-                        monitorPlayBtn.textContent='⏸ PAUSE';
-                        monitorPlayBtn.style.color='var(--emerald)';
-                        monitorPlayBtn.style.borderColor='var(--emerald)';
-                    });
-
-                window.addEventListener('stream:paused', ()=> {
-                        monitorPlayBtn.textContent='▶ MONITOR';
-                        monitorPlayBtn.style.color='';
-                        monitorPlayBtn.style.borderColor='';
-                    });
-            }
-
-            if (volSlider) {
-                volSlider.addEventListener('input', (e)=> {
-                        const audio=document.getElementById('radio-audio');
-                        if(audio) audio.volume=e.target.value / 100;
-                    });
-            }
-
-            // Sync Metadata
-            window.addEventListener('songChange', (e)=> {
-                    const song=e.detail.song;
-
-                    if(song) {
-                        if(monitorTitle) monitorTitle.textContent=song.title;
-                        if(monitorArtist) monitorArtist.textContent=song.artist;
-                    }
-                });
-
-            // Listeners (Quick Hack using existing update logic or polling)
-            // Ideally we grab it from the main update loop, but for now let's just use the main UI elem
-            setInterval(()=> {
-                    const mainCount=document.getElementById('listener-count');
-
-                    if(mainCount && listenerVal) {
-                        listenerVal.textContent=mainCount.textContent || '--';
-                    }
-                }
-
-                , 2000);
-
-            // Mini Visualizer Loop
-            function drawMiniVis() {
-                requestAnimationFrame(drawMiniVis);
-                if( !monitorCtx || !sc) return;
-                const analyser=sc.getAnalyser();
-
-                if( !analyser) {
-                    // Idle noise
-                    monitorCtx.clearRect(0, 0, 100, 30);
-                    monitorCtx.fillStyle='#222';
-                    monitorCtx.fillRect(0, 14, 100, 2);
-                    return;
-                }
-
-                const bufferValid=analyser.frequencyBinCount;
-                if( !bufferValid) return;
-
-                const data=new Uint8Array(bufferValid);
-                analyser.getByteFrequencyData(data);
-
-                monitorCtx.clearRect(0, 0, 100, 30);
-                monitorCtx.fillStyle='var(--emerald)';
-
-                const barW=3;
-                const gap=1;
-                const count=Math.floor(100 / (barW+gap));
-                const step=Math.floor(data.length / count);
-
-                for(let i=0; i<count; i++) {
-                    let sum=0; for(let j=0; j<step; j++) sum+=data[i*step+j];
-                    const val=sum/step;
-                    const h=(val/255)*25;
-                    monitorCtx.fillRect(i*(barW+gap), 30-h, barW, h);
-                    let count=0;
-
-                    rows.forEach(row=> {
-                            let show=false;
-
-                            if (tab==='live') {
-                                // Just show all for now, or filter by recent votes? 
-                                // Let's assume 'Live' means sorted by activity (default view)
-                                show=true;
-                            }
-
-                            else if (tab==='top') {
-                                // Filter > 4 stars
-                                const rating=parseFloat(row.querySelector('td:nth-child(4)').innerText.replace('★', ''));
-                                if(rating >=4.0) show=true;
-                            }
-
-                            else if (tab==='history') {
-                                // Logic would need real history data, for now show nothing or placeholder
-                                // Since we don't have history in this table, let's just show 'all' but re-sorted (simulated)
-                                show=true;
-                            }
-
-                            row.style.display=show ? 'table-row' : 'none';
-                            if(show) count++;
-                        });
-
-                    // Sort Logic (Client Side)
-                    if(tab==='top') {
-                        const tbody=document.querySelector('.control-table tbody');
-
-                        const sorted=Array.from(rows).sort((a, b)=> {
-                                const ra=parseFloat(a.querySelector('td:nth-child(4)').innerText.replace('★', '')||0);
-                                const rb=parseFloat(b.querySelector('td:nth-child(4)').innerText.replace('★', '')||0);
-                                return rb - ra;
-                            });
-                        tbody.append(...sorted);
-                    }
-
-                    document.getElementById('track-count-badge').textContent=`$ {
-                        count
-                    }
-
-                    TRACKS`;
-                }
-
-                ;
-
-                // --- TOAST SYSTEM ---
-                const toastContainer=document.createElement('div');
-                toastContainer.id='toast-container';
-                toastContainer.style.cssText='position:fixed; top: 20px; right: 20px; z-index: 9999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
-                document.body.appendChild(toastContainer);
-
-                window.showControlToast=function(msg, type='info') {
-                    const toast=document.createElement('div');
-                    const color=type==='error' ?'#ff4444':(type==='success' ?'var(--emerald)':'#fff');
-                    const bg=type==='error' ?'rgba(50,0,0,0.9)':'rgba(0,20,0,0.9)';
-
-                    toast.style.cssText=`background:$ {
-                        bg
-                    }
-
-                    ; color:$ {
-                        color
-                    }
-
-                    ; border:1px solid $ {
-                        color
-                    }
-
-                    ; padding:12px 20px; border-radius:4px; font-family:var(--font-display); font-size:12px; opacity:0; transform:translateX(20px); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); `;
-                    toast.textContent=msg;
-
-                    toastContainer.appendChild(toast);
-
-                    // Animate In
-                    requestAnimationFrame(()=> {
-                            toast.style.opacity='1';
-                            toast.style.transform='translateX(0)';
-                        });
-
-                    // Remove
-                    setTimeout(()=> {
-                            toast.style.opacity='0';
-                            toast.style.transform='translateX(20px)';
-                            setTimeout(()=> toast.remove(), 300);
-                        }
-
-                        , 3000);
-                }
-
-                ;
-
-                // --- KEYBOARD SHORTCUTS ---
-                document.addEventListener('keydown', (e)=> {
-                        // N -> Next Track (Admin)
-                        if (e.key.toLowerCase()==='n' && e.shiftKey &&
-
-                            <?php echo $is_admin ? 'true' : 'false'; ?>
-                        ) {
-                            if(confirm('QUICK SKIP?')) document.querySelector('button[name=skip_track]').click();
-                        }
-
-                        // Space -> Toggle Monitor
-                        if (e.code==='Space' && e.target.tagName !=='INPUT') {
-                            e.preventDefault();
-                            document.getElementById('monitor-play-btn').click();
-                        }
-                    });
-
-                // Initial Toast if messaged
-                <?php if ($skip_message): ?>
-                    setTimeout(()=> window.showControlToast('<?php echo esc_js($skip_message); ?>', '<?php echo strpos($skip_message, 'SUCCESS') !== false ? 'success' : 'error'; ?>'), 500);
-                <?php endif; ?>
-
-                // Re-bind table updater to respect tab sorting? 
-                // For now, let the interval update run, it might reset sort, but that's acceptable for "Live" view.
-            });
-        </script><?php get_footer(); ?>```
+            // Map data
+            const rows=Array.from(allIds).map(id=> {
+                const r=ratings[id] || {};
+                const m=moods[id] || {};
+
+                // Client Side Filter for noise
+                if ( (!r.title || r.title==='Unknown') && (!m.title) ) return null;
+
+                return {
+                    id,
+                    title: m.title || r.title || 'Unknown',
+                    artist: m.artist || r.artist || 'Unknown',
+                    top: m.top_mood || '-',
+                    genre: m.top_genre || '-',
+                    avg: parseFloat(r.average || 0),
+                    total: parseInt(r.total || 0),
+                    votes: parseInt(m.total_votes || 0),
+                    combinedScore: (parseInt(m.total_votes || 0) + parseInt(r.total || 0))
+                };
+            }).filter(Boolean);
+
+            // Sort
+            rows.sort((a, b)=> b.combinedScore - a.combinedScore);
+
+            // Rebuild HTML
+            const e=str=> str ? str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+
+            const html=rows.map(row=> {
+                const color=row.avg >=4 ? 'var(--emerald)' : (row.avg <=2 ? '#ff4444' : '#888');
+                const display = `${row.artist} - ${row.title}`;
+
+                return `<tr>
+                    <td class="mono-font" title="${e(row.id)}">${e(display)}</td>
+                    <td><span class="mood-badge">${e(row.top)}</span></td>
+                    <td><span style="color: ${color}; font-weight: bold;">★ ${row.avg.toFixed(1)}</span></td>
+                    <td><button class="cyber-btn small">FILES</button></td>
+                    <td><div class="mini-bar" style="width: ${Math.min(100, row.votes * 5)}px;"></div></td>
+                </tr>`;
+            }).join('');
+
+            tableBody.innerHTML=html;
+        }).catch(err=> console.error('Data pull failed', err));
+    }
+
+    // Update every 5 seconds
+    setInterval(updateData, 5000);
+    updateData(); // Initial call
+
+    // --- FOOTER CONTROLS ---
+    const monitorPlayBtn=document.getElementById('monitor-play-btn');
+    const volSlider=document.getElementById('monitor-volume');
+    const monitorTitle=document.getElementById('monitor-title');
+    const monitorCanvas=document.getElementById('monitor-visualizer');
+    let monitorCtx;
+
+    if(monitorCanvas) monitorCtx=monitorCanvas.getContext('2d');
+
+    // Check StreamController availability
+    let sc = null;
+    if (window.YourPartyAppInstance && window.YourPartyAppInstance.modules.stream) {
+        sc = window.YourPartyAppInstance.modules.stream;
+    } else if (window.StreamController) {
+        sc = window.StreamController;
+    }
+
+    if (monitorPlayBtn && sc) {
+        monitorPlayBtn.addEventListener('click', ()=> sc.togglePlay());
+
+        // Sync Play State
+        window.addEventListener('stream:playing', ()=> {
+            monitorPlayBtn.textContent='⏸ PAUSE';
+            monitorPlayBtn.style.color='var(--emerald)';
+            monitorPlayBtn.style.borderColor='var(--emerald)';
+        });
+
+        window.addEventListener('stream:paused', ()=> {
+            monitorPlayBtn.textContent='▶ MONITOR';
+            monitorPlayBtn.style.color='';
+            monitorPlayBtn.style.borderColor='';
+        });
+    }
+
+    if (volSlider) {
+        volSlider.addEventListener('input', (e)=> {
+            const audio=document.getElementById('radio-audio');
+            if(audio) audio.volume=e.target.value / 100;
+        });
+    }
+
+    // Sync Metadata
+    window.addEventListener('songChange', (e)=> {
+        const song=e.detail.song;
+        if(song && monitorTitle) {
+            monitorTitle.textContent=song.title;
+        }
+    });
+
+    // Mini Visualizer Loop
+    function drawMiniVis() {
+        requestAnimationFrame(drawMiniVis);
+        if( !monitorCtx || !sc) return;
+        const analyser=sc.getAnalyser();
+
+        if( !analyser) {
+            monitorCtx.clearRect(0, 0, 100, 30);
+            monitorCtx.fillStyle='#222';
+            monitorCtx.fillRect(0, 14, 100, 2);
+            return;
+        }
+
+        const bufferValid=analyser.frequencyBinCount;
+        if( !bufferValid) return;
+
+        const data=new Uint8Array(bufferValid);
+        analyser.getByteFrequencyData(data);
+
+        monitorCtx.clearRect(0, 0, 100, 30);
+        monitorCtx.fillStyle='var(--emerald)';
+
+        const barW=3;
+        const gap=1;
+        const count=Math.floor(100 / (barW+gap));
+        const step=Math.floor(data.length / count);
+
+        for(let i=0; i<count; i++) {
+            let sum=0; for(let j=0; j<step; j++) sum+=data[i*step+j];
+            const val=sum/step;
+            const h=(val/255)*25;
+            monitorCtx.fillRect(i*(barW+gap), 30-h, barW, h);
+        }
+    }
+    drawMiniVis();
+});
+</script>
