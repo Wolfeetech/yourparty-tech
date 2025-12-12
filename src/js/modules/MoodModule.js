@@ -76,21 +76,20 @@ class MoodModule {
         this.processQueue(); // Try to flush queue on init
 
         // Explicit Check & Bind for Debugging
-        const btn = document.getElementById('mood-tag-button');
-        if (btn) {
-            console.log('[MoodModule] Tag Button FOUND. ID matches.');
-            // Fallback direct binding in case delegation fails
-            btn.addEventListener('click', (e) => {
-                console.log('[MoodModule] Direct Click Triggered');
+        // Global Event Delegation for Dynamic Elements
+        document.body.addEventListener('click', (e) => {
+            const btn = e.target.closest('#mood-tag-button');
+            if (btn) {
+                console.log('[MoodModule] Delegated Click Triggered');
                 e.preventDefault();
-                e.stopPropagation(); // Prevent bubbling issues
+                e.stopPropagation();
                 this.openDialog();
-            });
-            // Ensure visual cursor
-            btn.style.cursor = 'pointer';
-            btn.style.zIndex = '9999'; // Force top
-        } else {
-            console.error('[MoodModule] Tag Button NOT FOUND. Check ID in markup.');
+            }
+        });
+
+        // Debug Log
+        if (document.getElementById('mood-tag-button')) {
+            console.log('[MoodModule] Tag Button Visible on Init');
         }
 
         // Listen for online status

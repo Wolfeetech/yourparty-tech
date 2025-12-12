@@ -97,6 +97,7 @@ foreach ($all_ids as $id) {
     $combined_data[$id] = [
         'title' => $moods_data[$id]['title'] ?? $ratings_data[$id]['title'] ?? 'Unknown Track',
         'artist' => $moods_data[$id]['artist'] ?? $ratings_data[$id]['artist'] ?? 'Unknown Artist',
+        'path' => $moods_data[$id]['path'] ?? $ratings_data[$id]['path'] ?? '',
         'rating_avg' => $ratings_data[$id]['average'] ?? 0,
         'rating_total' => $ratings_data[$id]['total'] ?? 0,
         'top_mood' => $moods_data[$id]['top_mood'] ?? '-',
@@ -140,6 +141,7 @@ get_header();
                             <th>TRACK</th>
                             <th>MOOD</th>
                             <th>RATING</th>
+                            <th>FILE</th>
                             <th>TREND</th>
                         </tr>
                     </thead>
@@ -147,16 +149,27 @@ get_header();
                         <?php foreach (array_slice($combined_data, 0, 50) as $id => $row): 
                             $score = $row['rating_avg'];
                             $color = $score >= 4.5 ? '#00ff88' : ($score >= 3 ? '#ffffff' : '#ff4444');
+                            $path = $row['path'] ?? '';
+                            $filename = basename($path);
+                            // Clean path for display (hide internal structure)
+                            $display_path = str_replace('/var/radio/music', 'M:', $path);
                         ?>
                         <tr>
                             <td>
                                 <div class="track-info">
-                                    <span class="track-title"><?php echo esc_html($row['title']); ?></span>
+                                    <span class="track-title"><?php echo esc_html($row['title'] ?: $filename); ?></span>
                                     <span class="track-artist"><?php echo esc_html($row['artist']); ?></span>
                                 </div>
                             </td>
                             <td><span class="badge-mood"><?php echo esc_html($row['top_mood']); ?></span></td>
                             <td style="color: <?php echo $color; ?>; font-weight:800;"><?php echo number_format($score, 1); ?></td>
+                            <td>
+                                <?php if ($path): ?>
+                                <button class="cyber-btn small copy-btn" onclick="navigator.clipboard.writeText('<?php echo esc_js(str_replace('/', '\\', $display_path)); ?>'); alert('Copied Path: <?php echo esc_js($filename); ?>');">
+                                    📂 LINK
+                                </button>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <!-- Sparkline simulated -->
                                 <div class="mini-bar" style="width: <?php echo min(100, $row['votes'] * 5); ?>px;"></div>

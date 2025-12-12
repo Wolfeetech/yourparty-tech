@@ -6,16 +6,17 @@
 - **Problem**: Thin Pool bei 96.6% - System instabil (Muss noch geprüft werden)
 - **Lösungsansätze**:
   - [x] **ERLEDIGT**: 1TB HDD als Proxmox Storage 'hdd-backup' eingerichtet (646GB frei)
-  - [ ] Container-Größen optimieren (brauchen die alle soviel?)
-  - [ ] CT 100 (alte radio-api, inaktiv) löschen → ~8GB frei
-  - [ ] Nicht benötigte Container identifizieren
+  - [x] Container-Größen optimieren (brauchen die alle soviel?)
+  - [x] CT 100 (alte radio-api, inaktiv) löschen → ~8GB frei
+  - [x] Nicht benötigte Container identifizieren (CT 100 gone)
+  - [/] Migration WordPress CT 207 (Failed - Volume Error)
 
 ### 2. Frontend Integration (CRITICAL / BROKEN)
-- **Status**: ⚠️ PARTIALLY BROKEN - Handover Phase
+- **Status**: ✅ FIXED via modularization
 - **Current Issues**:
     - [x] **API Proxy**: Fixed (`/api/` -> `211`) via Apache config. Data available.
-    - [ ] **"Station Loading" Bug**: JS fails to bind API data to DOM elements. (Suspect ID mismatch).
-    - [ ] **Interactive Features**: Ratings and Visualizer dead due to JS init failure.
+    - [x] **"Station Loading" Bug**: Fixed via StatusManager.js.
+    - [x] **Interactive Features**: Visualizer Pro & Mood Tagging active.
     - [x] **Control Dashboard**: CSS styling fixed and deployed.
 
 ---

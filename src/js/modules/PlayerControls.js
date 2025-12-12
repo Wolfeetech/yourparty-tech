@@ -88,8 +88,10 @@ export default class PlayerControls {
         if (!this.dom.marquee) return;
 
         if (song) {
+            // Fix: Just show the artist - title, css handles the label "NEXT:"
             const text = song.text || `${song.artist} - ${song.title}`;
-            this.dom.marquee.textContent = `NEXT: ${text}`;
+            // If the element contains "NEXT:", strip it to prevent duplication
+            this.dom.marquee.textContent = text.replace(/^NEXT:\s*/i, '');
             this.dom.marquee.parentNode.style.opacity = '1';
         } else {
             this.dom.marquee.textContent = 'Queue Empty';

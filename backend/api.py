@@ -804,7 +804,8 @@ async def get_ratings(song_id: Optional[str] = None):
             "average": t['rating']['average'], 
             "total": t['rating']['total'], 
             "title": t.get('metadata', {}).get('title', 'Unknown'), 
-            "artist": t.get('metadata', {}).get('artist', 'Unknown')
+            "artist": t.get('metadata', {}).get('artist', 'Unknown'),
+            "path": t.get('path', '')
         } 
         for t in tracks 
         if 'song_id' in t
