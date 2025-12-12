@@ -17,7 +17,12 @@ $requests_url = $args['requests_url'] ?? '#';
                     <p><?php echo esc_html(yourparty_get_content('contact_lead')); ?></p>
                 </header>
 
-                <form action="#" method="post" class="form-grid">
+                <form action="#" method="post" class="form-grid" id="contact-form">
+                    <!-- Honeypot for Spam Bots -->
+                    <div style="display:none; visibility:hidden;">
+                        <input type="text" name="_honeypot" value="" tabindex="-1" autocomplete="off">
+                    </div>
+
                     <div class="form-row form-row--inline">
                         <div class="form-field">
                             <label for="name" class="sr-only">Name</label>
@@ -33,8 +38,11 @@ $requests_url = $args['requests_url'] ?? '#';
                         <textarea id="message" name="message" placeholder="Erzähl uns von deinem Event..."
                             required></textarea>
                     </div>
+                    
+                    <div id="contact-status" class="form-status" role="status" aria-live="polite"></div>
+
                     <div class="form-actions">
-                        <button type="submit" class="btn btn--primary">Nachricht senden</button>
+                        <button type="submit" class="btn btn--primary" id="contact-submit">Nachricht senden</button>
                     </div>
                     <p class="form-privacy">
                         Mit dem Absenden stimmst du der <a

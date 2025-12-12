@@ -797,6 +797,45 @@ add_action('rest_api_init', function () {
         ]
     );
 
+    // NEW: Contact Form Endpoint
+    register_rest_route(
+        'yourparty/v1',
+        '/contact',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $name = sanitize_text_field($request->get_param('name'));
+                $email = sanitize_email($request->get_param('email'));
+                $message = sanitize_textarea_field($request->get_param('message'));
+                
+                if (empty($name) || empty($email) || empty($message)) {
+                    return new WP_Error('missing_fields', 'Bitte alle Felder ausfüllen.', ['status' => 400]);
+                }
+
+                // Rate Limit Check (reuse existing function)
+                if (!yourparty_check_rate_limit($_SERVER['REMOTE_ADDR'] ?? 'unknown')) {
+                     return new WP_Error('rate_limit', 'Zu viele Anfragen.', ['status' => 429]);
+                }
+
+                $to = get_option('admin_email');
+                $subject = 'Kontaktformular: ' . $name;
+                $body = "Name: $name\nEmail: $email\n\nNachricht:\n$message";
+                $headers = ['Reply-To: ' . $name . ' <' . $email . '>'];
+
+                if (wp_mail($to, $subject, $body, $headers)) {
+                    return rest_ensure_response(['message' => 'Nachricht erfolgreich gesendet.']);
+                } else {
+                    return new WP_Error('mail_failed', 'Versand fehlgeschlagen.', ['status' => 500]);
+                }
+            },
+            'permission_callback' => function () {
+                // Verify Nonce
+                $nonce = $_SERVER['HTTP_X_WP_NONCE'] ?? '';
+                return wp_verify_nonce($nonce, 'wp_rest');
+            }
+        ]
+    );
+
     // NEW: Dual Mood Voting Endpoint (current + next)
     register_rest_route(
         'yourparty/v1',
@@ -818,15 +857,21 @@ add_action('rest_api_init', function () {
                     return new WP_Error('yourparty_invalid_payload', 'Mindestens ein Mood erforderlich.', ['status' => 400]);
                 }
 
-                // Valid moods (matching backend)
-                $valid_moods = ['energy', 'chill', 'groove', 'dark', 'euphoric', 'melancholic', 'hypnotic', 'aggressive', 'trippy', 'warm'];
+                // Valid moods (Sync with MoodModule.js)
+                $valid_moods = [
+                    'energetic', 'chill', 'euphoric', 'dark', 'groovy', 
+                    'melodic', 'melancholic', 'aggressive', 'hypnotic', 
+                    'trippy', 'warm', 'uplifting', 'atmospheric', 'raw',
+                    // Keep legacy for backward compatibility if needed
+                    'energy', 'groove' 
+                ];
 
                 if (!empty($mood_current) && !in_array($mood_current, $valid_moods, true)) {
-                    return new WP_Error('yourparty_invalid_mood', 'Ungültiger mood_current: ' . $mood_current, ['status' => 400]);
+                    return new WP_Error('yourparty_invalid_mood', 'Invalid mood_current: ' . $mood_current, ['status' => 400]);
                 }
 
                 if (!empty($mood_next) && !in_array($mood_next, $valid_moods, true)) {
-                    return new WP_Error('yourparty_invalid_mood', 'Ungültiger mood_next: ' . $mood_next, ['status' => 400]);
+                    return new WP_Error('yourparty_invalid_mood', 'Invalid mood_next: ' . $mood_next, ['status' => 400]);
                 }
 
                 // Proxy to FastAPI backend
@@ -946,4 +991,60 @@ add_action('rest_api_init', function () {
             },
         ]
     );
+
+    // Contact Form Endpoint (Public with rate limit & honeypot)
+    register_rest_route('yourparty/v1', '/contact', [
+        'methods' => 'POST',
+        'callback' => 'yourparty_handle_contact',
+        'permission_callback' => '__return_true',
+        'args' => [
+            'name' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
+            'email' => ['required' => true, 'sanitize_callback' => 'sanitize_email'],
+            'message' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
+            '_honeypot' => ['required' => false],
+        ]
+    ]);
 });
+
+/**
+ * Handle Contact Form Submission
+ */
+function yourparty_handle_contact($request) {
+    // 1. Honeypot Check
+    if (!empty($request['_honeypot'])) {
+        // Return fake success to confuse bots
+        return new WP_REST_Response(['status' => 'success', 'message' => 'Sent'], 200);
+    }
+
+    // 2. Rate Limiting (IP based)
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $transient_key = 'contact_limit_' . md5($ip);
+    if (get_transient($transient_key)) {
+        return new WP_Error('rate_limit', 'Bitte warte einen Moment bevor du eine weitere Nachricht sendest.', ['status' => 429]);
+    }
+    set_transient($transient_key, true, 300); // 5 minutes
+
+    // 3. Process Data
+    $name = $request['name'];
+    $email = $request['email'];
+    $message = $request['message'];
+    
+    $to = get_option('admin_email');
+    $subject = "Neue Nachricht von $name (YourParty)";
+    
+    $body = "Name: $name\n";
+    $body .= "Email: $email\n\n";
+    $body .= "Nachricht:\n$message\n";
+    
+    $headers = ['Reply-To: ' . "$name <$email>"];
+
+    // 4. Send Mail
+    $sent = wp_mail($to, $subject, $body, $headers);
+
+    if ($sent) {
+        return new WP_REST_Response(['status' => 'success', 'message' => 'Nachricht erfolgreich gesendet!'], 200);
+    } else {
+        return new WP_Error('mail_failed', 'Fehler beim Senden. Bitte versuche es später.', ['status' => 500]);
+    }
+}
+

@@ -46,6 +46,15 @@ export default class VisualEngine {
             this.startRendering();
 
             window.addEventListener('resize', () => this.resize());
+
+            // Interaction: Switch Mode on Canvas Click
+            this.canvas.addEventListener('click', () => {
+                this.nextMode();
+
+                // Show floating Feedback
+                // TODO: Maybe implement a better UI toast via main.js later
+            });
+
             return true;
         }
         return false;
@@ -80,120 +89,117 @@ export default class VisualEngine {
 
             if (!this.analyser || !this.dataArray || !this.ctx) return;
 
-            this.analyser.getByteFrequencyData(this.dataArray);
+            // Differentiate data needed based on mode
+            const mode = this.MODES[this.currentMode];
+
+            if (mode.id === 'precision_wave' || mode.id === 'oscilloscope') {
+                this.analyser.getByteTimeDomainData(this.dataArray);
+            } else {
+                this.analyser.getByteFrequencyData(this.dataArray);
+            }
 
             const w = this.canvas.width / this.DPI;
             const h = this.canvas.height / this.DPI;
 
-            // Call current mode renderer
-            const mode = this.MODES[this.currentMode];
+            // Clear with trail effect for some modes
+            if (mode.id === 'particle_field' || mode.id === 'strobe_lights') {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Trails
+                this.ctx.fillRect(0, 0, w, h);
+            } else {
+                this.ctx.clearRect(0, 0, w, h);
+            }
+
             switch (mode.id) {
                 case 'pro_spectrum': this.drawProSpectrum(w, h); break;
                 case 'precision_wave': this.drawPrecisionWave(w, h); break;
                 case 'particle_field': this.drawParticleField(w, h, timestamp); break;
-                case 'frequency_rings': this.drawFrequencyRings(w, h, timestamp); break;
-                case 'energy_matrix': this.drawEnergyMatrix(w, h, timestamp); break;
-                case 'strobe_lights': this.drawStrobeLights(w, h, timestamp); break;
-                case 'color_wash': this.drawColorWash(w, h, timestamp); break;
-                case 'kaleidoscope': this.drawKaleidoscope(w, h, timestamp); break;
+                default: this.drawProSpectrum(w, h); break;
             }
         };
 
         this.animationId = requestAnimationFrame(render);
     }
 
-    // --- Renderers (Simplified for class structure) ---
-
     drawProSpectrum(w, h) {
-        this.ctx.fillStyle = 'rgba(10, 10, 10, 0.3)';
-        this.ctx.fillRect(0, 0, w, h);
+        // Fix: Only render useful frequency range (approx first 70% of bins)
+        // MP3s often cut off above 16kHz, leaving the right side empty in linear plots.
+        const usefulLimit = Math.floor(this.dataArray.length * 0.7);
 
-        const bars = 64;
-        const barWidth = w / bars;
-        const maxHeight = h * 0.85;
+        const barWidth = (w / usefulLimit) * 2.5; // Wider bars
+        let barHeight;
+        let x = 0;
 
-        const gradient = this.ctx.createLinearGradient(0, h, 0, 0);
-        gradient.addColorStop(0, '#2E8B57');
-        gradient.addColorStop(0.5, '#3b82f6');
-        gradient.addColorStop(1, '#ec4899');
-        this.ctx.fillStyle = gradient;
+        for (let i = 0; i < usefulLimit; i++) {
+            barHeight = (this.dataArray[i] / 255) * h;
 
-        for (let i = 0; i < bars; i++) {
-            const idx = Math.floor((i / bars) * this.dataArray.length);
-            const value = this.dataArray[idx] / 255;
-            const barHeight = value * maxHeight;
-            this.ctx.fillRect(i * barWidth, h - barHeight, barWidth - 2, barHeight);
+            // Color based on height (Frequency intensity)
+            // Green (Low) -> Blue (Mid) -> Pink (High)
+            const hue = i / usefulLimit * 360;
+            this.ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+
+            // Draw mirrored? No, classic spectrum for "Pro" feel
+            this.ctx.fillRect(x, h - barHeight, barWidth, barHeight);
+
+            x += barWidth + 1;
         }
     }
 
     drawPrecisionWave(w, h) {
-        this.ctx.fillStyle = 'rgba(10, 10, 10, 0.2)';
-        this.ctx.fillRect(0, 0, w, h);
-
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeStyle = '#00f0ff';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = '#00ff88'; // Neon Green
         this.ctx.beginPath();
+
         const sliceWidth = w / this.dataArray.length;
+        let x = 0;
+
         for (let i = 0; i < this.dataArray.length; i++) {
-            const v = this.dataArray[i] / 255;
-            const y = h / 2 + (v - 0.5) * h;
-            i === 0 ? this.ctx.moveTo(0, y) : this.ctx.lineTo(i * sliceWidth, y);
+            const v = this.dataArray[i] / 128.0;
+            const y = (v * h) / 2; // Center it
+
+            if (i === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
+
+            x += sliceWidth;
         }
+
+        this.ctx.lineTo(w, h / 2);
         this.ctx.stroke();
     }
 
-    // ... Other render methods would follow similar pattern ...
-    // For brevity in this turn, I am implementing the two most important ones
-    // and placeholders for the others to avoid huge file writes if not needed immediately.
-    // But since the user wants it to be "Professional Grade", I should probably include at least Particle Field.
-
     drawParticleField(w, h, t) {
-        this.ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
-        this.ctx.fillRect(0, 0, w, h);
-
-        if (this.particles.length < 100) {
-            this.particles.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                freq: Math.floor(Math.random() * this.dataArray.length)
-            });
+        // Initialize particles if needed
+        if (this.particles.length < 50) {
+            for (let i = 0; i < 50; i++) {
+                this.particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: Math.random() * 3,
+                    speed: Math.random() * 2 + 0.5
+                });
+            }
         }
 
-        this.particles.forEach(p => {
-            const val = this.dataArray[p.freq] / 255;
-            p.x += p.vx * (1 + val);
-            p.y += p.vy * (1 + val);
-            if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+        // Use low frequency for "Kick" reaction
+        const kick = this.dataArray[4];
+        const isKicking = kick > 200;
 
+        this.ctx.fillStyle = isKicking ? '#ffffff' : '#00ccff';
+
+        this.particles.forEach(p => {
+            p.y -= p.speed * (isKicking ? 2 : 1);
+            if (p.y < 0) p.y = h;
+
+            const radius = p.size * (isKicking ? 1.5 : 1);
             this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, 2 * val + 1, 0, Math.PI * 2);
-            this.ctx.fillStyle = `rgba(0, 255, 136, ${val})`;
+            this.ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
             this.ctx.fill();
         });
     }
 
-    drawFrequencyRings(w, h, t) { this.drawProSpectrum(w, h); } // Fallback
-    drawEnergyMatrix(w, h, t) { this.drawProSpectrum(w, h); } // Fallback
-    drawStrobeLights(w, h, t) {
-        const bass = this.dataArray[10];
-        this.ctx.fillStyle = `rgba(255, 255, 255, ${bass > 200 ? 0.8 : 0.05})`;
-        this.ctx.fillRect(0, 0, w, h);
-    }
-    drawColorWash(w, h, t) {
-        const avg = this.dataArray[20];
-        this.ctx.fillStyle = `hsla(${t / 20 % 360}, 70%, 50%, ${avg / 255})`;
-        this.ctx.fillRect(0, 0, w, h);
-    }
-    drawKaleidoscope(w, h, t) { this.drawProSpectrum(w, h); }
-
     setMode(index) {
         if (index >= 0 && index < this.MODES.length) {
             this.currentMode = index;
-            this.particles = [];
-            return this.MODES[index];
+            console.log(`[Visual] Mode switched to: ${this.MODES[index].name}`);
         }
     }
 

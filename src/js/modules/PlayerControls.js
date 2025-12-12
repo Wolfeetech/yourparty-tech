@@ -66,11 +66,13 @@ export default class PlayerControls {
 
     updateTrackInfo(song) {
         // Safe Update
-        if (this.dom.title && this.dom.title.textContent !== song.title) {
+        if (this.dom.title) {
             this.dom.title.textContent = song.title;
+            this.dom.title.classList.remove('skeleton');
         }
-        if (this.dom.artist && this.dom.artist.textContent !== song.artist) {
+        if (this.dom.artist) {
             this.dom.artist.textContent = song.artist;
+            this.dom.artist.classList.remove('skeleton');
         }
 
         // Cover Art with generic fallback
@@ -86,7 +88,8 @@ export default class PlayerControls {
         if (!this.dom.marquee) return;
 
         if (song) {
-            this.dom.marquee.textContent = `NEXT: ${song.artist} - ${song.title}`;
+            const text = song.text || `${song.artist} - ${song.title}`;
+            this.dom.marquee.textContent = `NEXT: ${text}`;
             this.dom.marquee.parentNode.style.opacity = '1';
         } else {
             this.dom.marquee.textContent = 'Queue Empty';

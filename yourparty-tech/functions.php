@@ -149,8 +149,8 @@ add_action('wp_enqueue_scripts', function () {
     $nonce = wp_create_nonce('wp_rest');
 
     $config = [
-        // Point to Python Backend API
-        'restBase' => 'https://yourparty.tech/api', 
+        // Point to WP REST API (Unified Gateway via inc/api.php)
+        'restBase' => esc_url_raw(rest_url('yourparty/v1')), 
         'wpRestBase' => esc_url_raw(rest_url('yourparty/v1')),
         'publicBase' => esc_url_raw(yourparty_public_url()),
         'streamUrl' => esc_url_raw($stream_url),

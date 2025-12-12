@@ -9,6 +9,7 @@ import VisualEngine from './modules/VisualEngine.js';
 import StreamController from './modules/StreamController.js';
 import RatingModule from './modules/RatingModule.js';
 import FullscreenManager from './modules/FullscreenManager.js';
+import ContactModule from './modules/ContactModule.js';
 
 console.log('[Main] Initializing YourParty Frontend...');
 
@@ -35,7 +36,8 @@ class YourPartyApp {
             rating: new RatingModule(this.config),
             realtime: new RealtimeModule(this.config),
             visuals: visualEngine,
-            fullscreen: new FullscreenManager()
+            fullscreen: new FullscreenManager(),
+            contact: new ContactModule(this.config)
         };
 
         this.init();
@@ -79,6 +81,11 @@ class YourPartyApp {
             // Notify Modules
             this.modules.player.update(data);
             this.modules.mood.setCurrentSong(song.id, song.moods);
+
+            // Legacy Globals
+            window.currentSongId = song.id;
+            window.currentTrackInfo = song;
+
             this.modules.rating.setInitialRating(
                 song.id,
                 data.now_playing.song.rating?.average,

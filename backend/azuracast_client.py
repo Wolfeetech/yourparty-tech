@@ -148,6 +148,10 @@ class AzuraCastClient:
             resp = requests.put(url, headers=self.headers, json=payload, verify=False)
             resp.raise_for_status()
             return True
+        except Exception as e:
+            logger.error(f"Error adding to playlist: {e}")
+            return False
+
     def queue_track(self, media_id: int):
         """
         Queue a specific track ID to play next.

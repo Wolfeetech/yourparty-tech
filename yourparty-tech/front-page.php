@@ -45,43 +45,43 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
 
                     <!-- Track Info -->
                     <div class="player-info">
-                        <h2 id="track-title" class="track-title">STATION LOADING...</h2> <!-- Updated fallback -->
-                        <p id="track-artist" class="track-artist">YourParty Tech</p>
+                        <h2 id="track-title" class="track-title skeleton">Loading Station...</h2> 
+                        <p id="track-artist" class="track-artist skeleton">Please wait</p>
                         
                         <!-- Rating Structure must match rating-module.js -->
                         <div class="rating-strip rating-container">
-                            <div class="rating-stars" id="rating-stars" role="radiogroup">
-                                <button class="rating-star" data-value="1">★</button>
-                                <button class="rating-star" data-value="2">★</button>
-                                <button class="rating-star" data-value="3">★</button>
-                                <button class="rating-star" data-value="4">★</button>
-                                <button class="rating-star" data-value="5">★</button>
+                            <div class="rating-stars" id="rating-stars" role="radiogroup" aria-label="Rate this track">
+                                <button class="rating-star" data-value="1" aria-label="1 star">★</button>
+                                <button class="rating-star" data-value="2" aria-label="2 stars">★</button>
+                                <button class="rating-star" data-value="3" aria-label="3 stars">★</button>
+                                <button class="rating-star" data-value="4" aria-label="4 stars">★</button>
+                                <button class="rating-star" data-value="5" aria-label="5 stars">★</button>
                             </div>
-                            <span id="rating-average" class="rating-score rating-average">--</span>
+                            <span id="rating-average" class="rating-score rating-average" aria-label="Average Rating">--</span>
                         </div>
                     </div>
 
                     <!-- Mood/Rating Actions -->
                     <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 5;">
-                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre">
-                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px;">🏷️</span> TAG VIBE
+                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog">
+                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px;" aria-hidden="true">🏷️</span> TAG VIBE
                          </button>
                     </div>
 
                     <!-- Controls -->
                     <div class="player-controls">
-                        <button id="play-toggle" class="play-fab" aria-label="Play">
-                            <span class="icon-play">
+                        <button id="play-toggle" class="play-fab" aria-label="Play Stream">
+                            <span class="icon-play" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                             </span>
-                            <span class="icon-pause" style="display:none;">
+                            <span class="icon-pause" style="display:none;" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                             </span>
                         </button>
                     </div>
 
                     <!-- Next Track Preview (Marquee) -->
-                    <div class="next-track-preview">
+                    <div class="next-track-preview" aria-live="polite">
                         <span class="label">NEXT:</span>
                         <span id="next-track-marquee">--</span>
                     </div>
@@ -94,15 +94,15 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     <h3>CONTROL THE VIBE</h3>
                     <div class="deck-line"></div>
                     <!-- VOTE STATUS INDICATOR -->
-                    <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;">AUTO MODE</div>
+                    <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;" aria-live="polite">AUTO MODE</div>
                 </div>
                 <div class="vibe-buttons">
-                    <button class="vibe-btn" data-vote="energetic" title="More Energy"><span class="emoji">🔥</span> <span class="lbl">ENERGY</span></button>
-                    <button class="vibe-btn" data-vote="chill" title="Chill Out"><span class="emoji">🧊</span> <span class="lbl">CHILL</span></button>
-                    <button class="vibe-btn" data-vote="groovy" title="Groove"><span class="emoji">🕺</span> <span class="lbl">GROOVE</span></button>
-                    <button class="vibe-btn" data-vote="dark" title="Dark Mode"><span class="emoji">🌑</span> <span class="lbl">DARK</span></button>
+                    <button class="vibe-btn" data-vote="energetic" title="More Energy" aria-label="Vote for Energy"><span class="emoji" aria-hidden="true">🔥</span> <span class="lbl">ENERGY</span></button>
+                    <button class="vibe-btn" data-vote="chill" title="Chill Out" aria-label="Vote for Chill"><span class="emoji" aria-hidden="true">🧊</span> <span class="lbl">CHILL</span></button>
+                    <button class="vibe-btn" data-vote="groovy" title="Groove" aria-label="Vote for Groove"><span class="emoji" aria-hidden="true">🕺</span> <span class="lbl">GROOVE</span></button>
+                    <button class="vibe-btn" data-vote="dark" title="Dark Mode" aria-label="Vote for Dark"><span class="emoji" aria-hidden="true">🌑</span> <span class="lbl">DARK</span></button>
                 </div>
-                <div id="vibe-feedback" class="vibe-feedback"></div>
+                <div id="vibe-feedback" class="vibe-feedback" aria-live="assertive"></div>
             </div>
 
         </div>
@@ -300,8 +300,30 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 .vibe-btn .emoji { font-size: 1.5rem; }
 .vibe-btn .lbl { font-size: 0.6rem; font-weight: bold; letter-spacing: 0.1em; opacity: 0.7; }
 
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 @keyframes glow-breathe { 0% { opacity: 0.3; transform: scale(0.9); } 100% { opacity: 0.6; transform: scale(1.1); } }
+
+/* Next Track Preview */
+.next-track-preview {
+    margin-top: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: #888;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.next-track-preview .label {
+    color: var(--neon-green);
+    font-weight: bold;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+}
 
 /* Rating Stars */
 .rating-strip { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
@@ -387,6 +409,22 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7;
 }
 .close-btn:hover { opacity: 1; color: var(--neon-green); }
+
+/* Skeleton Loading */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+    color: transparent !important;
+}
+@keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Accessiblity Focus */
+:focus-visible {
+    outline: 2px solid var(--neon-green);
+    outline-offset: 4px;
+}
 </style>
 
 <?php get_footer(); ?>

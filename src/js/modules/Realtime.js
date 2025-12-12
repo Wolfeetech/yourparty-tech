@@ -15,14 +15,18 @@ export default class RealtimeModule {
     connect() {
         if (this.socket && (this.socket.readyState === WebSocket.CONNECTING || this.socket.readyState === WebSocket.OPEN)) return;
 
-        // Use dynamic host or default
-        const wsUrl = 'wss://yourparty.tech/ws/logrmp';
-        console.log('[Realtime] Connecting to ' + wsUrl);
+        // Dynamic URL based on config or host
+        const slug = this.config.stationSlug || 'logrmp'; // Fallback
+        const host = window.location.host;
+        const wsUrl = `wss://${host}/ws/${slug}`;
+
+        if (this.reconnectAttempts === 0) {
+            console.log('[Realtime] Connecting to ' + wsUrl);
+        }
 
         try {
             this.socket = new WebSocket(wsUrl);
         } catch (e) {
-            console.warn('[Realtime] Init Error', e);
             this.scheduleReconnect();
             return;
         }
@@ -30,23 +34,34 @@ export default class RealtimeModule {
         this.socket.onopen = () => {
             console.log('[Realtime] Connected');
             this.reconnectAttempts = 0;
+            // Send subscription/hello if needed
+            this.socket.send(JSON.stringify({ "subs": { [slug]: {} } }));
         };
 
         this.socket.onmessage = (event) => {
             try {
                 const msg = JSON.parse(event.data);
                 this.handleMessage(msg);
-            } catch (e) { console.warn('[Realtime] Parse error', e); }
+            } catch (e) { } // Silent parse error
         };
 
         this.socket.onclose = () => {
             this.scheduleReconnect();
         };
 
-        this.socket.onerror = () => { };
+        this.socket.onerror = (err) => {
+            // Silence initial error to avoid noisy console if offline
+            if (this.reconnectAttempts > 5) return;
+            console.warn('[Realtime] WS Error');
+        };
     }
 
     scheduleReconnect() {
+        if (this.reconnectAttempts > 10) {
+            console.log('[Realtime] stopped retrying (Fallback to polling).');
+            return;
+        }
+
         const delay = Math.min(2000 * Math.pow(1.5, this.reconnectAttempts), 30000);
         this.reconnectAttempts++;
         setTimeout(() => this.connect(), delay);

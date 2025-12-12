@@ -47,29 +47,57 @@ export const GENRES = {
     'schlager': 'Schlager'
 };
 
+
 class MoodModule {
     constructor(appConfig) {
         this.config = appConfig;
         this.currentSongId = null;
-        this.currentMoods = {};
+        this.currentTrack = null;
+
+        // State
+        this.selectedMoodCurrent = null;
+        this.selectedMoodNext = null;
+        this.activeTab = 'current';
 
         // Offline Queue
         this.voteQueue = JSON.parse(localStorage.getItem('yp_vote_queue') || '[]');
 
         // Cooldowns
-        this.cooldowns = JSON.parse(localStorage.getItem('yp_vote_cooldowns') || '{}');
+        this.cooldowns = JSON.parse(localStorage.getItem('yp_mood_cooldowns') || '{}');
+        this.VOTE_COOLDOWN_MS = 5 * 60 * 1000; // 5 Minutes
 
         this.init();
     }
 
     init() {
-        console.log('[MoodModule] Init (ES6)');
+        console.log('[MoodModule] Init (ES6 - Dual Voting)');
         this.bindGlobalEvents();
         this.createDialog();
         this.processQueue(); // Try to flush queue on init
 
+        // Explicit Check & Bind for Debugging
+        const btn = document.getElementById('mood-tag-button');
+        if (btn) {
+            console.log('[MoodModule] Tag Button FOUND. ID matches.');
+            // Fallback direct binding in case delegation fails
+            btn.addEventListener('click', (e) => {
+                console.log('[MoodModule] Direct Click Triggered');
+                e.preventDefault();
+                e.stopPropagation(); // Prevent bubbling issues
+                this.openDialog();
+            });
+            // Ensure visual cursor
+            btn.style.cursor = 'pointer';
+            btn.style.zIndex = '9999'; // Force top
+        } else {
+            console.error('[MoodModule] Tag Button NOT FOUND. Check ID in markup.');
+        }
+
         // Listen for online status
         window.addEventListener('online', () => this.processQueue());
+
+        // Backward Compatibility
+        window.openMoodDialog = () => this.openDialog();
     }
 
     bindGlobalEvents() {
@@ -80,7 +108,7 @@ class MoodModule {
                 this.openDialog();
             }
 
-            // Vibe/Steering Buttons
+            // Vibe/Steering Buttons (Quick Vote)
             const vibeBtn = e.target.closest('.vibe-btn');
             if (vibeBtn) {
                 e.preventDefault();
@@ -90,6 +118,7 @@ class MoodModule {
     }
 
     async handleSteering(btn) {
+        // Quick vote for "Next" mood
         const vote = btn.dataset.vote;
         if (!vote) return;
 
@@ -98,49 +127,49 @@ class MoodModule {
         allBtns.forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
 
+        const payload = {
+            song_id: this.currentSongId || 'global',
+            mood_next: vote,
+            source: 'steering_deck',
+            timestamp: Date.now()
+        };
+
+        if (!navigator.onLine) {
+            this.queueVote(payload);
+            this.showGlobalFeedback(`Vibe "${vote}" queued (offline).`, 'warning');
+            return;
+        }
+
         try {
-            const baseUrl = this.config.restBase || '/api';
-            // Use prediction endpoint
-            const response = await fetch(`${baseUrl}/vote-next`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vote: vote, timestamp: Date.now() })
-            });
-
-            const feedbackVal = document.getElementById('vibe-feedback');
-
-            if (response.ok) {
-                const data = await response.json();
-                if (feedbackVal) {
-                    feedbackVal.innerHTML = `VOTE: ${vote.toUpperCase()}!`;
-                    if (data.prediction) {
-                        feedbackVal.innerHTML += ` <small>(Next: ${data.prediction.title})</small>`;
-                    }
-                    feedbackVal.className = 'vibe-feedback success';
-                    setTimeout(() => feedbackVal.textContent = '', 4000);
-                }
-            } else {
-                throw new Error('Vote failed');
-            }
+            await this.sendVote(payload);
+            this.showGlobalFeedback(`VOTE: ${vote.toUpperCase()} recorded!`, 'success');
         } catch (e) {
             console.error(e);
-            this.showStatus('Steering failed.', 'error');
+            this.queueVote(payload);
+            this.showGlobalFeedback('Network error. Vote queued.', 'warning');
+        }
+    }
+
+    showGlobalFeedback(msg, type) {
+        // Fallback feedback if no specific element exists
+        const fb = document.getElementById('vibe-feedback');
+        if (fb) {
+            fb.textContent = msg;
+            fb.className = `vibe-feedback ${type}`;
+            setTimeout(() => fb.textContent = '', 4000);
+        } else {
+            console.log(`[Feedback] ${msg}`);
         }
     }
 
     createDialog() {
         if (document.getElementById('mood-dialog')) return;
 
-        const moodGrid = Object.entries(MOODS).map(([key, m]) => `
-            <button class="mood-btn" data-mood="${key}">
+        const moodButtonsHTML = Object.entries(MOODS).map(([key, m]) => `
+            <button class="mood-btn" data-value="${key}" 
+                    aria-label="${m.label}" role="radio" aria-checked="false">
                 <span class="emoji">${m.emoji}</span>
                 <span class="label">${m.label}</span>
-            </button>
-        `).join('');
-
-        const genreGrid = Object.entries(GENRES).map(([key, label]) => `
-            <button class="mood-btn" data-genre="${key}">
-                <span class="label">${label}</span>
             </button>
         `).join('');
 
@@ -149,53 +178,154 @@ class MoodModule {
         dialog.className = 'mood-dialog glass-panel';
         dialog.style.display = 'none';
 
+        // Accessibility
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-labelledby', 'mood-dialog-title');
+
         dialog.innerHTML = `
             <div class="mood-dialog-backdrop" id="mood-backdrop"></div>
             <div class="mood-dialog-content">
-                <button class="close-btn" id="mood-close">&times;</button>
-                <h3>Tag Vibe & Genre</h3>
+                <button class="close-btn" id="mood-close" aria-label="Close">&times;</button>
+                <h3 id="mood-dialog-title">Tag Vibe & Genre</h3>
                 <p class="track-info" id="mood-track-info">Loading...</p>
                 
-                <div class="tag-section">
-                    <h4>Vibe / Energy</h4>
-                    <div class="mood-grid">${moodGrid}</div>
+                <!-- TABS -->
+                <div class="mood-tabs" role="tablist">
+                    <button class="mood-tab active" data-tab="current" role="tab" aria-selected="true">🎵 Current Song</button>
+                    <button class="mood-tab" data-tab="next" role="tab" aria-selected="false">⏭️ Next Vibe</button>
                 </div>
 
-                <div class="tag-section">
-                    <h4>Genre</h4>
-                    <div class="genre-grid">${genreGrid}</div>
+                <!-- PANEL: CURRENT -->
+                <div class="mood-panel active" id="panel-current" role="tabpanel">
+                    <p class="hint">How does this song make you feel?</p>
+                    <div class="mood-grid" data-target="current">
+                        ${moodButtonsHTML}
+                    </div>
                 </div>
 
-                <div class="status-msg" id="mood-status"></div>
+                <!-- PANEL: NEXT -->
+                <div class="mood-panel" id="panel-next" role="tabpanel" style="display:none;">
+                    <p class="hint">What vibe do you want next?</p>
+                    <div class="mood-grid" data-target="next">
+                        ${moodButtonsHTML}
+                    </div>
+                </div>
+
+                <div class="status-msg" id="mood-status" role="status" aria-live="polite"></div>
+
+                <div class="dialog-actions">
+                     <button id="mood-submit-btn" class="submit-btn" disabled>Submit Vote</button>
+                </div>
             </div>
         `;
 
         document.body.appendChild(dialog);
 
-        // Bind events
+        // Bind Events
         const close = () => this.closeDialog();
         dialog.querySelector('#mood-close').onclick = close;
         dialog.querySelector('#mood-backdrop').onclick = close;
 
+        // Tabs
+        dialog.querySelectorAll('.mood-tab').forEach(tab => {
+            tab.onclick = () => this.switchTab(tab.dataset.tab);
+        });
+
+        // Mood Selection
         dialog.querySelectorAll('.mood-btn').forEach(btn => {
             btn.onclick = (e) => this.handleSelection(e);
         });
+
+        // Submit
+        dialog.querySelector('#mood-submit-btn').onclick = () => this.handleSubmit();
+    }
+
+    switchTab(tabName) {
+        this.activeTab = tabName;
+        const dialog = document.getElementById('mood-dialog');
+
+        // Update Tabs
+        dialog.querySelectorAll('.mood-tab').forEach(t => {
+            const isActive = t.dataset.tab === tabName;
+            t.classList.toggle('active', isActive);
+            t.setAttribute('aria-selected', isActive);
+        });
+
+        // Update Panels
+        const panelCurrent = dialog.querySelector('#panel-current');
+        const panelNext = dialog.querySelector('#panel-next');
+
+        if (tabName === 'current') {
+            panelCurrent.style.display = 'block';
+            panelNext.style.display = 'none';
+        } else {
+            panelCurrent.style.display = 'none';
+            panelNext.style.display = 'block';
+        }
+    }
+
+    handleSelection(e) {
+        const btn = e.currentTarget;
+        const value = btn.dataset.value;
+        const target = btn.closest('.mood-grid').dataset.target; // 'current' or 'next'
+
+        // Deselect others in same grid
+        const grid = btn.closest('.mood-grid');
+        grid.querySelectorAll('.mood-btn').forEach(b => {
+            b.classList.remove('selected');
+            b.setAttribute('aria-checked', 'false');
+        });
+
+        // Select clicked
+        btn.classList.add('selected');
+        btn.setAttribute('aria-checked', 'true');
+
+        if (target === 'current') {
+            this.selectedMoodCurrent = value;
+        } else {
+            this.selectedMoodNext = value;
+        }
+
+        this.updateSubmitButton();
+    }
+
+    updateSubmitButton() {
+        const btn = document.getElementById('mood-submit-btn');
+        if (btn) {
+            btn.disabled = (!this.selectedMoodCurrent && !this.selectedMoodNext);
+        }
     }
 
     openDialog() {
         const dialog = document.getElementById('mood-dialog');
         const trackInfo = document.getElementById('mood-track-info');
 
-        // Get info from DOM as fallback or current state
-        const title = document.getElementById('track-title')?.textContent || 'Unknown';
-        const artist = document.getElementById('track-artist')?.textContent || 'Unknown';
-
-        if (title.toUpperCase().includes("WAITING") || title.toUpperCase().includes("OFFLINE")) {
-            alert("Please wait for a track to play.");
+        // Check Cooldown
+        if (this.currentSongId && this.isOnCooldown(this.currentSongId)) {
+            alert("You've already voted on this track recently. Please wait.");
             return;
         }
 
+        // Get info
+        const title = this.currentTrack?.title || document.getElementById('track-title')?.textContent || 'Unknown';
+        const artist = this.currentTrack?.artist || document.getElementById('track-artist')?.textContent || 'Unknown';
+
         trackInfo.textContent = `${artist} - ${title}`;
+
+        // Reset State
+        this.selectedMoodCurrent = null;
+        this.selectedMoodNext = null;
+        this.activeTab = 'current';
+        this.switchTab('current');
+        this.updateSubmitButton();
+
+        // Clear previous selections
+        dialog.querySelectorAll('.mood-btn').forEach(b => {
+            b.classList.remove('selected');
+            b.setAttribute('aria-checked', 'false');
+        });
+
         dialog.classList.add('active');
         dialog.style.display = 'flex';
     }
@@ -205,75 +335,69 @@ class MoodModule {
         dialog.classList.remove('active');
         setTimeout(() => {
             dialog.style.display = 'none';
-            const status = document.getElementById('mood-status');
-            if (status) status.textContent = '';
+            this.showStatus('');
         }, 200);
     }
 
-    handleSelection(e) {
-        const btn = e.currentTarget;
-        const mood = btn.dataset.mood;
-        const genre = btn.dataset.genre;
-
-        if (mood) this.submitVote(mood, 'mood', btn);
-        if (genre) this.submitVote(genre, 'genre', btn);
-    }
-
-    async submitVote(val, type, btnElement) {
-        if (!this.currentSongId || this.currentSongId === '0') {
-            this.showStatus('No active song!', 'error');
+    async handleSubmit() {
+        if (!this.currentSongId) {
+            this.showStatus('Error: No active song identified.', 'error');
             return;
         }
-
-        // Check Cooldown
-        const now = Date.now();
-        const lastVote = this.cooldowns[this.currentSongId];
-        if (lastVote && (now - lastVote < 300000)) { // 5 mins
-            this.showStatus('Cooldown active (5m).', 'warning');
-            return;
-        }
-
-        // Visual Feedback
-        btnElement.style.transform = 'scale(0.95)';
-        setTimeout(() => btnElement.style.transform = 'scale(1)', 100);
 
         const payload = {
             song_id: this.currentSongId,
-            tag: val,
-            type: type,
-            timestamp: now
+            mood_current: this.selectedMoodCurrent,
+            mood_next: this.selectedMoodNext,
+            timestamp: Date.now()
         };
+
+        const btn = document.getElementById('mood-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
 
         if (!navigator.onLine) {
             this.queueVote(payload);
             this.showStatus('Saved offline. Will sync later.', 'success');
+            setTimeout(() => this.closeDialog(), 1500);
             return;
         }
 
         try {
             await this.sendVote(payload);
-            this.showStatus(`${type === 'mood' ? 'Mood' : 'Genre'} saved!`, 'success');
+            this.showStatus('Vote recorded! Thanks.', 'success');
 
             // Set cooldown
-            this.cooldowns[this.currentSongId] = now;
-            localStorage.setItem('yp_vote_cooldowns', JSON.stringify(this.cooldowns));
+            this.setCooldown(this.currentSongId);
+
+            setTimeout(() => {
+                this.closeDialog();
+                btn.textContent = 'Submit Vote';
+            }, 1000);
 
         } catch (err) {
             console.error(err);
-            // Fallback to queue if API fails
             this.queueVote(payload);
             this.showStatus('Network error. Queued.', 'warning');
+            setTimeout(() => this.closeDialog(), 1500);
         }
     }
 
     async sendVote(payload) {
-        const baseUrl = this.config.restBase || '/api';
-        const response = await fetch(`${baseUrl}/mood-tag`, {
+        const baseUrl = this.config.restBase || '/wp-json/yourparty/v1'; // Default to WP proxy
+        // Note: New endpoint is /vote-mood
+        const endpoint = `${baseUrl}/vote-mood`;
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('API Error');
+
+        if (!response.ok) {
+            const txt = await response.text();
+            throw new Error(`API Error: ${response.status} ${txt}`);
+        }
     }
 
     queueVote(payload) {
@@ -285,9 +409,8 @@ class MoodModule {
         if (this.voteQueue.length === 0 || !navigator.onLine) return;
 
         console.log(`[MoodModule] Processing ${this.voteQueue.length} queued votes...`);
-
-        const queue = [...this.voteQueue]; // Copy
-        this.voteQueue = []; // Clear local
+        const queue = [...this.voteQueue];
+        this.voteQueue = [];
         localStorage.setItem('yp_vote_queue', '[]');
 
         for (const payload of queue) {
@@ -302,23 +425,28 @@ class MoodModule {
         localStorage.setItem('yp_vote_queue', JSON.stringify(this.voteQueue));
     }
 
-    showStatus(msg, type) {
+    isOnCooldown(songId) {
+        const lastVote = this.cooldowns[songId];
+        if (!lastVote) return false;
+        return (Date.now() - lastVote) < this.VOTE_COOLDOWN_MS;
+    }
+
+    setCooldown(songId) {
+        this.cooldowns[songId] = Date.now();
+        localStorage.setItem('yp_mood_cooldowns', JSON.stringify(this.cooldowns));
+    }
+
+    showStatus(msg, type = '') {
         const el = document.getElementById('mood-status');
         if (el) {
             el.textContent = msg;
             el.className = 'status-msg ' + type;
-            setTimeout(() => el.textContent = '', 3000);
         }
     }
 
     setCurrentSong(songId, moods) {
         this.currentSongId = songId;
-        this.currentMoods = moods || {};
-        this.updateDisplay();
-    }
-
-    updateDisplay() {
-        // Here we could update badges on the player if we want to show current consensus
+        // Optionally store more metadata if passed
     }
 }
 
