@@ -117,6 +117,13 @@ uasort($combined_data, function ($a, $b) {
 get_header(); 
 ?>
 
+<!-- HIDE GLOBAL FOOTER/PLAYER ON THIS PAGE -->
+<style>
+    .site-footer, #mini-player { display: none !important; }
+    /* Ensure no padding bump from global styles */
+    body { padding-bottom: 0 !important; }
+</style>
+
 <!-- MAIN DASHBOARD UI -->
 <div class="control-dashboard-v2">
     
@@ -248,28 +255,33 @@ get_header();
 </div>
 
 <!-- STICKY MONITOR FOOTER (GLOBAL) -->
-<div class="monitor-footer">
-    <div class="ft-left">
-        <canvas id="monitor-visualizer" class="monitor-vis"></canvas>
-        <div class="monitor-meta">
-            <span class="now-label">ON AIR</span>
-            <span id="monitor-title" class="scrolling-text">WAITING FOR SIGNAL...</span>
+<!-- REFACTORED TO MATCH USER CSS CLASS NAMES -->
+<div class="control-footer">
+    <div class="footer-left">
+        <div class="now-playing-monitor">
+             <canvas id="monitor-visualizer" style="width:40px; height:20px; margin-right:5px; opacity:0.7;"></canvas>
+             <div class="monitor-info">
+                 <span style="font-size:9px; color:var(--emerald); letter-spacing:1px; font-weight:bold;">ON AIR</span>
+                 <span id="monitor-title">WAITING FOR SIGNAL...</span>
+             </div>
         </div>
-        <div class="control-actions" style="margin-left: 15px;">
-            <button id="monitor-play-btn" class="footer-btn">▶ MONITOR</button>
-        </div>
+    </div>
+
+    <div class="footer-center">
+        <button id="monitor-play-btn" class="footer-btn">▶ MONITOR</button>
+    </div>
+
+    <div class="footer-right">
         <div class="volume-control">
             VOL <input type="range" id="monitor-volume" min="0" max="100" value="80">
         </div>
-    </div>
-    <div class="ft-right">
-        <div class="stat">
-            <span class="lbl">DB</span>
-            <span class="val">OK</span>
+        <div class="status-metric">
+            <span class="label">DB</span>
+            <span class="value">OK</span>
         </div>
-        <div class="stat">
-            <span class="lbl">API</span>
-            <span class="val ok">LINKED</span>
+        <div class="status-metric">
+            <span class="label">API</span>
+            <span class="value">LINKED</span>
         </div>
     </div>
 </div>
@@ -373,26 +385,6 @@ body { background: var(--bg-dark); }
 .cyber-btn.danger { background: rgba(255,68,68,0.1); color: #ff4444; border: 1px solid #ff4444; }
 .cyber-btn.danger:hover { background: #ff4444; color: #fff; box-shadow: 0 0 20px rgba(255,68,68,0.4); }
 
-/* Footer */
-.monitor-footer {
-    position: fixed; bottom: 0; left: 0; width: 100%; height: 80px;
-    background: rgba(10,10,10,0.95); backdrop-filter: blur(20px);
-    border-top: 1px solid var(--primary);
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 30px; box-sizing: border-box; z-index: 100;
-    box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
-}
-.ft-left { display: flex; align-items: center; gap: 20px; }
-.monitor-vis { width: 120px; height: 40px; background: #000; opacity: 0.5; border-radius: 4px; }
-.monitor-meta { display: flex; flex-direction: column; }
-.now-label { font-size: 9px; color: var(--primary); letter-spacing: 0.2em; font-weight: bold; }
-#monitor-title { font-size: 14px; font-weight: bold; color: #fff; }
-
-.ft-right { display: flex; gap: 20px; }
-.stat { display: flex; flex-direction: column; align-items: flex-end; }
-.stat .lbl { font-size: 9px; color: #666; }
-.stat .val { font-size: 12px; font-weight: bold; color: #888; }
-.stat .val.ok { color: var(--primary); }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
