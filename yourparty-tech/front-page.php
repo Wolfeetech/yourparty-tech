@@ -97,10 +97,10 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;" aria-live="polite">AUTO MODE</div>
                 </div>
                 <div class="vibe-buttons">
-                    <button class="vibe-btn" data-vote="energetic" title="More Energy" aria-label="Vote for Energy"><span class="emoji" aria-hidden="true">🔥</span> <span class="lbl">ENERGY</span></button>
-                    <button class="vibe-btn" data-vote="chill" title="Chill Out" aria-label="Vote for Chill"><span class="emoji" aria-hidden="true">🧊</span> <span class="lbl">CHILL</span></button>
-                    <button class="vibe-btn" data-vote="groovy" title="Groove" aria-label="Vote for Groove"><span class="emoji" aria-hidden="true">🕺</span> <span class="lbl">GROOVE</span></button>
-                    <button class="vibe-btn" data-vote="dark" title="Dark Mode" aria-label="Vote for Dark"><span class="emoji" aria-hidden="true">🌑</span> <span class="lbl">DARK</span></button>
+                    <button class="vibe-btn" data-vote="energetic" onclick="if(window.YourPartyAppInstance) window.YourPartyAppInstance.modules.mood.submitVote('energetic')" title="More Energy"><span class="emoji">🔥</span> <span class="lbl">ENERGY</span></button>
+                    <button class="vibe-btn" data-vote="chill" onclick="if(window.YourPartyAppInstance) window.YourPartyAppInstance.modules.mood.submitVote('chill')" title="Chill Out"><span class="emoji">🧊</span> <span class="lbl">CHILL</span></button>
+                    <button class="vibe-btn" data-vote="groovy" onclick="if(window.YourPartyAppInstance) window.YourPartyAppInstance.modules.mood.submitVote('groovy')" title="Groove"><span class="emoji">🕺</span> <span class="lbl">GROOVE</span></button>
+                    <button class="vibe-btn" data-vote="dark" onclick="if(window.YourPartyAppInstance) window.YourPartyAppInstance.modules.mood.submitVote('dark')" title="Dark Mode"><span class="emoji">🌑</span> <span class="lbl">DARK</span></button>
                 </div>
                 <div id="vibe-feedback" class="vibe-feedback" aria-live="assertive"></div>
             </div>

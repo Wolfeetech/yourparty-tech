@@ -591,6 +591,41 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
     ]);
 }
 
+function yourparty_rest_post_vote_mood(WP_REST_Request $request)
+{
+    $song_id = preg_replace('/[^a-zA-Z0-9]/', '', (string) $request->get_param('song_id'));
+    
+    // Validate ID
+    if (empty($song_id)) {
+        return new WP_Error('invalid_payload', 'Invalid Song ID', ['status' => 400]);
+    }
+
+    // Proxy to FastAPI
+    // Using PVE Host IP (.211 is container)
+    $api_url = 'http://192.168.178.211:8000/vote-mood';
+
+    $payload = [
+        'song_id' => $song_id,
+        'mood_current' => sanitize_text_field($request->get_param('mood_current')),
+        'mood_next' => sanitize_text_field($request->get_param('mood_next')),
+        'rating' => $request->get_param('rating'), // Int or null
+        'vote' => sanitize_text_field($request->get_param('vote'))
+    ];
+
+    $response = wp_remote_post($api_url, [
+        'headers' => ['Content-Type' => 'application/json'],
+        'body' => json_encode($payload),
+        'timeout' => 5
+    ]);
+
+    if (is_wp_error($response)) {
+         return new WP_Error('backend_error', 'Service unavailable', ['status' => 503]);
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    return rest_ensure_response($body);
+}
+
 add_action('rest_api_init', function () {
     register_rest_route(
         'yourparty/v1',
@@ -796,6 +831,58 @@ add_action('rest_api_init', function () {
             ],
         ]
     );
+
+    // DUAL MOOD VOTING PROXY
+    register_rest_route(
+        'yourparty/v1',
+        '/vote-mood',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => 'yourparty_rest_post_vote_mood',
+            'permission_callback' => '__return_true',
+            'args' => [
+                'song_id' => ['required' => true, 'type' => 'string'],
+            ],
+        ]
+    );
+
+    // --- CONTROL PANEL PROXY ENDPOINTS ---
+    
+    // Ratings
+    register_rest_route('yourparty/v1', '/control/ratings', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            $resp = wp_remote_get('http://192.168.178.211:8000/ratings', ['timeout' => 5]);
+            if (is_wp_error($resp)) return [];
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => function() { return current_user_can('manage_options'); }
+    ]);
+
+    // Moods
+    register_rest_route('yourparty/v1', '/control/moods', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            $resp = wp_remote_get('http://192.168.178.211:8000/moods', ['timeout' => 5]);
+            if (is_wp_error($resp)) return [];
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => function() { return current_user_can('manage_options'); }
+    ]);
+
+    // Steer
+    register_rest_route('yourparty/v1', '/control/steer', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            $resp = wp_remote_get('http://192.168.178.211:8000/control/steer', ['timeout' => 5]);
+            if (is_wp_error($resp)) return $resp;
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => function() { return current_user_can('manage_options'); }
+    ]);
 
     // NEW: Contact Form Endpoint
     register_rest_route(

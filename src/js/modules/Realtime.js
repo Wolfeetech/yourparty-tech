@@ -15,10 +15,19 @@ export default class RealtimeModule {
     connect() {
         if (this.socket && (this.socket.readyState === WebSocket.CONNECTING || this.socket.readyState === WebSocket.OPEN)) return;
 
-        // Dynamic URL based on config or host
-        const slug = this.config.stationSlug || 'logrmp'; // Fallback
-        const host = window.location.host;
-        const wsUrl = `wss://${host}/ws/${slug}`;
+        // Dynamic URL based on config
+        const slug = this.config.stationSlug || 'radio.yourparty';
+
+        // Fix: Use the configured public base (AzuraCast) instead of local WP host
+        let wsHost = window.location.host;
+        if (this.config.publicBase) {
+            try {
+                const url = new URL(this.config.publicBase);
+                wsHost = url.host;
+            } catch (e) { }
+        }
+
+        const wsUrl = `wss://${wsHost}/ws/${slug}`;
 
         if (this.reconnectAttempts === 0) {
             console.log('[Realtime] Connecting to ' + wsUrl);
