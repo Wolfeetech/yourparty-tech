@@ -1,368 +1,73 @@
-/* MOOD TAGGING DIALOG (PREMIUM ELECTRONIC) */
-.mood-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(16px);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.mood-overlay.active {
-  opacity: 1;
-  pointer-events: all;
-}
-
+/* === MOOD DIALOG / MODAL === */
 .mood-dialog {
-  background: #050505;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 520px;
-  width: 90%;
-  text-align: center;
-  transform: scale(0.95) translateY(10px);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 100px rgba(16, 185, 129, 0.05); /* Subtle green ambient glow */
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10000;
+    display: none; align-items: center; justify-content: center;
+}
+.mood-dialog.active { display: flex; }
+
+.mood-dialog-backdrop {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 1;
 }
 
-.mood-overlay.active .mood-dialog {
-  transform: scale(1) translateY(0);
+.mood-dialog-content {
+    position: relative; z-index: 10;
+    background: rgba(20,20,20,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%; max-width: 500px;
+    text-align: center;
+    color: #fff;
+    animation: zoomIn 0.3s ease;
 }
 
-.mood-dialog__header {
-  margin-bottom: 24px;
-}
+@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-.mood-dialog__title {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 800;
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-  color: #fff;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-}
+.mood-dialog h3 { font-size: 1.5rem; margin-bottom: 5px; }
+.track-info { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
 
-.mood-dialog__subtitle {
-  color: #666;
-  font-size: 11px;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-}
+.tag-section { margin-bottom: 20px; }
+.tag-section h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--neon-green, #00ff88); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
 
-.mood-dialog__track {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.mood-dialog__track-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mood-dialog__track-artist {
-  font-size: 12px;
-  color: var(--emerald);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.mood-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
-  margin-bottom: 24px;
+.mood-grid, .genre-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;
 }
 
 .mood-btn {
-  padding: 12px 8px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  color: #888;
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 70px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px; border-radius: 10px; cursor: pointer; color: #fff;
+    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px;
 }
+.mood-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: #fff; }
+.mood-btn .emoji { font-size: 1.5rem; }
+.mood-btn .label { font-size: 0.8rem; font-weight: bold; }
 
-.mood-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  transform: translateY(-2px);
-}
+.genre-grid .mood-btn { padding: 8px; }
 
-.mood-btn.selected {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: var(--emerald);
-  color: #fff;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-}
+.status-msg { margin-top: 15px; font-weight: bold; min-height: 20px; }
+.status-msg.success { color: #00ff88; }
+.status-msg.error { color: #ff4444; }
 
-.mood-btn__emoji {
-  font-size: 20px;
-  margin-bottom: 2px;
-  filter: grayscale(0.5);
-  transition: filter 0.2s;
+.close-btn {
+    position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7;
 }
+.close-btn:hover { opacity: 1; color: var(--neon-green, #00ff88); }
 
-.mood-btn:hover .mood-btn__emoji,
-.mood-btn.selected .mood-btn__emoji {
-  filter: grayscale(0);
-}
-
-.mood-dialog__actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.mood-dialog__actions button {
-  padding: 14px 28px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.mood-dialog__btn-submit {
-  background: var(--emerald);
-  color: #000;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-}
-
-.mood-dialog__btn-submit:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-  background: #333;
-  color: #666;
-}
-
-.mood-dialog__btn-submit:not(:disabled):hover {
-  opacity: 1;
-  transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
-}
-
-.mood-dialog__btn-cancel {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #666;
-}
-
-.mood-dialog__btn-cancel:hover {
-  border-color: #fff !important;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.mood-dialog__feedback {
-  margin-top: 16px;
-  font-size: 12px;
-  color: var(--emerald);
-  font-family: var(--font-display);
-  min-height: 20px;
-  font-weight: 600;
-  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
-}
-
-/* Mobile */
-@media (max-width: 480px) {
-  .mood-options {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .mood-btn {
-      min-height: 60px;
-      font-size: 10px;
-  }
-}
-
-/* SCROLL AREA & SECTIONS */
-.mood-dialog__scroll-area {
-    max-height: 50vh;
-    overflow-y: auto;
-    margin-bottom: 24px;
-    padding-right: 8px;
-    /* Custom Scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-}
-
-.mood-dialog__scroll-area::-webkit-scrollbar {
-    width: 4px;
-}
-.mood-dialog__scroll-area::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
-}
-.mood-dialog__scroll-area::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
-}
-.mood-dialog__scroll-area::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.mood-section {
-    margin-bottom: 32px;
-}
-
-.mood-section h4 {
-    font-family: var(--font-display);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #555;
-    margin: 0 0 16px 0;
-    text-align: left;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.mood-section h4::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255,255,255,0.05);
-}
-
-/* ========== TAB SYSTEM FOR DUAL VOTING ========== */
-.mood-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    padding: 4px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
+/* TABS */
+.mood-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .mood-tab {
-    flex: 1;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    color: #666;
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: none; border: none; color: #666; padding: 10px; cursor: pointer; font-weight: bold; border-bottom: 2px solid transparent; flex: 1;
 }
+.mood-tab.active { color: #fff; border-bottom-color: var(--neon-green, #00ff88); }
+.hint { font-size: 0.8rem; color: #888; font-style: italic; margin-bottom: 10px; }
 
-.mood-tab:hover {
-    color: #999;
-    background: rgba(255, 255, 255, 0.03);
+.submit-btn {
+    background: var(--neon-green, #00ff88); color: #000; padding: 15px 30px; border: none; border-radius: 30px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; width: 100%; transition: all 0.2s;
 }
-
-.mood-tab.active {
-    background: rgba(16, 185, 129, 0.15);
-    color: var(--emerald);
-    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-}
-
-/* ========== PANELS ========== */
-.mood-panel {
-    display: none;
-    animation: fadeIn 0.2s ease;
-}
-
-.mood-panel.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.mood-panel__hint {
-    font-size: 12px;
-    color: #555;
-    margin-bottom: 16px;
-    text-align: center;
-    font-family: var(--font-display);
-}
-
-/* ========== SELECTION INDICATOR ========== */
-.mood-dialog__selection {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 16px;
-    min-height: 20px;
-}
-
-.mood-dialog__selection span {
-    font-size: 11px;
-    font-family: var(--font-display);
-    color: var(--emerald);
-    padding: 6px 12px;
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: 20px;
-    border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.mood-dialog__selection span:empty {
-    display: none;
-}
-
-/* ========== FOCUS STYLES FOR ACCESSIBILITY ========== */
-.mood-btn:focus-visible,
-.mood-tab:focus-visible {
-    outline: 2px solid var(--emerald);
-    outline-offset: 2px;
-}
-
-.mood-dialog__btn-submit:focus-visible,
-.mood-dialog__btn-cancel:focus-visible {
-    outline: 2px solid var(--emerald);
-    outline-offset: 2px;
-}
-
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+.submit-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,255,136,0.4); }

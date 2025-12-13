@@ -1,4 +1,5 @@
 <?php
+error_log('DEBUG: YOURPARTY THEME FUNCTIONS.PHP LOADED');
 /**
  * YourParty Tech theme functions.
  */
