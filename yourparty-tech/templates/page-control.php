@@ -67,21 +67,17 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 }
 
 // --- DATA FETCH ---
-// Internal IP for PHP Server-Side Requests (Docker Network / Localhost)
-$api_base_internal = 'http://192.168.178.211:8000'; 
+$api_base = 'http://192.168.178.211:8000'; 
 
-// Public URL for Client-Side JS Requests (Proxied via WordPress)
-$api_base_public = rest_url('yourparty/v1/control');
-
-$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base_internal/ratings", ['sslverify' => false, 'timeout' => 5]));
+$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => false, 'timeout' => 5]));
 $ratings_data = json_decode($ratings_body, true);
 if (!is_array($ratings_data)) $ratings_data = [];
 
-$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base_internal/moods", ['sslverify' => false, 'timeout' => 5]));
+$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base/moods", ['sslverify' => false, 'timeout' => 5]));
 $moods_data = json_decode($moods_body, true);
 if (!is_array($moods_data)) $moods_data = [];
 
-$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base_internal/control/steer", ['sslverify' => false, 'timeout' => 5]));
+$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", ['sslverify' => false, 'timeout' => 5]));
 $steering_status = json_decode($steer_body, true);
 if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' => null];
 
@@ -90,20 +86,6 @@ if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' 
 $combined_data = [];
 // Use ratings as base
 if (isset($ratings_data) && is_array($ratings_data)) {
-// ... (rest of logic same) ...
-}
-
-// ... lines 112-421 unchanged ...
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const tableBody=document.querySelector('.control-table tbody');
-    // CRITICAL FIX: Use Public WP REST Endpoint for Client JS
-    const apiBase='<?php echo esc_js($api_base_public); ?>';
-    
-    console.log('[Control] API Base:', apiBase);
-
-    function updateData() {
     foreach ($ratings_data as $id => $data) {
         if (!$id) continue;
         
@@ -439,7 +421,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody=document.querySelector('.control-table tbody');
-    const apiBase='<?php echo esc_js($api_base_public); ?>';
+    const apiBase='<?php echo esc_js($api_base); ?>';
 
     function updateData() {
         Promise.all([ 

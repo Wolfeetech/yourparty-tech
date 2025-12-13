@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.4] - 2025-12-13
+### Fixed
+- **Critical**: Resolved White Screen of Death (WSOD) on Control Dashboard.
+    - Cause 1: File corruption (fixed via re-push).
+    - Cause 2: Missing Template assignment in Database (restored via `fix_control_page.php`).
+- **System**: Aborted unnecessary migration of CT 207 (confirmed already on HDD).
+
 ## [1.0.0] - 2025-12-12
 ### Optimization Phase
 - **Infrastructure**:
