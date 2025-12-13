@@ -1,5 +1,5 @@
 <?php
-// fix_control_page.php
+// fix_control_page.php RE-RUN
 define('WP_USE_THEMES', false);
 require('/var/www/html/wp-load.php');
 
@@ -40,7 +40,8 @@ if ($current_template !== $template) {
     echo "Template is already correct.\n";
 }
 
-// Flush Permalinks just in case
+// FORCE PERMALINK FLUSH
+global $wp_rewrite;
+$wp_rewrite->set_permalink_structure('/%postname%/');
 flush_rewrite_rules();
 echo "Permalinks flushed.\n";
-echo "DONE.";
