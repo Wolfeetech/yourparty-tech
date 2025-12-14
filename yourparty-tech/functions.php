@@ -254,7 +254,7 @@ add_action('init', function () {
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v1')) {
+    if (!get_option('yourparty_rules_flushed_v1') || isset($_GET['force_flush'])) {
         flush_rewrite_rules();
         update_option('yourparty_rules_flushed_v1', true);
     }
