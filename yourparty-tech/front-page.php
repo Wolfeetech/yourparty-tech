@@ -62,9 +62,9 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     </div>
 
                     <!-- Mood/Rating Actions -->
-                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 5;">
-                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog" onclick="console.log('INLINE CLICK'); if(window.openMoodDialog){window.openMoodDialog();}else{var d=document.getElementById('mood-dialog');if(d){d.style.display='flex';d.classList.add('active');}else{alert('Mood Dialog loading...');}}">
-                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px;" aria-hidden="true">🏷️</span> TAG VIBE
+                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
+                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog" onclick="console.log('INLINE CLICK'); if(window.openMoodDialog){window.openMoodDialog();}else{var d=document.getElementById('mood-dialog');if(d){d.style.display='flex';d.classList.add('active');}else{alert('Mood Dialog loading...');}}">
+                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px; pointer-events: none;" aria-hidden="true">🏷️</span> TAG VIBE
                          </button>
                     </div>
 
