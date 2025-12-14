@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YourParty Tech - Eventtechnik & DJ</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-glow">YourParty</span>
+        <span class="brand-tag">Tech</span>
+        <p class="brand-sub">Eventtechnik &amp; DJ</p>
+      </div>
+      <nav class="site-nav" aria-label="Hauptnavigation">
+        <a href="#hero">Home</a>
+        <a href="#radio-live">Programm</a>
+        <a href="#leistungen">Leistungen</a>
+        <a href="#referenzen">Referenzen</a>
+        <a href="#ueber-uns">Ueber uns</a>
+        <a href="#kontakt">Kontakt</a>
+      </nav>
+      <button
+        class="nav-toggle"
+        id="nav-toggle"
+        aria-label="Navigation oeffnen"
+        aria-expanded="false"
+      >
+        &#9776;
+      </button>
+    </header>
+
+    <div id="sticky-player" class="sticky-player hidden" aria-live="polite">
+      <button
+        id="sticky-play-toggle"
+        class="sticky-play"
+        aria-label="Stream starten"
+      >
+        ▷
+      </button>
+      <div class="sticky-meta">
+        <span id="sticky-track-title">YourParty Radio</span>
+        <small id="sticky-track-artist">Live Stream</small>
+      </div>
+      <div class="sticky-status">
+        <span id="sticky-status-pill" class="status-pill status-online">On Air</span>
+        <span id="sticky-listeners" class="sticky-listeners">--</span>
+      </div>
+    </div>
+
+    <nav id="mobile-menu" class="mobile-menu" aria-label="Mobile Navigation">
+      <a href="#hero">Home</a>
+      <a href="#radio-live">Programm</a>
+      <a href="#leistungen">Leistungen</a>
+      <a href="#referenzen">Referenzen</a>
+      <a href="#ueber-uns">Ueber uns</a>
+      <a href="#kontakt">Kontakt</a>
+    </nav>
+
+    <main>
+      <section id="hero" class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">YourParty Tech · Radio · Eventproduktion</p>
+          <h1>Club-Sound. Broadcast-Qualität. Überall einsetzbar.</h1>
+          <p class="hero-lead">
+            Wir planen, beschallen und streamen elektronische Events – vom intimen Clubset bis zum hybriden Festival.
+            Technik, DJs und 24/7-Radio kommen aus einer Hand.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#kontakt">Jetzt Anfrage starten</a>
+            <a class="btn ghost" href="#radio-live">Radio reinhoeren</a>
+          </div>
+        </div>
+        <div class="hero-badge">
+          <span>Live on Air</span>
+          <strong>Wolf – Stockenweiler · YourParty Radio</strong>
+        </div>
+      </section>
+
+      <section id="radio-live" class="section section-live">
+        <div class="section-intro">
+          <h2>Live Radio &amp; Highlights</h2>
+          <p>
+            Echtzeit-Infos aus AzuraCast: aktueller Track, Zuhörer, Community-Bewertung und kommende Shows.
+          </p>
+        </div>
+        <div class="live-layout">
+          <article class="player-panel">
+            <div class="player-cover">
+              <img
+                id="cover-art"
+                src="https://placehold.co/480x480/2e8b57/ffffff?text=YourParty+Radio"
+                alt="Aktuelles Cover"
+              />
+              <button id="play-toggle" class="play-button" aria-label="Stream starten">
+                &gt;
+              </button>
+            </div>
+            <div class="player-info">
+              <p class="label">Jetzt laeuft</p>
+              <h3 id="track-title">Wird geladen ...</h3>
+              <p id="track-artist" class="muted">Kuenstler wird geladen</p>
+              <p id="track-album" class="muted">Album unbekannt</p>
+              <div class="player-meta">
+                <span id="track-status" class="status-pill status-online">Online</span>
+                <span class="meta-item">
+                  <strong id="listener-count">--</strong>
+                  <small>Listener</small>
+                </span>
+              </div>
+              <div class="rating-controls" aria-live="polite">
+                <div
+                  class="rating-stars"
+                  role="radiogroup"
+                  aria-label="Aktuellen Track bewerten"
+                >
+                  <button
+                    type="button"
+                    class="rating-star"
+                    data-value="1"
+                    aria-label="1 von 5 Sternen"
+                    aria-checked="false"
+                  >
+                    &#9733;
+                  </button>
+                  <button
+                    type="button"
+                    class="rating-star"
+                    data-value="2"
+                    aria-label="2 von 5 Sternen"
+                    aria-checked="false"
+                  >
+                    &#9733;
+                  </button>
+                  <button
+                    type="button"
+                    class="rating-star"
+                    data-value="3"
+                    aria-label="3 von 5 Sternen"
+                    aria-checked="false"
+                  >
+                    &#9733;
+                  </button>
+                  <button
+                    type="button"
+                    class="rating-star"
+                    data-value="4"
+                    aria-label="4 von 5 Sternen"
+                    aria-checked="false"
+                  >
+                    &#9733;
+                  </button>
+                  <button
+                    type="button"
+                    class="rating-star"
+                    data-value="5"
+                    aria-label="5 von 5 Sternen"
+                    aria-checked="false"
+                  >
+                    &#9733;
+                  </button>
+                </div>
+                <div class="rating-summary">
+                  <span id="rating-average">-</span>
+                  <small id="rating-total">Noch keine Bewertungen</small>
+                </div>
+                <p id="vote-feedback" class="vote-feedback" role="status"></p>
+              </div>
+            </div>
+            <audio id="radio-player" preload="none" crossorigin="anonymous">
+              <source
+                src="http://192.168.178.210/listen/radio.yourparty/radio.mp3"
+                type="audio/mpeg"
+              />
+              Dein Browser unterstuetzt HTML5-Audio nicht.
+            </audio>
+          </article>
+
+          <aside class="history-panel">
+            <div class="history-header">
+              <h3>Playlist History</h3>
+              <p class="muted">Die letzten 10 gespielten Tracks</p>
+            </div>
+            <ul id="history-list" class="history-list">
+              <li class="history-item skeleton"></li>
+              <li class="history-item skeleton"></li>
+              <li class="history-item skeleton"></li>
+            </ul>
+            <button class="btn ghost slim" id="refresh-history">
+              Verlauf aktualisieren
+            </button>
+          </aside>
+        </div>
+      </section>
+
+      <section id="widgets" class="section widgets">
+        <div class="widget program-widget">
+          <h3>Programm &amp; Schedule</h3>
+          <p class="muted">Die naechsten Shows aus dem Studio – automatisch mit dem AutoDJ synchronisiert.</p>
+          <ul id="schedule-list" class="schedule-list">
+            <li class="skeleton-line"></li>
+            <li class="skeleton-line"></li>
+            <li class="skeleton-line"></li>
+          </ul>
+          <a
+            class="btn ghost slim"
+            href="https://192.168.178.210/public/radio.yourparty/schedule"
+            target="_blank"
+            rel="noopener"
+          >
+            Vollstaendigen Plan oeffnen
+          </a>
+        </div>
+        <div class="widget request-widget">
+          <h3>Song Requests</h3>
+          <p class="muted">
+            Sag uns, was als nächstes laufen soll – dein Wunsch landet direkt in AzuraCast und kann live gepickt werden.
+          </p>
+          <a
+            class="btn primary slim"
+            href="https://192.168.178.210/public/radio.yourparty/embed-requests"
+            target="_blank"
+            rel="noopener"
+          >
+            Jetzt Song wuenschen
+          </a>
+        </div>
+      </section>
+
+      <section id="leistungen" class="section services">
+        <div class="section-intro">
+          <h2>Services, die Events transformieren</h2>
+          <p>
+            Technik, People und Workflow aus einer Hand: modular buchbar und auf Clubs, Corporate-Events oder Festivals skalierbar.
+          </p>
+        </div>
+        <div class="card-grid">
+          <article class="service-card">
+            <div class="service-icon service-icon--audio" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation">
+                <rect x="3" y="7" width="3" height="10" rx="1.5"></rect>
+                <rect x="9" y="4" width="3" height="16" rx="1.5"></rect>
+                <rect x="15" y="9" width="3" height="11" rx="1.5"></rect>
+                <rect x="20" y="6" width="2" height="14" rx="1"></rect>
+              </svg>
+            </div>
+            <h3>Audio Engineering</h3>
+            <p>
+              Systemplanung, FOH, Monitoring, Broadcast-Mixes, Recording und Fallback-Streams für reibungslose Shows.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-icon service-icon--light" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation">
+                <path d="M12 2c-3.866 0-7 3.134-7 7 0 2.398 1.19 4.515 3 5.8V19a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4.2c1.81-1.285 3-3.402 3-5.8 0-3.866-3.134-7-7-7Z"></path>
+                <path d="M9 22h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+              </svg>
+            </div>
+            <h3>Licht &amp; Visuals</h3>
+            <p>
+              Creative Direction, Timecode-Shows, Visuals, LED- und Laser-Design – perfekt mit Audio und Streaming verzahnt.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-icon service-icon--dj" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation">
+                <circle cx="8" cy="8" r="4.5"></circle>
+                <circle cx="16" cy="16" r="5.5"></circle>
+                <circle cx="16" cy="16" r="2"></circle>
+              </svg>
+            </div>
+            <h3>DJ &amp; Artists</h3>
+            <p>
+              Kuratierte Line-ups von Wolf – Stockenweiler, Co-Hosts und internationale Guests inklusive Rider-Management.
+            </p>
+          </article>
+          <article class="service-card">
+            <div class="service-icon service-icon--stream" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation">
+                <path d="M4 7.5c2.5-2.5 6.5-2.5 9 0s6.5 2.5 9 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path>
+                <path d="M4 12c2.5-2.5 6.5-2.5 9 0s6.5 2.5 9 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path>
+                <path d="M10.5 15.5 14 19l3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+              </svg>
+            </div>
+            <h3>Streaming &amp; Hybrid</h3>
+            <p>
+              Multicam-Streams, Radio-Syndication, Podcasts, On-Demand-Edits und hybride Formate inklusive Backup-Workflows.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="referenzen" class="section references">
+        <div class="section-intro">
+          <h2>Referenzen &amp; Partner</h2>
+          <p>
+            Eine Auswahl an Venues, Marken und Kulturschaffenden, die uns vertrauen.
+          </p>
+        </div>
+        <div class="logo-grid">
+          <div class="logo-item">Soundsee</div>
+          <div class="logo-item">Bassline Kollektiv</div>
+          <div class="logo-item">Club 212</div>
+          <div class="logo-item">City of Konstanz</div>
+        </div>
+      </section>
+
+      <section id="ueber-uns" class="section about">
+        <div class="about-card">
+          <h2>Wolf - Stockenweiler &amp; Crew</h2>
+          <p>
+            Wolf Prinz ist Veranstaltungstechniker, DJ und Producer – seit über 20 Jahren in der elektronischen Szene zu Hause.
+            Mit einem eingespielten Netzwerk betreuen wir hochwertige Club- und Corporate-Produktionen vom Konzept bis zur Übertragung.
+          </p>
+          <p>
+            Unsere Mission: Events mit Charakter, perfektem Sound und smarten Abläufen – vom Listening Room bis zum mehrtägigen Festival.
+          </p>
+        </div>
+        <div class="about-highlights">
+          <article>
+            <h3>Core Values</h3>
+            <ul>
+              <li>Community-driven Programming &amp; Open Radio</li>
+              <li>Technik als Experience, nicht nur Hardware</li>
+              <li>Sauber dokumentierte Workflows &amp; Fairness</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Resident Tools</h3>
+            <ul>
+              <li>AzuraCast, Mixxx, Ableton Live</li>
+              <li>D&amp;B Audiotechnik, MA Lighting</li>
+              <li>OBS, Resolume, Dante &amp; IP-basierte Netzwerke</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="kontakt" class="section contact">
+        <div class="section-intro">
+          <h2>Kontakt &amp; Booking</h2>
+          <p>
+            Sag uns, welche Bühne oder Produktion du planst – wir melden uns innerhalb von 24 Stunden mit einer Idee und einem Setup-Vorschlag.
+          </p>
+        </div>
+        <div class="contact-layout">
+          <form id="contact-form" class="contact-form" novalidate>
+            <label for="name" class="visually-hidden">Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              placeholder="Dein Name"
+              required
+            />
+            <label for="email" class="visually-hidden">E-Mail</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="E-Mail"
+              required
+            />
+            <label for="message" class="visually-hidden">Nachricht</label>
+            <textarea
+              id="message"
+              name="message"
+              rows="6"
+              placeholder="Wo findet dein Event statt? Welche Technik brauchst du?"
+              required
+            ></textarea>
+            <button type="submit" class="btn primary full">
+              Anfrage senden
+            </button>
+            <p id="contact-feedback" class="form-feedback" role="status"></p>
+          </form>
+
+          <div class="contact-info">
+            <div class="info-block">
+              <h3>Direktkontakt</h3>
+              <p>booking@yourparty.tech</p>
+              <p>+49 7546 2249120</p>
+            </div>
+            <div class="info-block">
+              <h3>Social Signals</h3>
+              <ul class="social-links">
+                <li><a href="#">Instagram</a></li>
+                <li><a href="#">YouTube</a></li>
+                <li><a href="#">Discord Lounge</a></li>
+              </ul>
+            </div>
+            <div class="info-block">
+              <h3>Studio &amp; Warehouse</h3>
+              <p>Stockenweiler 34</p>
+              <p>88079 Kressbronn am Bodensee</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <span>YourParty Tech</span>
+        <small>Radio, Events &amp; Hybrid Experiences</small>
+      </div>
+      <div class="footer-links">
+        <a href="#">Impressum</a>
+        <a href="#">Datenschutz</a>
+        <a href="#">AVB</a>
+      </div>
+      <p class="footer-copy">&copy; 2025 Wolf - Stockenweiler. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
