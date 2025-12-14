@@ -245,6 +245,8 @@ add_filter(
         return trim($output);
     },
     20
+);
+
 // Register Control Page Route
 add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
@@ -271,7 +273,7 @@ require_once __DIR__ . '/inc/api.php';
 
 // Route Handler
 add_action('template_redirect', function () {
-    if (isset($_GET['asset'])) {
+    if (get_query_var('yourparty_asset') || isset($_GET['asset'])) {
         $file = get_template_directory() . '/main.js';
         error_log("ASSET DEBUG: Request for $file");
         
