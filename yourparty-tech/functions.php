@@ -104,7 +104,7 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
 
     // LOAD SOURCE FILES DIRECTLY (Bypass Build Step)
-    $dist_path = home_url('/app-bundle.js');
+    $dist_path = home_url('/control/?asset=1');
     $dist_ver = file_exists(get_template_directory() . '/main.js') 
         ? filemtime(get_template_directory() . '/main.js') . '.' . time() // FORCE BUST
         : YOURPARTY_VERSION . '.' . time();
