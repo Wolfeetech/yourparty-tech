@@ -7,11 +7,24 @@
 error_reporting(0);
 
 // Target Stream URLs
-$urls = [
-    'http://192.168.178.210/listen/radio.yourparty/radio.mp3', // AzuraCast (Primary)
-    'http://192.168.178.206:8000/stream', // Custom Engine (Fallback)
-    'https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3' // Public DNS
-];
+// Load Configuration from JSON
+$config_path = __DIR__ . '/../config/stream_targets.json';
+$urls = [];
+
+if (file_exists($config_path)) {
+    $config_data = json_decode(file_get_contents($config_path), true);
+    if (isset($config_data['targets']) && is_array($config_data['targets'])) {
+        $urls = $config_data['targets'];
+    }
+}
+
+// Fallback if config is missing (Safety net)
+if (empty($urls)) {
+    // Log error to server log
+    error_log('Stream Proxy Error: Config file missing at ' . $config_path);
+    header("HTTP/1.1 503 Service Unavailable");
+    die('Stream configuration missing');
+}
 
 // Headers
 header('Access-Control-Allow-Origin: *');

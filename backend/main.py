@@ -190,6 +190,7 @@ def update_rating_in_db(song_id: str, vote: str = None, rating_value: int = None
     return get_rating_counts(song_id)
 
 
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -203,7 +204,11 @@ MUSIC_DIR = Path(os.getenv("MUSIC_DIR", "/var/radio/music"))
 async def lifespan(app: FastAPI):
     # startup
     if not AZURACAST_URL or not AZURACAST_API_KEY:
-        raise RuntimeError("AZURACAST_URL and AZURACAST_API_KEY are required for backend operation.")
+        error_msg = "AZURACAST_URL and AZURACAST_API_KEY are required environment variables. Please check your .env file."
+        print(f"CRITICAL ERROR: {error_msg}")
+        raise RuntimeError(error_msg)
+    
+    print(f"INFO: Connected to AzuraCast at {AZURACAST_URL}")
     yield
     # shutdown (no-op)
 

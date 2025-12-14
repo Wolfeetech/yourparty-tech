@@ -58,7 +58,7 @@ if (!defined('YOURPARTY_STREAM_URL')) {
     $stream_url_option = get_option('yourparty_stream_url');
     define(
         'YOURPARTY_STREAM_URL',
-        $stream_url_option ?: 'https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3'
+        $stream_url_option ?: YOURPARTY_AZURACAST_PUBLIC_URL . '/listen/radio.yourparty/radio.mp3'
     );
 }
 
@@ -263,4 +263,44 @@ add_action('template_include', function ($template) {
         return get_template_directory() . '/templates/page-control.php';
     }
     return $template;
+});
+
+// -----------------------------------------------------------------------------
+// Security: tighten REST CORS and disable XML-RPC
+// -----------------------------------------------------------------------------
+
+// Disable XML-RPC to reduce attack surface (brute force, pingbacks)
+add_filter('xmlrpc_enabled', '__return_false');
+
+// Restrict REST API CORS to allowed frontends only
+add_action('rest_api_init', function () {
+    // Remove default WP CORS headers (wildcard)
+    remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+
+    $allowed_origins = [
+        'https://yourparty.tech',
+        'https://www.yourparty.tech',
+        'https://radio.yourparty.tech',
+        'https://control.yourparty.tech',
+    ];
+
+    add_filter('rest_pre_serve_request', function ($served, $server, $request) use ($allowed_origins) {
+        $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+        if (in_array($origin, $allowed_origins, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Vary: Origin');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, PATCH, DELETE');
+            header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type, Content-Disposition, Content-MD5');
+        }
+
+        // Handle preflight cleanly
+        if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+            status_header(204);
+            exit;
+        }
+
+        return $served;
+    }, 10, 3);
 });
