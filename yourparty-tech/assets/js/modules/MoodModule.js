@@ -169,7 +169,12 @@ class MoodModule {
     }
 
     createDialog() {
-        if (document.getElementById('mood-dialog')) return;
+        console.log('[MoodModule] createDialog called');
+        if (document.getElementById('mood-dialog')) {
+            console.log('[MoodModule] Dialog already exists, skipping creation');
+            return;
+        }
+        console.log('[MoodModule] Creating new dialog...');
 
         const moodButtonsHTML = Object.entries(MOODS).map(([key, m]) => `
             <button class="mood-btn" data-value="${key}" 
