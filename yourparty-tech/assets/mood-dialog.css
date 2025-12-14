@@ -13,6 +13,7 @@
     z-index: 1;
 }
 
+.mood-dialog-content {
     position: relative; z-index: 10;
     background: rgba(20,20,20,0.95);
     border: 1px solid rgba(255,255,255,0.1);
@@ -25,6 +26,7 @@
     text-align: center;
     color: #fff;
     animation: zoomIn 0.3s ease;
+}
 
 @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
