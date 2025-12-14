@@ -69,7 +69,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('assets/images/hero-bodensee.jpg');
+    background-image: url('assets/images/service-stage.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -180,7 +180,6 @@ a { color: inherit; text-decoration: none; }
 .usp-card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
 
 /* RADIO CARD */
-<<<<<<< HEAD
 /* RADIO CARD - PREMIUM REDESIGN */
 .radio-card--integrated {
     background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(0,0,0,0.95) 100%);
@@ -218,40 +217,6 @@ a { color: inherit; text-decoration: none; }
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
-=======
-.radio-card { max-width: 800px; margin: 0 auto; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.radio-card__media { position: relative; aspect-ratio: 1/1; max-width: 400px; margin: 40px auto; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-lg); }
-.radio-card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--transition-slow); }
-.radio-card__media:hover img { transform: scale(1.02); }
-.radio-card__play { 
-  position: absolute; 
-  top: 50%; left: 50%; 
-  transform: translate(-50%, -50%); 
-  width: 80px; height: 80px; 
-  border-radius: 50%; 
-  background: linear-gradient(135deg, var(--emerald-light) 0%, var(--emerald-dark) 100%); 
-  border: none; 
-  color: #fff; 
-  font-size: 32px; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-  box-shadow: 0 4px 20px rgba(46, 139, 87, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
-}
-.radio-card__play:hover { 
-  transform: translate(-50%, -50%) scale(1.08); 
-  box-shadow: 0 8px 40px rgba(46, 139, 87, 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
-  filter: brightness(1.1);
-}
-.radio-card__play:active { 
-  transform: translate(-50%, -50%) scale(0.98); 
-  transition-duration: 0.1s;
-}
-.radio-card__meta { text-align: center; padding: 0 40px 40px; }
-.radio-card__artist { color: var(--text-muted); font-size: 16px; margin-top: 8px; }
->>>>>>> c56c5e38c7bdec486b44fa7d38fe126d7a47a7e2
 
 /* META ROW LAYOUT */
 .radio-card__meta-row { 
