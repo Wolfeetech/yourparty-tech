@@ -55,10 +55,11 @@
 | WordPress | CT 207 | 20GB | ✅ Läuft (Content Updated) |
 | MariaDB | CT 208 | 15GB | ✅ Läuft |
 | Radio API (neu) | CT 211 | 20GB | ✅ Aktiv (Connected to DB) |
-| Radio API (alt) | CT 100 | 8GB | ❌ Inaktiv - LÖSCHEN? |
+| Radio API (alt) | CT 100 | 8GB | 🗑️ DELETED |
 | AzuraCast | VM 210 | 64GB + 2TB HDD | ✅ Läuft |
 | MongoDB | CT 202 | 15GB | ✅ Läuft (Storing Ratings) |
 | **Thin Pool** | pve/data | 157GB | ⚠️ 96.6% voll |
+| **PVE Control** | Host | Script | ✅ Active (Cron) |
 
 ---
 

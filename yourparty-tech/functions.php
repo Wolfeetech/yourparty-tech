@@ -255,10 +255,18 @@ add_action('init', function () {
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v4')) {
+    if (!get_option('yourparty_rules_flushed_v5')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v4', true);
+        update_option('yourparty_rules_flushed_v5', true);
     }
+});
+
+// Disable Canonical Redirect for Modules to prevent trailing slash
+add_filter('redirect_canonical', function ($redirect_url) {
+    if (get_query_var('yourparty_module')) {
+        return false;
+    }
+    return $redirect_url;
 });
 
 add_filter('query_vars', function ($vars) {
