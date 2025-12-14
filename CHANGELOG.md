@@ -7,6 +7,19 @@
     - Cause 2: Missing Template assignment in Database (restored via `fix_control_page.php`).
 - **System**: Aborted unnecessary migration of CT 207 (confirmed already on HDD).
 
+## [v1.0.5] - 2025-12-14
+### Added
+- **Optimization**: PVE Monitoring Integration.
+    - Added `tools/pve_monitor.py` to host (scheduled via cron).
+    - Added `/yourparty/v1/control` endpoint to fetch PVE status.
+- **Visuals**: Replaced "over-the-top" drone banner with realistic Bodensee footage in Services section.
+- **Visuals**: Updated Hero Banner to "Stage" image.
+
+### Fixed
+- **CSS**: Resolved merge conflicts in `style.css` (Startpage/Radio Card).
+- **Cleanup**: Removed temporary debug headers.
+
+
 ## [1.0.0] - 2025-12-12
 ### Optimization Phase
 - **Infrastructure**:

@@ -255,9 +255,9 @@ add_action('init', function () {
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v3')) {
+    if (!get_option('yourparty_rules_flushed_v4')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v3', true);
+        update_option('yourparty_rules_flushed_v4', true);
     }
 });
 
