@@ -252,6 +252,7 @@ add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
     add_rewrite_rule('^app-bundle\.js$', 'index.php?yourparty_asset=1', 'top');
+    add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     
     // Auto-flush if needed (Self-cleaning)
     if (!get_option('yourparty_rules_flushed_v3')) {
@@ -264,6 +265,7 @@ add_filter('query_vars', function ($vars) {
     $vars[] = 'yourparty_control';
     $vars[] = 'yourparty_stream';
     $vars[] = 'yourparty_asset';
+    $vars[] = 'yourparty_module';
     return $vars;
 });
 
@@ -273,6 +275,23 @@ require_once __DIR__ . '/inc/api.php';
 
 // Route Handler
 add_action('template_redirect', function () {
+    // 1. JS Module Proxy (Dynamic)
+    $module = get_query_var('yourparty_module');
+    if ($module) {
+        $module = sanitize_file_name($module);
+        $file = get_template_directory() . '/assets/js/modules/' . $module;
+        if (file_exists($file)) {
+            header('Content-Type: application/javascript');
+            header('Cache-Control: no-cache');
+            readfile($file);
+            exit;
+        } else {
+            status_header(404);
+            echo "Module not found: " . esc_html($module);
+            exit;
+        }
+    }
+
     if (get_query_var('yourparty_asset') || isset($_GET['asset'])) {
         $file = get_template_directory() . '/main.js';
         error_log("ASSET DEBUG: Request for $file");
