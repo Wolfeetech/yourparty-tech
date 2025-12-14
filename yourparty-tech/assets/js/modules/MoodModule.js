@@ -331,7 +331,9 @@ class MoodModule {
         const title = this.currentTrack?.title || document.getElementById('track-title')?.textContent || 'Unknown';
         const artist = this.currentTrack?.artist || document.getElementById('track-artist')?.textContent || 'Unknown';
 
-        trackInfo.textContent = `${artist} - ${title}`;
+        if (trackInfo) {
+            trackInfo.textContent = `${artist} - ${title}`;
+        }
 
         // Reset State
         this.selectedMoodCurrent = null;
@@ -348,6 +350,7 @@ class MoodModule {
 
         dialog.classList.add('active');
         dialog.style.display = 'flex';
+        console.log('[MoodModule] Dialog should now be visible, display:', dialog.style.display);
     }
 
     closeDialog() {
