@@ -353,4 +353,59 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 /* === MOOD DIALOG STYLES MOVED TO assets/mood-dialog.css === */
 </style>
 
+<!-- STATIC MOOD DIALOG (Fallback for JS issues) -->
+<div id="mood-dialog" class="mood-dialog glass-panel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2147483647; align-items:center; justify-content:center;">
+    <div class="mood-dialog-backdrop" id="mood-backdrop" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1;"></div>
+    <div class="mood-dialog-content" style="position:relative; z-index:10; background:rgba(20,20,20,0.95); border:1px solid rgba(255,255,255,0.1); box-shadow:0 0 50px rgba(0,0,0,0.8); border-radius:20px; padding:30px; width:90%; max-width:500px; text-align:center; color:#fff;">
+        <button class="close-btn" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:15px; right:15px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+        <h3 style="font-size:1.5rem; margin-bottom:5px;">Tag Vibe & Genre</h3>
+        <p id="mood-track-info" style="color:#888; margin-bottom:20px; font-size:0.9rem;">Select a vibe for this track</p>
+        
+        <div class="mood-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:20px;">
+            <button class="mood-btn" data-value="energetic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">⚡</span><span style="font-size:0.7rem;">Energetic</span>
+            </button>
+            <button class="mood-btn" data-value="chill" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🌴</span><span style="font-size:0.7rem;">Chill</span>
+            </button>
+            <button class="mood-btn" data-value="euphoric" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🤩</span><span style="font-size:0.7rem;">Euphoric</span>
+            </button>
+            <button class="mood-btn" data-value="dark" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🌑</span><span style="font-size:0.7rem;">Dark</span>
+            </button>
+            <button class="mood-btn" data-value="groovy" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">💃</span><span style="font-size:0.7rem;">Groovy</span>
+            </button>
+            <button class="mood-btn" data-value="melodic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🎹</span><span style="font-size:0.7rem;">Melodic</span>
+            </button>
+            <button class="mood-btn" data-value="hypnotic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🌀</span><span style="font-size:0.7rem;">Hypnotic</span>
+            </button>
+            <button class="mood-btn" data-value="uplifting" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
+                <span style="font-size:1.5rem;">🚀</span><span style="font-size:0.7rem;">Uplifting</span>
+            </button>
+        </div>
+        
+        <button id="mood-submit-btn" onclick="alert('Vote submitted! (Demo)'); document.getElementById('mood-dialog').style.display='none';" style="background:#00ff88; color:#000; padding:15px 30px; border:none; border-radius:30px; font-weight:bold; font-size:1.1rem; cursor:pointer; width:100%;">Submit Vote</button>
+    </div>
+</div>
+
+<script>
+// Simple inline dialog opener
+document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('mood-tag-button');
+    var dlg = document.getElementById('mood-dialog');
+    if (btn && dlg) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[StaticDialog] Opening mood dialog');
+            dlg.style.display = 'flex';
+        });
+    }
+});
+</script>
+
 <?php get_footer(); ?>
