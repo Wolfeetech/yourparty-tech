@@ -1091,7 +1091,7 @@ add_action('rest_api_init', function () {
             '_honeypot' => ['required' => false],
         ]
     ]);
-    // NEW: PVE Control Status Endpoint (Phase 4)
+    // NEW: PVE Control Status Endpoint (Phase 4) - Forced Update
     register_rest_route(
         'yourparty/v1',
         '/control',
