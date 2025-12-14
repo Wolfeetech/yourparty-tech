@@ -104,9 +104,9 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
 
     // LOAD SOURCE FILES DIRECTLY (Bypass Build Step)
-    $dist_path = get_template_directory_uri() . '/src/js/main.js';
-    $dist_ver = file_exists(get_template_directory() . '/src/js/main.js') 
-        ? filemtime(get_template_directory() . '/src/js/main.js') . '.' . time() // FORCE BUST
+    $dist_path = home_url('/app-bundle.js');
+    $dist_ver = file_exists(get_template_directory() . '/main.js') 
+        ? filemtime(get_template_directory() . '/main.js') . '.' . time() // FORCE BUST
         : YOURPARTY_VERSION . '.' . time();
 
     // Load Main Application Bundle (Source Mode)
@@ -246,23 +246,39 @@ add_filter(
         return trim($output);
     },
     20
-);
-
 // Register Control Page Route
 add_action('init', function () {
+    error_log('DEBUG ROUTER: ' . $_SERVER['REQUEST_URI']);
+    
+    // Nuclear Option: Raw Handler for Stability
+    if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/app-bundle.js') !== false) {
+        error_log('DEBUG ROUTER: MATCHED bundle js');
+        $file = get_template_directory() . '/main.js';
+        if (file_exists($file)) {
+            header('Content-Type: application/javascript');
+            header('Cache-Control: no-cache');
+            readfile($file);
+            exit;
+        } else {
+             error_log('DEBUG ROUTER: File NOT Found: ' . $file);
+        }
+    }
+
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
+    add_rewrite_rule('^app-bundle\.js$', 'index.php?yourparty_asset=1', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v1') || isset($_GET['force_flush'])) {
+    if (!get_option('yourparty_rules_flushed_v3')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v1', true);
+        update_option('yourparty_rules_flushed_v3', true);
     }
 });
 
 add_filter('query_vars', function ($vars) {
     $vars[] = 'yourparty_control';
     $vars[] = 'yourparty_stream';
+    $vars[] = 'yourparty_asset';
     return $vars;
 });
 
@@ -274,6 +290,20 @@ add_action('template_redirect', function () {
     if (get_query_var('yourparty_stream')) {
         yourparty_handle_stream_request();
         exit;
+    }
+    
+    if (get_query_var('yourparty_asset') || isset($_GET['yourparty_asset'])) {
+        $file = get_template_directory() . '/main.js';
+        if (file_exists($file)) {
+            header('Content-Type: application/javascript');
+            header('Cache-Control: no-cache');
+            readfile($file);
+            exit;
+        } else {
+            status_header(404);
+            echo 'Asset not found';
+            exit;
+        }
     }
 });
 
