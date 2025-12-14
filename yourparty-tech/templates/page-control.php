@@ -67,7 +67,11 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 }
 
 // --- DATA FETCH ---
-$api_base = 'http://192.168.178.211:8000'; 
+$api_internal = 'http://backend:8000'; // Docker internal
+$api_public = 'https://api.yourparty.tech'; // Client-side accessible
+
+// PHP Fetches use Internal
+$api_base = $api_internal; 
 
 $ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => false, 'timeout' => 5]));
 $ratings_data = json_decode($ratings_body, true);
@@ -424,7 +428,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody=document.querySelector('.control-table tbody');
-    const apiBase='<?php echo esc_js($api_base); ?>';
+    const apiBase='<?php echo esc_js($api_public); ?>';
 
     function updateData() {
         Promise.all([ 

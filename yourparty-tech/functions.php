@@ -1,5 +1,4 @@
 <?php
-error_log('DEBUG: YOURPARTY THEME FUNCTIONS.PHP LOADED');
 /**
  * YourParty Tech theme functions.
  */
@@ -104,7 +103,7 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
 
     // LOAD SOURCE FILES DIRECTLY (Bypass Build Step)
-    $dist_path = home_url('/control/?asset=1');
+    $dist_path = home_url('/?asset=1');
     $dist_ver = file_exists(get_template_directory() . '/main.js') 
         ? filemtime(get_template_directory() . '/main.js') . '.' . time() // FORCE BUST
         : YOURPARTY_VERSION . '.' . time();
@@ -250,8 +249,6 @@ add_filter(
 add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
-});
-    add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
     add_rewrite_rule('^app-bundle\.js$', 'index.php?yourparty_asset=1', 'top');
     
     // Auto-flush if needed (Self-cleaning)
@@ -270,41 +267,32 @@ add_filter('query_vars', function ($vars) {
 
 // Load Helpers
 require_once __DIR__ . '/inc/stream-handler.php';
+require_once __DIR__ . '/inc/api.php';
 
 // Route Handler
 add_action('template_redirect', function () {
-    if (get_query_var('yourparty_stream')) {
-        yourparty_handle_stream_request();
-        exit;
-    }
-    
-    if (get_query_var('yourparty_asset') || isset($_GET['yourparty_asset'])) {
+    if (isset($_GET['asset'])) {
         $file = get_template_directory() . '/main.js';
+        error_log("ASSET DEBUG: Request for $file");
+        
         if (file_exists($file)) {
+            error_log("ASSET DEBUG: File found, serving.");
             header('Content-Type: application/javascript');
             header('Cache-Control: no-cache');
             readfile($file);
             exit;
         } else {
-            status_header(404);
-            echo 'Asset not found';
-            exit;
+             error_log("ASSET DEBUG: File NOT found.");
         }
+    }
+
+    if (get_query_var('yourparty_stream')) {
+        yourparty_handle_stream_request();
+        exit;
     }
 });
 
 add_action('template_include', function ($template) {
-    // Piggyback Asset Handler
-    if (get_query_var('yourparty_control') && isset($_GET['asset'])) {
-        $file = get_template_directory() . '/main.js';
-        if (file_exists($file)) {
-            header('Content-Type: application/javascript');
-            header('Cache-Control: no-cache');
-            readfile($file);
-            exit;
-        }
-    }
-
     if (get_query_var('yourparty_control')) {
         return get_template_directory() . '/templates/page-control.php';
     }

@@ -63,7 +63,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
 
                     <!-- Mood/Rating Actions -->
                     <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 5;">
-                         <button id="mood-tag-button" class="btn-glass-small" onclick="if(window.openMoodDialog) window.openMoodDialog()" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog">
+                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog">
                             <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px;" aria-hidden="true">🏷️</span> TAG VIBE
                          </button>
                     </div>
