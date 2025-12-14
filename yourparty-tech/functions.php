@@ -248,23 +248,9 @@ add_filter(
     20
 // Register Control Page Route
 add_action('init', function () {
-    error_log('DEBUG ROUTER: ' . $_SERVER['REQUEST_URI']);
-    
-    // Nuclear Option: Raw Handler for Stability
-    if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/app-bundle.js') !== false) {
-        error_log('DEBUG ROUTER: MATCHED bundle js');
-        $file = get_template_directory() . '/main.js';
-        if (file_exists($file)) {
-            header('Content-Type: application/javascript');
-            header('Cache-Control: no-cache');
-            readfile($file);
-            exit;
-        } else {
-             error_log('DEBUG ROUTER: File NOT Found: ' . $file);
-        }
-    }
-
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
+    add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
+});
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
     add_rewrite_rule('^app-bundle\.js$', 'index.php?yourparty_asset=1', 'top');
     
@@ -308,6 +294,17 @@ add_action('template_redirect', function () {
 });
 
 add_action('template_include', function ($template) {
+    // Piggyback Asset Handler
+    if (get_query_var('yourparty_control') && isset($_GET['asset'])) {
+        $file = get_template_directory() . '/main.js';
+        if (file_exists($file)) {
+            header('Content-Type: application/javascript');
+            header('Cache-Control: no-cache');
+            readfile($file);
+            exit;
+        }
+    }
+
     if (get_query_var('yourparty_control')) {
         return get_template_directory() . '/templates/page-control.php';
     }
