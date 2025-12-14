@@ -276,13 +276,18 @@ add_action('template_redirect', function () {
         error_log("ASSET DEBUG: Request for $file");
         
         if (file_exists($file)) {
-            error_log("ASSET DEBUG: File found, serving.");
+            // error_log("ASSET DEBUG: File found, serving.");
             header('Content-Type: application/javascript');
             header('Cache-Control: no-cache');
             readfile($file);
             exit;
         } else {
-             error_log("ASSET DEBUG: File NOT found.");
+            // DEBUG: Show why it failed on live
+            header('Content-Type: text/plain');
+            echo "Error: Asset not found at path: " . $file;
+            echo "\nDir: " . get_template_directory();
+            // error_log("ASSET DEBUG: File NOT found.");
+            exit;
         }
     }
 
