@@ -1091,6 +1091,36 @@ add_action('rest_api_init', function () {
             '_honeypot' => ['required' => false],
         ]
     ]);
+    // NEW: PVE Control Status Endpoint (Phase 4)
+    register_rest_route(
+        'yourparty/v1',
+        '/control',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $upload_dir = wp_upload_dir();
+                $status_file = $upload_dir['basedir'] . '/pve_status.json';
+                
+                $data = [
+                    'pve' => null,
+                    'last_updated' => null,
+                ];
+
+                if (file_exists($status_file)) {
+                    $json = json_decode(file_get_contents($status_file), true);
+                    $data['pve'] = $json ?: ['error' => 'Invalid JSON'];
+                    $data['last_updated'] = filemtime($status_file);
+                } else {
+                    $data['error'] = 'Status file not found at ' . $status_file;
+                }
+
+                return rest_ensure_response($data);
+            },
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            },
+        ]
+    );
 });
 
 /**
