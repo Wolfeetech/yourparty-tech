@@ -4,7 +4,7 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.3.34');
+    define('YOURPARTY_VERSION', '3.3.35');
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
@@ -255,9 +255,9 @@ add_action('init', function () {
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v5')) {
+    if (!get_option('yourparty_rules_flushed_v6')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v5', true);
+        update_option('yourparty_rules_flushed_v6', true);
     }
 });
 
