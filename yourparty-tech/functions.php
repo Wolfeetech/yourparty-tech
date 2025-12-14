@@ -258,8 +258,6 @@ add_action('init', function () {
         flush_rewrite_rules();
         update_option('yourparty_rules_flushed_v3', true);
     }
-    
-    header('X-Debug-Deploy: v_final_check_1');
 });
 
 add_filter('query_vars', function ($vars) {
