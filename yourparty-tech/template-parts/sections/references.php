@@ -5,9 +5,9 @@
  * @package YourPartyTech
  */
 
-// Google API Configuration
-$google_api_key = get_option('yourparty_google_api_key', 'AIzaSyDq5i1iorjN5-odXZuhArOMl7cw7HZS3kw');
-$google_place_id = get_theme_mod('yourparty_google_places_id', 'ChIJvcnMkm7CuAwRRACFNOjAm24');
+// Google API Configuration (key must be set in WP options)
+$google_api_key = get_option('yourparty_google_api_key', '');
+$google_place_id = get_theme_mod('yourparty_google_places_id', '');
 
 // Fetch reviews server-side
 $reviews_data = false;

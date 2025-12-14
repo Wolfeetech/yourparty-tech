@@ -13,10 +13,10 @@ import pathlib
 env_path = pathlib.Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-# Config from Env
+# Config from Env (required)
 MONGO_URI = os.getenv("MONGO_URI")
-AZURACAST_URL = os.getenv("AZURACAST_URL", "http://192.168.178.210")
-AZURACAST_KEY = os.getenv("AZURACAST_API_KEY", "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c")
+AZURACAST_URL = os.getenv("AZURACAST_URL")
+AZURACAST_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
 
 LOCAL_DRIVE = "M:\\"
@@ -25,13 +25,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("SyncManager")
 
 def get_mongo_client():
+    if not MONGO_URI:
+        logger.error("MONGO_URI is required; aborting sync.")
+        return None
     try:
-        if MONGO_URI:
-            client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
-        else:
-             # Fallback
-             client = MongoClient("mongodb://root:yourparty@192.168.178.222:27017/?authSource=admin")
-             
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
         client.server_info() # Trigger connect
         return client
     except Exception as e:
@@ -39,15 +37,16 @@ def get_mongo_client():
         return None
 
 def fetch_azuracast_media():
+    if not AZURACAST_URL or not AZURACAST_KEY:
+        logger.error("AZURACAST_URL and AZURACAST_API_KEY are required to fetch media.")
+        return []
     headers = {
         "Authorization": f"Bearer {AZURACAST_KEY}",
         "Content-Type": "application/json"
     }
     url = f"{AZURACAST_URL}/api/station/{STATION_ID}/files"
     try:
-        resp = requests.get(url, headers=headers, timeout=10, verify=False)
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        resp = requests.get(url, headers=headers, timeout=10, verify=True)
         
         resp.raise_for_status()
         return resp.json()

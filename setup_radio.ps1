@@ -40,13 +40,12 @@ $MongoPort = "27017"
 $MongoUser = Read-Host "MongoDB Benutzer (Enter für 'root')"
 if (-not $MongoUser) { $MongoUser = "root" }
 
-$MongoPass = Read-Host "MongoDB Passwort (Enter für leer)"
-if ($MongoPass) {
-    $MongoUri = "mongodb://$($MongoUser):$($MongoPass)@$($MongoHost):$($MongoPort)/?authSource=admin"
+$MongoPass = Read-Host "MongoDB Passwort (erforderlich)"
+if (-not $MongoPass) {
+    Write-Color "MongoDB Passwort darf nicht leer sein." "Red"
+    exit 1
 }
-else {
-    $MongoUri = "mongodb://$($MongoHost):$($MongoPort)/"
-}
+$MongoUri = "mongodb://$($MongoUser):$($MongoPass)@$($MongoHost):$($MongoPort)/?authSource=admin"
 
 # Test Mongo Connection via Python script (simplest way since we have python)
 $TestScript = @"
@@ -83,11 +82,17 @@ catch {
 Remove-Item $TestFile -ErrorAction SilentlyContinue
 
 # 3. Save Configuration to .env
+$AzuraCastKey = Read-Host "AzuraCast API Key (erforderlich)"
+if (-not $AzuraCastKey) {
+    Write-Color "AzuraCast API Key darf nicht leer sein." "Red"
+    exit 1
+}
+
 Write-Color "`n3. Speichere Konfiguration..." "Yellow"
 $EnvContent = @"
 MONGO_URI="$MongoUri"
 AZURACAST_URL="http://192.168.178.210"
-AZURACAST_API_KEY="9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c"
+AZURACAST_API_KEY="$AzuraCastKey"
 MONGO_HOST="$MongoHost"
 MONGO_PORT="$MongoPort"
 MONGO_INITDB_ROOT_USERNAME="$MongoUser"

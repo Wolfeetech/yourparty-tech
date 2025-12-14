@@ -519,7 +519,7 @@ async def get_queue():
     # /api/station/{id}/queue
     url = f"{str(os.getenv('AZURACAST_URL', 'https://192.168.178.210'))}/api/station/1/queue"
     
-    async with httpx.AsyncClient(verify=False) as client:
+    async with httpx.AsyncClient(verify=True) as client:
         try:
              # This endpoint often requires API Key, let's try with headers
              headers = {"X-API-Key": os.getenv("AZURACAST_API_KEY", "")}
@@ -540,7 +540,7 @@ async def public_status_loop():
             # Public Endpoint: No Key Needed
             url = "http://192.168.178.210/api/nowplaying/1" 
             
-            async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
+            async with httpx.AsyncClient(verify=True, follow_redirects=True) as client:
                 # Try HTTP first
                 try:
                     resp = await client.get(url, timeout=5.0)
@@ -908,11 +908,14 @@ async def run_playlist_sync():
     if not top_tracks:
         return
 
-    # 2. Connect to AzuraCast
-    # Fallback credentials from investigation
-    ac_url = os.getenv("AZURACAST_URL", "http://192.168.178.210") 
-    ac_key = os.getenv("AZURACAST_API_KEY", "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c")
+    # 2. Connect to AzuraCast (requires explicit env configuration)
+    ac_url = os.getenv("AZURACAST_URL")
+    ac_key = os.getenv("AZURACAST_API_KEY")
     station_id = 1 
+
+    if not ac_url or not ac_key:
+        logger.error("AZURACAST_URL or AZURACAST_API_KEY missing; cannot sync playlists.")
+        return
 
     client = AzuraCastClient(ac_url, ac_key, station_id)
     

@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.33.0
+    container_name: vaultwarden
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ROCKET_PORT: 8080
+      WEBSOCKET_ENABLED: "true"
+      SIGNUPS_ALLOWED: ${SIGNUPS_ALLOWED:-false}
+      INVITATIONS_ALLOWED: ${INVITATIONS_ALLOWED:-false}
+      DOMAIN: ${VAULTWARDEN_DOMAIN}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_SECURITY: ${SMTP_SECURITY:-starttls}
+      SHOW_PASSWORD_HINT: ${SHOW_PASSWORD_HINT:-false}
+      LOG_FILE: /data/vaultwarden.log
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./data:/data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  data:

@@ -29,12 +29,20 @@ app = FastAPI(
 # Enable Prometheus Metrics
 Instrumentator().instrument(app).expose(app)
 
-# Load Allowed Origins from Env
-raw_origins = os.getenv("ALLOWED_ORIGINS", '["*"]')
+# Load Allowed Origins from Env (default: production + localhost)
+default_origins = json.dumps([
+    "https://yourparty.tech",
+    "https://www.yourparty.tech",
+    "https://radio.yourparty.tech",
+    "https://control.yourparty.tech",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+])
+raw_origins = os.getenv("ALLOWED_ORIGINS", default_origins)
 try:
     origins_list = json.loads(raw_origins)
 except json.JSONDecodeError:
-    origins_list = ["*"]
+    origins_list = json.loads(default_origins)
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,9 +67,12 @@ from pymongo import MongoClient, ReturnDocument
 # ---------------------------------------------------------------------------
 
 MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
-MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "4f5cd00532af49b5941d6f6385b2e0bf")
+MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
 MONGO_HOST = os.getenv("MONGO_HOST", "mongo")
 MONGO_PORT = os.getenv("MONGO_PORT", "27017")
+
+if not MONGO_PASS:
+    raise RuntimeError("MONGO_INITDB_ROOT_PASSWORD is required; refusing to start with default/empty password.")
 
 MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}"
 
@@ -183,7 +194,7 @@ def update_rating_in_db(song_id: str, vote: str = None, rating_value: int = None
 # Configuration
 # ---------------------------------------------------------------------------
 
-AZURACAST_URL = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+AZURACAST_URL = os.getenv("AZURACAST_URL")
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 MUSIC_DIR = Path(os.getenv("MUSIC_DIR", "/var/radio/music"))
 
@@ -192,7 +203,7 @@ MUSIC_DIR = Path(os.getenv("MUSIC_DIR", "/var/radio/music"))
 async def lifespan(app: FastAPI):
     # startup
     if not AZURACAST_URL or not AZURACAST_API_KEY:
-        print("[WARN] AZURACAST_URL or AZURACAST_API_KEY missing  API will not function correctly.")
+        raise RuntimeError("AZURACAST_URL and AZURACAST_API_KEY are required for backend operation.")
     yield
     # shutdown (no-op)
 
@@ -238,7 +249,7 @@ async def get_enriched_status():
     headers = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}
 
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=False) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=True) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -274,7 +285,7 @@ async def get_history():
     headers = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}
 
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=False) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=True) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -310,7 +321,7 @@ async def get_library():
     headers = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}
 
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=False) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=True) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
@@ -854,7 +865,7 @@ async def liquidsoap_next_track():
     url = f"{AZURACAST_URL}/api/station/1/media/{song_id}"
     headers = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}
     
-    async with httpx.AsyncClient(timeout=5, verify=False) as client:
+    async with httpx.AsyncClient(timeout=5, verify=True) as client:
         try:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
@@ -943,7 +954,7 @@ async def write_metadata_to_id3(song_id: str) -> None:
     logger.debug(f"[ID3_WRITE_API] Fetching media info from: {url}")
 
     try:
-        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=False) as client:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True, verify=True) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             media = response.json()
@@ -1026,7 +1037,7 @@ async def add_to_azuracast_playlist(song_id: str, playlist_name: str):
     
     playlist_id = None
     
-    async with httpx.AsyncClient(timeout=10, verify=False) as client:
+    async with httpx.AsyncClient(timeout=10, verify=True) as client:
         try:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
@@ -1064,7 +1075,7 @@ async def add_to_azuracast_playlist(song_id: str, playlist_name: str):
     # 2. Add song to playlist
     media_url = f"{AZURACAST_URL}/api/station/1/media/{song_id}"
     
-    async with httpx.AsyncClient(timeout=10, verify=False) as client:
+    async with httpx.AsyncClient(timeout=10, verify=True) as client:
         try:
             resp = await client.get(media_url, headers=headers)
             if resp.status_code != 200:
@@ -1148,7 +1159,7 @@ async def update_metrics_loop():
 
     while True:
         try:
-            async with httpx.AsyncClient(verify=False) as client:
+            async with httpx.AsyncClient(verify=True) as client:
                 # 1. AzuraCast Playlists
                 if azura_key:
                     headers = {"Authorization": f"Bearer {azura_key}"}
@@ -1187,4 +1198,3 @@ async def update_metrics_loop():
 @app.on_event("startup")
 async def start_metrics_task():
     asyncio.create_task(update_metrics_loop())
-
