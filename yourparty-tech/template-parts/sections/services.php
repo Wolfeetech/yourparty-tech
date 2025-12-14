@@ -53,7 +53,7 @@
             <div style="background: var(--color-glass); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--color-glass-border); transition: transform 0.3s;"
                 onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
                 <div style="margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; height: 200px;">
-                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/service-drone.png"
+                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/hero-bodensee.jpg"
                         alt="Drohnenaufnahmen" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <h3 style="margin-top: 0; font-size: 1.5rem;">
