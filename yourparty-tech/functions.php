@@ -251,11 +251,30 @@ add_filter(
 // Register Control Page Route
 add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
+    add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
+    
+    // Auto-flush if needed (Self-cleaning)
+    if (!get_option('yourparty_rules_flushed_v1')) {
+        flush_rewrite_rules();
+        update_option('yourparty_rules_flushed_v1', true);
+    }
 });
 
 add_filter('query_vars', function ($vars) {
     $vars[] = 'yourparty_control';
+    $vars[] = 'yourparty_stream';
     return $vars;
+});
+
+// Load Helpers
+require_once __DIR__ . '/inc/stream-handler.php';
+
+// Route Handler
+add_action('template_redirect', function () {
+    if (get_query_var('yourparty_stream')) {
+        yourparty_handle_stream_request();
+        exit;
+    }
 });
 
 add_action('template_include', function ($template) {
