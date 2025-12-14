@@ -1,15 +1,15 @@
 /**
  * YourParty Tech - Frontend Entry Point
  */
-import MoodModule from './modules/MoodModule.js';
-import StatusManager from './modules/StatusManager.js';
-import PlayerControls from './modules/PlayerControls.js';
-import RealtimeModule from './modules/Realtime.js';
-import VisualEngine from './modules/VisualEngine.js';
-import StreamController from './modules/StreamController.js';
-import RatingModule from './modules/RatingModule.js';
-import FullscreenManager from './modules/FullscreenManager.js';
-import ContactModule from './modules/ContactModule.js';
+import MoodModule from '/modules/MoodModule.js';
+import StatusManager from '/modules/StatusManager.js';
+import PlayerControls from '/modules/PlayerControls.js';
+import RealtimeModule from '/modules/Realtime.js';
+import VisualEngine from '/modules/VisualEngine.js';
+import StreamController from '/modules/StreamController.js';
+import RatingModule from '/modules/RatingModule.js';
+import FullscreenManager from '/modules/FullscreenManager.js';
+import ContactModule from '/modules/ContactModule.js';
 
 console.log('[Main] Initializing YourParty Frontend...');
 
