@@ -1792,3 +1792,212 @@ body.visualizer-active {
     border-color: var(--mood-color, var(--purple));
     color: #000;
 }
+
+/* =====================================================
+   MOOD DIALOG BUTTON STYLES (MoodModule.js compatibility)
+   ===================================================== */
+
+/* Support both .open and .active class for dialog visibility */
+.mood-dialog.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mood-dialog.active .mood-dialog__content,
+.mood-dialog.active .mood-dialog-content {
+    transform: translateY(0);
+}
+
+/* Mood Grid Layout */
+.mood-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+/* Mood Button Styling */
+.mood-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    color: #fff;
+    font-family: inherit;
+}
+
+.mood-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--purple-light);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(128, 0, 128, 0.2);
+}
+
+.mood-btn .emoji {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.mood-btn .label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* SELECTED STATE - Highly Visible */
+.mood-btn.selected {
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-light) 100%);
+    border-color: var(--purple-light);
+    color: #fff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(128, 0, 128, 0.4), 0 0 20px rgba(128, 0, 128, 0.3);
+}
+
+.mood-btn.selected .label {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* Mood Dialog Content Container */
+.mood-dialog-content {
+    position: relative;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 550px;
+    padding: 28px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    z-index: 2;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+/* Dialog Close Button */
+.mood-dialog .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.mood-dialog .close-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.1);
+}
+
+/* Dialog Tabs */
+.mood-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mood-tab {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mood-tab:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.mood-tab.active {
+    background: var(--emerald);
+    border-color: var(--emerald);
+    color: #000;
+}
+
+/* Submit Button */
+.mood-dialog .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--emerald-light) 0%, var(--emerald) 100%);
+    border: none;
+    border-radius: 10px;
+    color: #000;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 16px;
+}
+
+.mood-dialog .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(46, 139, 87, 0.4);
+}
+
+.mood-dialog .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Panel Hints */
+.mood-panel .hint {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+/* Status Messages */
+.mood-dialog .status-msg {
+    text-align: center;
+    padding: 8px;
+    font-size: 13px;
+    min-height: 24px;
+}
+
+.mood-dialog .status-msg.success {
+    color: var(--emerald);
+}
+
+.mood-dialog .status-msg.error {
+    color: #ef4444;
+}
+
+.mood-dialog .status-msg.warning {
+    color: #f59e0b;
+}
+
+/* Track Info in Dialog */
+.mood-dialog .track-info {
+    text-align: center;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
