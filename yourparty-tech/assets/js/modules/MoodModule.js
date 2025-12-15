@@ -256,6 +256,12 @@ class MoodModule {
         this.activeTab = tabName;
         const dialog = document.getElementById('mood-dialog');
 
+        // Safety check - dialog might not exist or have different structure
+        if (!dialog) {
+            console.warn('[MoodModule] switchTab: Dialog not found');
+            return;
+        }
+
         // Update Tabs
         dialog.querySelectorAll('.mood-tab').forEach(t => {
             const isActive = t.dataset.tab === tabName;
@@ -263,16 +269,20 @@ class MoodModule {
             t.setAttribute('aria-selected', isActive);
         });
 
-        // Update Panels
+        // Update Panels (with null checks)
         const panelCurrent = dialog.querySelector('#panel-current');
         const panelNext = dialog.querySelector('#panel-next');
 
-        if (tabName === 'current') {
-            panelCurrent.style.display = 'block';
-            panelNext.style.display = 'none';
+        if (panelCurrent && panelNext) {
+            if (tabName === 'current') {
+                panelCurrent.style.display = 'block';
+                panelNext.style.display = 'none';
+            } else {
+                panelCurrent.style.display = 'none';
+                panelNext.style.display = 'block';
+            }
         } else {
-            panelCurrent.style.display = 'none';
-            panelNext.style.display = 'block';
+            console.warn('[MoodModule] switchTab: Panels not found, skipping visibility toggle');
         }
     }
 
