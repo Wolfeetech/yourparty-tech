@@ -80,6 +80,13 @@ class MoodModule {
         document.body.addEventListener('click', (e) => {
             const btn = e.target.closest('#mood-tag-button');
             if (btn) {
+                // Check if static dialog exists (from front-page.php) - let it handle itself
+                const staticDialog = document.getElementById('mood-dialog');
+                if (staticDialog && staticDialog.querySelector('.mood-option')) {
+                    console.log('[MoodModule] Static dialog detected, skipping module handler');
+                    return; // Let inline onclick handle it
+                }
+
                 console.log('[MoodModule] Delegated Click Triggered');
                 e.preventDefault();
                 e.stopPropagation();

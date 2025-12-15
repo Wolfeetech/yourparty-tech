@@ -142,6 +142,43 @@ get_header();
         </div>
     </header>
 
+    <!-- COMMUNITY VIBE DASHBOARD -->
+    <section class="deck-panel vibe-overview">
+        <div class="panel-head">
+            <h3>🌡️ COMMUNITY VIBE</h3>
+            <span class="live-tag">LIVE</span>
+        </div>
+        <div class="vibe-content">
+            <div class="dominant-mood" id="dominant-mood-display">
+                <span class="label">DOMINANT</span>
+                <span class="mood-name" id="dominant-mood-name">--</span>
+                <span class="mood-icon" id="dominant-mood-icon">🎵</span>
+            </div>
+            <div class="mood-bars" id="mood-bars">
+                <!-- Populated by JavaScript -->
+                <div class="mood-bar-item" style="opacity:0.5;">
+                    <span class="mood-label">Loading...</span>
+                    <div class="bar-container"><div class="bar-fill" style="width:0%;"></div></div>
+                    <span class="vote-count">--</span>
+                </div>
+            </div>
+            <div class="vibe-stats">
+                <div class="stat">
+                    <span class="stat-value" id="total-votes-today">--</span>
+                    <span class="stat-label">TOTAL VOTES</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="active-listeners">--</span>
+                    <span class="stat-label">LISTENERS</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="tracks-rated">--</span>
+                    <span class="stat-label">TRACKS RATED</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="dashboard-grid">
         
         <!-- LEFT: INTELLIGENCE DECK -->
@@ -420,7 +457,96 @@ input[type=range] { height: 4px; -webkit-appearance: none; background: #333; bor
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: var(--emerald); border-radius: 50%; cursor: pointer; } 
 .status-metric { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; } 
 .status-metric .label { font-size: 9px; color: #666; } 
-.status-metric .value { font-size: 12px; color: var(--emerald); font-family: monospace; } 
+.status-metric .value { font-size: 12px; color: var(--emerald); font-family: monospace; }
+
+/* VIBE OVERVIEW DASHBOARD */
+.vibe-overview { margin-bottom: 20px; }
+.vibe-content { padding: 20px; display: grid; grid-template-columns: 200px 1fr 200px; gap: 30px; align-items: center; }
+@media(max-width: 900px) { .vibe-content { grid-template-columns: 1fr; gap: 20px; } }
+
+.dominant-mood { 
+    text-align: center; 
+    padding: 20px; 
+    background: rgba(0,255,136,0.05); 
+    border: 1px solid rgba(0,255,136,0.2); 
+    border-radius: 12px; 
+}
+.dominant-mood .label { 
+    display: block; 
+    font-size: 10px; 
+    color: #666; 
+    letter-spacing: 0.1em; 
+    margin-bottom: 8px; 
+}
+.dominant-mood .mood-name { 
+    display: block; 
+    font-size: 18px; 
+    font-weight: 800; 
+    color: var(--emerald); 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+}
+.dominant-mood .mood-icon { 
+    font-size: 32px; 
+    margin-top: 10px; 
+    display: block; 
+}
+
+.mood-bars { display: flex; flex-direction: column; gap: 8px; }
+.mood-bar-item { 
+    display: grid; 
+    grid-template-columns: 100px 1fr 40px; 
+    gap: 10px; 
+    align-items: center; 
+}
+.mood-label { 
+    font-size: 11px; 
+    color: #888; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+}
+.bar-container { 
+    height: 12px; 
+    background: rgba(255,255,255,0.05); 
+    border-radius: 6px; 
+    overflow: hidden; 
+}
+.bar-fill { 
+    height: 100%; 
+    background: linear-gradient(90deg, var(--emerald), #00ccaa); 
+    border-radius: 6px; 
+    transition: width 0.5s ease; 
+}
+.vote-count { 
+    font-size: 12px; 
+    font-weight: bold; 
+    color: #fff; 
+    text-align: right; 
+    font-family: monospace; 
+}
+
+.vibe-stats { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+}
+.vibe-stats .stat { 
+    text-align: center; 
+    padding: 10px; 
+    background: rgba(255,255,255,0.02); 
+    border-radius: 8px; 
+}
+.vibe-stats .stat-value { 
+    display: block; 
+    font-size: 20px; 
+    font-weight: 800; 
+    color: #fff; 
+}
+.vibe-stats .stat-label { 
+    font-size: 10px; 
+    color: #666; 
+    letter-spacing: 0.1em; 
+}
 </style>
 
 <?php get_footer(); ?>
@@ -492,6 +618,78 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update every 5 seconds
     setInterval(updateData, 5000);
     updateData(); // Initial call
+
+    // --- VIBE OVERVIEW UPDATES ---
+    const moodIcons = {
+        'energetic': '⚡', 'chill': '🌴', 'euphoric': '🤩', 'dark': '🌑',
+        'groovy': '💃', 'melodic': '🎹', 'hypnotic': '🌀', 'uplifting': '🚀',
+        'atmospheric': '🌌', 'driving': '🏎️', 'trashey': '🗑️'
+    };
+
+    function updateVibeOverview() {
+        // Fetch from FastAPI directly (since it has the right data structure)
+        fetch('http://192.168.178.211:8000/moods')
+            .then(r => r.json())
+            .then(data => {
+                const topMoods = data.top_moods || [];
+                
+                // Update dominant mood
+                if (topMoods.length > 0) {
+                    const dominant = topMoods[0];
+                    const nameEl = document.getElementById('dominant-mood-name');
+                    const iconEl = document.getElementById('dominant-mood-icon');
+                    if (nameEl) nameEl.textContent = dominant.tag.toUpperCase();
+                    if (iconEl) iconEl.textContent = moodIcons[dominant.tag] || '🎵';
+                }
+                
+                // Calculate max for bar scaling
+                const maxCount = topMoods.length > 0 ? topMoods[0].count : 1;
+                
+                // Update mood bars
+                const barsContainer = document.getElementById('mood-bars');
+                if (barsContainer && topMoods.length > 0) {
+                    const barsHtml = topMoods.slice(0, 6).map(m => {
+                        const pct = Math.round((m.count / maxCount) * 100);
+                        const icon = moodIcons[m.tag] || '🎵';
+                        return `
+                            <div class="mood-bar-item">
+                                <span class="mood-label">${icon} ${m.tag}</span>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="width:${pct}%;"></div>
+                                </div>
+                                <span class="vote-count">${m.count}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    barsContainer.innerHTML = barsHtml;
+                }
+                
+                // Update stats
+                const totalVotes = topMoods.reduce((sum, m) => sum + m.count, 0);
+                const tracksRated = topMoods.length;
+                
+                const totalEl = document.getElementById('total-votes-today');
+                const tracksEl = document.getElementById('tracks-rated');
+                if (totalEl) totalEl.textContent = totalVotes;
+                if (tracksEl) tracksEl.textContent = tracksRated;
+            })
+            .catch(err => console.warn('Vibe overview fetch failed:', err));
+        
+        // Fetch listener count from AzuraCast (if available)
+        fetch('/wp-json/yourparty/v1/status')
+            .then(r => r.json())
+            .then(data => {
+                const listenersEl = document.getElementById('active-listeners');
+                if (listenersEl && data.listeners !== undefined) {
+                    listenersEl.textContent = data.listeners.total || data.listeners || '--';
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Update vibe overview every 5 seconds
+    setInterval(updateVibeOverview, 5000);
+    updateVibeOverview(); // Initial call
 
     // --- FOOTER CONTROLS ---
     const monitorPlayBtn=document.getElementById('monitor-play-btn');

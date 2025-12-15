@@ -355,9 +355,9 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 
 <!-- MOOD DIALOG (Professional Implementation) -->
 <div id="mood-dialog" class="mood-dialog" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; align-items:center; justify-content:center;">
-    <div id="mood-backdrop" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:1;"></div>
+    <div id="mood-backdrop" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:1;"></div>
     <div class="mood-dialog-content" style="position:relative; z-index:10; background:linear-gradient(180deg, rgba(30,30,30,0.98) 0%, rgba(15,15,15,0.98) 100%); border:1px solid rgba(255,255,255,0.15); box-shadow:0 25px 80px rgba(0,0,0,0.9); border-radius:24px; padding:32px; width:90%; max-width:480px; text-align:center; color:#fff;">
-        <button id="mood-close" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:1.3rem; cursor:pointer; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all 0.2s;">&times;</button>
+        <button id="mood-close" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:1.3rem; cursor:pointer; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all 0.2s;">&times;</button>
         
         <h3 style="font-size:1.4rem; margin:0 0 8px 0; font-weight:700;">🏷️ Tag This Vibe</h3>
         <p id="mood-track-info" style="color:#888; margin:0 0 24px 0; font-size:0.85rem;">How does this track make you feel?</p>
@@ -403,6 +403,26 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     let selectedMood = null;
     let currentSongId = null;
     
+    // Fetch current song ID from AzuraCast status API
+    async function fetchCurrentSongId() {
+        try {
+            const response = await fetch('/wp-json/yourparty/v1/status');
+            if (!response.ok) return;
+            const data = await response.json();
+            const songId = data?.now_playing?.song?.id;
+            if (songId) {
+                window.currentSongId = songId;
+                console.log('[MoodDialog] Fetched song ID from API:', songId);
+            }
+        } catch (e) {
+            console.warn('[MoodDialog] Failed to fetch song ID:', e);
+        }
+    }
+    
+    // Fetch immediately and every 15 seconds
+    fetchCurrentSongId();
+    setInterval(fetchCurrentSongId, 15000);
+    
     // DOM Elements
     const dialog = document.getElementById('mood-dialog');
     const backdrop = document.getElementById('mood-backdrop');
@@ -431,21 +451,29 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
         const artist = document.getElementById('track-artist')?.textContent || '';
         trackInfo.textContent = artist ? `${artist} - ${title}` : title;
         
-        // Try to get song ID from global state
-        if (window.YourPartyAppInstance?.modules?.status?.currentSongId) {
-            currentSongId = window.YourPartyAppInstance.modules.status.currentSongId;
+        // Try to get song ID from global state (status-fix.js sets window.currentSongId)
+        if (window.currentSongId) {
+            currentSongId = window.currentSongId;
+            console.log('[MoodDialog] Using window.currentSongId:', currentSongId);
+        } else if (window.YourPartyAppInstance?.currentSongId) {
+            currentSongId = window.YourPartyAppInstance.currentSongId;
+            console.log('[MoodDialog] Using YourPartyAppInstance.currentSongId:', currentSongId);
         } else {
+            // Fallback - should rarely happen if status is loaded
             currentSongId = 'unknown_' + Date.now();
+            console.warn('[MoodDialog] No song ID available, using fallback:', currentSongId);
         }
         
         statusEl.textContent = '';
         dialog.style.display = 'flex';
+        dialog.classList.add('active');
     }
     
     // Close Dialog
     function closeDialog() {
         console.log('[MoodDialog] Closing...');
         dialog.style.display = 'none';
+        dialog.classList.remove('active');
     }
     
     // Update Submit Button
@@ -495,9 +523,15 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
         statusEl.style.color = '#888';
         
         try {
+            // Get title/artist for track metadata
+            const title = document.getElementById('track-title')?.textContent || 'Unknown';
+            const artist = document.getElementById('track-artist')?.textContent || 'Unknown';
+            
             const payload = {
                 song_id: currentSongId,
-                mood_current: selectedMood
+                mood_current: selectedMood,
+                title: title,
+                artist: artist
             };
             
             const restBase = window.YourPartyConfig?.restBase || '/wp-json/yourparty/v1';
@@ -575,8 +609,19 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
         }
     });
     
-    // Global function for MoodModule.js compatibility
+    // Global function - override MoodModule.js with delay to ensure we win
     window.openMoodDialog = openDialog;
+    
+    // Re-override after modules load (MoodModule.js overwrites this)
+    setTimeout(function() {
+        window.openMoodDialog = openDialog;
+        console.log('[MoodDialog] Re-claimed window.openMoodDialog');
+    }, 500);
+    
+    // And again after longer delay just in case
+    setTimeout(function() {
+        window.openMoodDialog = openDialog;
+    }, 2000);
     
     console.log('[MoodDialog] Initialized');
 })();
