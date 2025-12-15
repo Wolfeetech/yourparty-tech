@@ -1,0 +1,34 @@
+# Storage Baseline Report - 2025-12-15 07:08
+
+## Storage Status
+| Name       | Type    | Status | Total      | Used       | Available  | % Used |
+|------------|---------|--------|------------|------------|------------|--------|
+| hdd-backup | dir     | active | 976.7 GB   | 339.3 GB   | 637.5 GB   | 34.73% |
+| local      | dir     | active | 71.0 GB    | 39.2 GB    | 28.2 GB    | 55.17% |
+| local-lvm  | lvmthin | active | 164.9 GB   | 153.0 GB   | 11.9 GB    | 92.79% |
+
+## Thin-Pool Data Usage
+92.79% - **CRITICAL** - Needs immediate cleanup
+
+## Running Containers
+| VMID | Status  | Name                 |
+|------|---------|----------------------|
+| 101  | running | adguard              |
+| 103  | running | npm                  |
+| 106  | running | wireguard            |
+| 108  | running | vaultwarden          |
+| 109  | running | pbs                  |
+| 110  | running | n8n                  |
+| 120  | running | fileserver           |
+| 130  | running | mail-relay           |
+| 202  | running | mongodb-primary      |
+| 207  | running | radio-wordpress-prod |
+| 208  | running | mariadb-server       |
+| 211  | running | radio-api            |
+
+## HTTP Status
+- https://yourparty.tech/ : **200 OK**
+
+## Notes
+- CT 100 (old radio-api) already destroyed
+- Thin-pool at critical level, migration recommended

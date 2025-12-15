@@ -1,11 +1,18 @@
 # Changelog
 
-## [v1.0.4] - 2025-12-13
+## [v1.0.6] - 2025-12-15
 ### Fixed
-- **Critical**: Resolved White Screen of Death (WSOD) on Control Dashboard.
-    - Cause 1: File corruption (fixed via re-push).
-    - Cause 2: Missing Template assignment in Database (restored via `fix_control_page.php`).
-- **System**: Aborted unnecessary migration of CT 207 (confirmed already on HDD).
+- **Critical**: Resolved broken "Tag Vibe" button and module loading failures.
+    - Root Cause 1: Nested directory structure (`yourparty-tech/yourparty-tech/`) caused stale files.
+    - Root Cause 2: Nginx blocked direct access to `/modules/*.js` files.
+    - Root Cause 3: WordPress canonical redirect added trailing slashes, breaking ES6 imports.
+- **Module Proxy**: Implemented PHP-based module proxy in `functions.php` to serve JS modules via WordPress routing.
+- **Canonical Redirect Bypass**: Added filter to disable `redirect_canonical` for module requests.
+- **Deployment Fix**: Forced file copy from nested subdirectory to theme root on server.
+
+### Infrastructure
+- **Storage Report**: Thin-pool at 92.79% (CT 207 already on HDD, CT 100 destroyed).
+- **Apache**: Reloaded after deployment to clear caches.
 
 ## [v1.0.5] - 2025-12-14
 ### Added
