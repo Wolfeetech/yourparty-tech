@@ -353,59 +353,233 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 /* === MOOD DIALOG STYLES MOVED TO assets/mood-dialog.css === */
 </style>
 
-<!-- STATIC MOOD DIALOG (Fallback for JS issues) -->
-<div id="mood-dialog" class="mood-dialog glass-panel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2147483647; align-items:center; justify-content:center;">
-    <div class="mood-dialog-backdrop" id="mood-backdrop" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1;"></div>
-    <div class="mood-dialog-content" style="position:relative; z-index:10; background:rgba(20,20,20,0.95); border:1px solid rgba(255,255,255,0.1); box-shadow:0 0 50px rgba(0,0,0,0.8); border-radius:20px; padding:30px; width:90%; max-width:500px; text-align:center; color:#fff;">
-        <button class="close-btn" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:15px; right:15px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
-        <h3 style="font-size:1.5rem; margin-bottom:5px;">Tag Vibe & Genre</h3>
-        <p id="mood-track-info" style="color:#888; margin-bottom:20px; font-size:0.9rem;">Select a vibe for this track</p>
+<!-- MOOD DIALOG (Professional Implementation) -->
+<div id="mood-dialog" class="mood-dialog" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; align-items:center; justify-content:center;">
+    <div id="mood-backdrop" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:1;"></div>
+    <div class="mood-dialog-content" style="position:relative; z-index:10; background:linear-gradient(180deg, rgba(30,30,30,0.98) 0%, rgba(15,15,15,0.98) 100%); border:1px solid rgba(255,255,255,0.15); box-shadow:0 25px 80px rgba(0,0,0,0.9); border-radius:24px; padding:32px; width:90%; max-width:480px; text-align:center; color:#fff;">
+        <button id="mood-close" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:1.3rem; cursor:pointer; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all 0.2s;">&times;</button>
         
-        <div class="mood-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:20px;">
-            <button class="mood-btn" data-value="energetic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">⚡</span><span style="font-size:0.7rem;">Energetic</span>
+        <h3 style="font-size:1.4rem; margin:0 0 8px 0; font-weight:700;">🏷️ Tag This Vibe</h3>
+        <p id="mood-track-info" style="color:#888; margin:0 0 24px 0; font-size:0.85rem;">How does this track make you feel?</p>
+        
+        <div id="mood-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:24px;">
+            <button class="mood-option" data-mood="energetic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">⚡</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Energetic</span>
             </button>
-            <button class="mood-btn" data-value="chill" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🌴</span><span style="font-size:0.7rem;">Chill</span>
+            <button class="mood-option" data-mood="chill" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🌴</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Chill</span>
             </button>
-            <button class="mood-btn" data-value="euphoric" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🤩</span><span style="font-size:0.7rem;">Euphoric</span>
+            <button class="mood-option" data-mood="euphoric" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🤩</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Euphoric</span>
             </button>
-            <button class="mood-btn" data-value="dark" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🌑</span><span style="font-size:0.7rem;">Dark</span>
+            <button class="mood-option" data-mood="dark" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🌑</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Dark</span>
             </button>
-            <button class="mood-btn" data-value="groovy" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">💃</span><span style="font-size:0.7rem;">Groovy</span>
+            <button class="mood-option" data-mood="groovy" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">💃</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Groovy</span>
             </button>
-            <button class="mood-btn" data-value="melodic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🎹</span><span style="font-size:0.7rem;">Melodic</span>
+            <button class="mood-option" data-mood="melodic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🎹</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Melodic</span>
             </button>
-            <button class="mood-btn" data-value="hypnotic" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🌀</span><span style="font-size:0.7rem;">Hypnotic</span>
+            <button class="mood-option" data-mood="hypnotic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🌀</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Hypnotic</span>
             </button>
-            <button class="mood-btn" data-value="uplifting" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:10px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:5px;" onclick="this.style.background='rgba(0,255,136,0.3)';">
-                <span style="font-size:1.5rem;">🚀</span><span style="font-size:0.7rem;">Uplifting</span>
+            <button class="mood-option" data-mood="uplifting" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
+                <span style="font-size:1.6rem;">🚀</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Uplifting</span>
             </button>
         </div>
         
-        <button id="mood-submit-btn" onclick="alert('Vote submitted! (Demo)'); document.getElementById('mood-dialog').style.display='none';" style="background:#00ff88; color:#000; padding:15px 30px; border:none; border-radius:30px; font-weight:bold; font-size:1.1rem; cursor:pointer; width:100%;">Submit Vote</button>
+        <div id="mood-status" style="min-height:20px; margin-bottom:12px; font-size:0.8rem; color:#888;"></div>
+        
+        <button id="mood-submit-btn" disabled style="background:linear-gradient(135deg, #00ff88 0%, #00cc6a 100%); color:#000; padding:16px 32px; border:none; border-radius:30px; font-weight:700; font-size:1rem; cursor:pointer; width:100%; transition:all 0.3s; opacity:0.5; text-transform:uppercase; letter-spacing:0.05em;">Select a Vibe First</button>
     </div>
 </div>
 
 <script>
-// Simple inline dialog opener
-document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('mood-tag-button');
-    var dlg = document.getElementById('mood-dialog');
-    if (btn && dlg) {
-        btn.addEventListener('click', function(e) {
+(function() {
+    'use strict';
+    
+    // State
+    let selectedMood = null;
+    let currentSongId = null;
+    
+    // DOM Elements
+    const dialog = document.getElementById('mood-dialog');
+    const backdrop = document.getElementById('mood-backdrop');
+    const closeBtn = document.getElementById('mood-close');
+    const submitBtn = document.getElementById('mood-submit-btn');
+    const statusEl = document.getElementById('mood-status');
+    const trackInfo = document.getElementById('mood-track-info');
+    const moodOptions = document.querySelectorAll('.mood-option');
+    const tagButton = document.getElementById('mood-tag-button');
+    
+    // Open Dialog
+    function openDialog() {
+        console.log('[MoodDialog] Opening...');
+        selectedMood = null;
+        updateSubmitButton();
+        
+        // Reset all selections
+        moodOptions.forEach(btn => {
+            btn.style.background = 'rgba(255,255,255,0.05)';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.transform = 'scale(1)';
+        });
+        
+        // Get current track info
+        const title = document.getElementById('track-title')?.textContent || 'Current Track';
+        const artist = document.getElementById('track-artist')?.textContent || '';
+        trackInfo.textContent = artist ? `${artist} - ${title}` : title;
+        
+        // Try to get song ID from global state
+        if (window.YourPartyAppInstance?.modules?.status?.currentSongId) {
+            currentSongId = window.YourPartyAppInstance.modules.status.currentSongId;
+        } else {
+            currentSongId = 'unknown_' + Date.now();
+        }
+        
+        statusEl.textContent = '';
+        dialog.style.display = 'flex';
+    }
+    
+    // Close Dialog
+    function closeDialog() {
+        console.log('[MoodDialog] Closing...');
+        dialog.style.display = 'none';
+    }
+    
+    // Update Submit Button
+    function updateSubmitButton() {
+        if (selectedMood) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.textContent = 'Submit Vote ✓';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.textContent = 'Select a Vibe First';
+        }
+    }
+    
+    // Handle Mood Selection
+    function selectMood(btn, mood) {
+        console.log('[MoodDialog] Selected:', mood);
+        selectedMood = mood;
+        
+        // Visual feedback - reset all
+        moodOptions.forEach(b => {
+            b.style.background = 'rgba(255,255,255,0.05)';
+            b.style.borderColor = 'rgba(255,255,255,0.1)';
+            b.style.transform = 'scale(1)';
+            b.style.boxShadow = 'none';
+        });
+        
+        // Highlight selected
+        btn.style.background = 'linear-gradient(135deg, rgba(0,255,136,0.3) 0%, rgba(0,200,100,0.2) 100%)';
+        btn.style.borderColor = '#00ff88';
+        btn.style.transform = 'scale(1.05)';
+        btn.style.boxShadow = '0 0 20px rgba(0,255,136,0.3)';
+        
+        updateSubmitButton();
+    }
+    
+    // Submit Vote
+    async function submitVote() {
+        if (!selectedMood) return;
+        
+        console.log('[MoodDialog] Submitting vote:', selectedMood, 'for song:', currentSongId);
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        statusEl.textContent = '';
+        statusEl.style.color = '#888';
+        
+        try {
+            const payload = {
+                song_id: currentSongId,
+                mood_current: selectedMood
+            };
+            
+            const restBase = window.YourPartyConfig?.restBase || '/wp-json/yourparty/v1';
+            const response = await fetch(restBase + '/vote-mood', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                statusEl.textContent = '✓ Vote recorded!';
+                statusEl.style.color = '#00ff88';
+                submitBtn.textContent = 'Done!';
+                
+                setTimeout(closeDialog, 1200);
+            } else {
+                const err = await response.text();
+                console.error('[MoodDialog] API Error:', err);
+                statusEl.textContent = 'Error: ' + (response.status === 503 ? 'Service unavailable' : 'Try again');
+                statusEl.style.color = '#ff4444';
+                submitBtn.textContent = 'Retry';
+                submitBtn.disabled = false;
+            }
+        } catch (e) {
+            console.error('[MoodDialog] Network error:', e);
+            statusEl.textContent = 'Network error - vote saved locally';
+            statusEl.style.color = '#ffaa00';
+            
+            // Queue for later
+            const queue = JSON.parse(localStorage.getItem('yp_vote_queue') || '[]');
+            queue.push({ song_id: currentSongId, mood_current: selectedMood, timestamp: Date.now() });
+            localStorage.setItem('yp_vote_queue', JSON.stringify(queue));
+            
+            setTimeout(closeDialog, 1500);
+        }
+    }
+    
+    // Event Bindings
+    if (tagButton) {
+        tagButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('[StaticDialog] Opening mood dialog');
-            dlg.style.display = 'flex';
+            openDialog();
         });
     }
-});
+    
+    if (backdrop) backdrop.addEventListener('click', closeDialog);
+    if (closeBtn) closeBtn.addEventListener('click', closeDialog);
+    if (submitBtn) submitBtn.addEventListener('click', submitVote);
+    
+    moodOptions.forEach(btn => {
+        btn.addEventListener('click', function() {
+            selectMood(this, this.dataset.mood);
+        });
+        
+        // Hover effects
+        btn.addEventListener('mouseenter', function() {
+            if (this.dataset.mood !== selectedMood) {
+                this.style.background = 'rgba(255,255,255,0.1)';
+                this.style.borderColor = 'rgba(255,255,255,0.3)';
+            }
+        });
+        btn.addEventListener('mouseleave', function() {
+            if (this.dataset.mood !== selectedMood) {
+                this.style.background = 'rgba(255,255,255,0.05)';
+                this.style.borderColor = 'rgba(255,255,255,0.1)';
+            }
+        });
+    });
+    
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dialog.style.display === 'flex') {
+            closeDialog();
+        }
+    });
+    
+    // Global function for MoodModule.js compatibility
+    window.openMoodDialog = openDialog;
+    
+    console.log('[MoodDialog] Initialized');
+})();
 </script>
 
 <?php get_footer(); ?>
