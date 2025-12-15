@@ -39,7 +39,7 @@
 - [x] Visualizer (Deep Space Background).
 - [x] Brand Copywriting ("Sonay Audio Engineering").
 - [x] Admin Dashboard (Mission Control) wired to Python Backend.
-- [ ] **Mobile Optimierung**: Testen auf iPhone/Android.
+- [x] **Mobile Optimierung**: Tested on iPhone X viewport (375x812).
 
 ### Backend API
 - [x] REST-API gibt 200 zurück
@@ -76,8 +76,8 @@
 
 3.  **🔄 Mission Control**:
     - [x] Dashboard zeigt jetzt Live-Daten aus der API.
-    - [ ] "Playlist Generator" testen (exportiert .m3u für AzuraCast).
+    - [x] "Playlist Generator" testen (AzuraCast native .m3u export verified).
     - [x] **Stream Stability**: Rewrite of `StreamController.js` to fix paused states.
 
 ---
-*Zuletzt aktualisiert: 2024-12-11 05:15*
+*Zuletzt aktualisiert: 2025-12-15 07:13*
