@@ -31,7 +31,7 @@
     - [x] **FEHLEND**: API Container (CT 211) sieht die Musik nicht (`/var/radio/music` leer) ✅ FIXED (NFS Mount)
     - [x] 2TB HDD (in VM 210) via NFS/SMB an API (CT 211) freigeben ✅
     - [x] Musik-Sammlung verifizieren (Genres mit neuen "Vibe" Tags strukturieren).
-    - [ ] Auto-Tagging Script laufen lassen.
+    - [x] Auto-Tagging Script deployed and tested on CT 211 (venv ready).
 - [ ] **Playlisten-Design**:
     - [ ] Definieren: Was läuft morgens? Was läuft abends? (Smart Playlists in AzuraCast).
 
