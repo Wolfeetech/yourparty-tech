@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateVibeOverview() {
         // Fetch from FastAPI directly (since it has the right data structure)
-        fetch('http://192.168.178.211:8000/moods')
+        fetch('<?php echo function_exists("yourparty_api_base_url") ? yourparty_api_base_url() : "http://192.168.178.211:8000"; ?>/moods')
             .then(r => r.json())
             .then(data => {
                 const topMoods = data.top_moods || [];

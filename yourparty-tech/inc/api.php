@@ -19,6 +19,20 @@ function yourparty_azuracast_base_url(): string
     return 'https://192.168.178.210';
 }
 
+/**
+ * Get the FastAPI backend base URL.
+ * Configure via wp-config.php: define('YOURPARTY_API_URL', 'http://your-api-server:8000');
+ */
+function yourparty_api_base_url(): string
+{
+    if (defined('YOURPARTY_API_URL') && YOURPARTY_API_URL) {
+        return rtrim(YOURPARTY_API_URL, '/');
+    }
+
+    // Default: internal network IP
+    return 'http://192.168.178.211:8000';
+}
+
 function yourparty_http_defaults(): array
 {
     $headers = [
@@ -553,7 +567,7 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
 
     // Proxy to FastAPI backend (MongoDB storage)
     // Using PVE Host IP (.25) via NAT because direct container access (.211) is bridged/isolated
-    $api_url = 'http://192.168.178.211:8000/mood-tag';
+    $api_url = yourparty_api_base_url() . '/mood-tag';
 
     $body_args = [
         'song_id' => $song_id,
@@ -602,7 +616,7 @@ function yourparty_rest_post_vote_mood(WP_REST_Request $request)
 
     // Proxy to FastAPI
     // Using PVE Host IP (.211 is container)
-    $api_url = 'http://192.168.178.211:8000/vote-mood';
+    $api_url = yourparty_api_base_url() . '/vote-mood';
 
     $payload = [
         'song_id' => $song_id,
@@ -853,7 +867,7 @@ add_action('rest_api_init', function () {
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
             if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
-            $resp = wp_remote_get('http://192.168.178.211:8000/ratings', ['timeout' => 5]);
+            $resp = wp_remote_get(yourparty_api_base_url() . '/ratings', ['timeout' => 5]);
             if (is_wp_error($resp)) return [];
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
@@ -865,7 +879,7 @@ add_action('rest_api_init', function () {
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
             if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
-            $resp = wp_remote_get('http://192.168.178.211:8000/moods', ['timeout' => 5]);
+            $resp = wp_remote_get(yourparty_api_base_url() . '/moods', ['timeout' => 5]);
             if (is_wp_error($resp)) return [];
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
@@ -877,7 +891,7 @@ add_action('rest_api_init', function () {
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
             if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
-            $resp = wp_remote_get('http://192.168.178.211:8000/control/steer', ['timeout' => 5]);
+            $resp = wp_remote_get(yourparty_api_base_url() . '/control/steer', ['timeout' => 5]);
             if (is_wp_error($resp)) return $resp;
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
@@ -962,7 +976,7 @@ add_action('rest_api_init', function () {
                 }
 
                 // Proxy to FastAPI backend
-                $api_url = 'http://192.168.178.211:8000/vote-mood';
+                $api_url = yourparty_api_base_url() . '/vote-mood';
 
                 $body_args = [
                     'song_id' => $song_id,

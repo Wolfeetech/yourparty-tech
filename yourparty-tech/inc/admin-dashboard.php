@@ -9,8 +9,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Configuration
-define('YOURPARTY_API_BASE', 'http://192.168.178.211:8000');
+// Configuration - use centralized function from api.php
+// Falls back to hardcoded IP if function not available
+if (function_exists('yourparty_api_base_url')) {
+    define('YOURPARTY_API_BASE', yourparty_api_base_url());
+} else {
+    define('YOURPARTY_API_BASE', 'http://192.168.178.211:8000');
+}
 
 // Register Menu Page
 add_action('admin_menu', function () {
