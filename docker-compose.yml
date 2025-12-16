@@ -1,13 +1,50 @@
 version: '3.8'
 
 services:
-  # MongoDB Database
-  mongo:
-    image: mongo:4.4
-    container_name: radio-mongo
+  # MySQL Database for WordPress
+  db:
+    image: mariadb:10.11
+    container_name: yourparty-db
     restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-changeme}
+      - MYSQL_DATABASE=${WP_DB_NAME:-yourparty}
+      - MYSQL_USER=${WP_DB_USER:-yourparty}
+      - MYSQL_PASSWORD=${WP_DB_PASSWORD:-changeme}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - radio-net
+
+  # WordPress with YourParty Theme
+  wordpress:
+    image: wordpress:6.7-php8.2-apache
+    container_name: yourparty-wordpress
+    restart: unless-stopped
+    depends_on:
+      - db
     ports:
-      - "27017:27017"
+      - "8080:80"
+    environment:
+      - WORDPRESS_DB_HOST=db:3306
+      - WORDPRESS_DB_USER=${WP_DB_USER:-yourparty}
+      - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD:-changeme}
+      - WORDPRESS_DB_NAME=${WP_DB_NAME:-yourparty}
+      - WORDPRESS_DEBUG=${WP_DEBUG:-false}
+    volumes:
+      - wp_data:/var/www/html
+      - ./yourparty-tech:/var/www/html/wp-content/themes/yourparty-tech:ro
+    networks:
+      - radio-net
+
+  # MongoDB for Mood/Rating Data
+  mongo:
+    image: mongo:6.0
+    container_name: yourparty-mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-changeme}
     volumes:
       - mongo_data:/data/db
     networks:
@@ -16,17 +53,17 @@ services:
   # FastAPI Backend (Radio API)
   backend:
     build: ./backend
-    container_name: radio-api
+    container_name: yourparty-api
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - MONGODB_URL=mongodb://mongo:27017/
-      - AZURACAST_URL=${AZURACAST_URL:-http://192.168.178.210}
+      - MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-changeme}@mongo:27017/?authSource=admin
+      - AZURACAST_URL=${AZURACAST_URL:-http://azuracast:80}
       - AZURACAST_API_KEY=${AZURACAST_API_KEY}
       - MUSIC_DIR=/var/radio/music
     volumes:
-      - ${MUSIC_PATH:-/var/radio/music}:/var/radio/music:ro
+      - ${MUSIC_PATH:-./music}:/var/radio/music:ro
     depends_on:
       - mongo
     networks:
@@ -35,7 +72,7 @@ services:
   # Nginx Reverse Proxy (API Gateway)
   nginx:
     image: nginx:alpine
-    container_name: radio-nginx
+    container_name: yourparty-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -46,13 +83,16 @@ services:
       - ${SSL_KEY_PATH:-./certs}:/etc/ssl/private:ro
     depends_on:
       - backend
+      - wordpress
     networks:
       - radio-net
 
 volumes:
+  db_data:
+  wp_data:
   mongo_data:
-
 
 networks:
   radio-net:
     driver: bridge
+
