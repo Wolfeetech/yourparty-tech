@@ -1,5 +1,20 @@
 # Changelog
 
+## [v1.0.7] - 2025-12-17
+### Security
+- **Critical**: Deleted malicious WordPress user `adminbockup` (ID 5).
+- **Database**: Changed weak password (`SimplePass123` → `YpRd!2024#SecureDB`).
+- **WordPress**: Reset admin passwords for admin, Wolf, Franz users.
+- **Protection**: Installed Wordfence 8.1.3 security plugin.
+- **Auto-Heal**: Added watchdog scripts (`wp-core-check.sh`, `wp-index-watchdog.sh`).
+- **Documentation**: Created `SERVER_INFO.md` with complete infrastructure reference.
+
+### Infrastructure
+- Documented all 12 LXC containers and 2 VMs with IP addresses.
+- Added `docker-compose.yml` with WordPress, MariaDB, MongoDB, FastAPI, Nginx.
+- Created `.env.example` with all configuration variables.
+- Centralized API URLs via `yourparty_api_base_url()` function.
+
 ## [v1.0.6] - 2025-12-15
 ### Fixed
 - **Critical**: Resolved broken "Tag Vibe" button and module loading failures.

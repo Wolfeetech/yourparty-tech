@@ -80,4 +80,17 @@
     - [x] **Stream Stability**: Rewrite of `StreamController.js` to fix paused states.
 
 ---
-*Zuletzt aktualisiert: 2025-12-15 07:13*
+
+## 🔒 SECURITY (2025-12-17)
+
+| Fix | Status |
+|-----|--------|
+| Delete malicious user `adminbockup` | ✅ DONE |
+| Change DB password (`SimplePass123` → secure) | ✅ DONE |
+| Reset WP admin passwords (admin, Wolf, Franz) | ✅ DONE |
+| Install Wordfence 8.1.3 | ✅ DONE |
+| Auto-protection scripts (watchdog) | ✅ ACTIVE |
+| `SERVER_INFO.md` documentation | ✅ CREATED |
+
+---
+*Zuletzt aktualisiert: 2025-12-17 14:30*
