@@ -93,7 +93,7 @@ DB_PASSWORD = 'SimplePass123'  ← CHANGE THIS!
 | IP | `192.168.178.228` |
 | Database | `wordpress_db` |
 | User | `wp_user` |
-| Password | `SimplePass123` ⚠️ WEAK |
+| Password | `YpRd!2024#SecureDB` ✅ UPDATED 2024-12-17 |
 
 ### AzuraCast (VM 210)
 | Property | Value |
@@ -106,13 +106,12 @@ DB_PASSWORD = 'SimplePass123'  ← CHANGE THIS!
 
 ## 👤 WORDPRESS USERS
 
-| ID | Username | Email | Role | Status |
-|----|----------|-------|------|--------|
-| 1 | admin | admin@yourparty.tech | Administrator | ✅ OK |
-| 2 | Wolf | wolf@yourparty.tech | Administrator | ✅ OK |
-| 3 | Franz | franz@yourparty.tech | Administrator | ✅ OK |
-| 4 | trumpweiss | yourpartycr@gmail.com | Administrator | ⚠️ Review |
-| 5 | **adminbockup** | adminbockup@wordpress.org | Administrator | 🚨 **DELETE** |
+| ID | Username | Email | Password | Role |
+|----|----------|-------|----------|------|
+| 1 | admin | admin@yourparty.tech | `YpAdmin2024!` | Administrator |
+| 2 | Wolf | wolf@yourparty.tech | `YpWolf2024!` | Administrator |
+| 3 | Franz | franz@yourparty.tech | `YpFranz2024!` | Administrator |
+| 4 | trumpweiss | yourpartycr@gmail.com | *unchanged* | Administrator |
 
 ---
 
