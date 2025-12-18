@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 if (function_exists('yourparty_api_base_url')) {
     define('YOURPARTY_API_BASE', yourparty_api_base_url());
 } else {
-    define('YOURPARTY_API_BASE', 'http://192.168.178.211:8000');
+    define('YOURPARTY_API_BASE', 'https://api.yourparty.tech');
 }
 
 // Register Menu Page

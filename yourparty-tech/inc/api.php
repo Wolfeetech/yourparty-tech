@@ -29,8 +29,8 @@ function yourparty_api_base_url(): string
         return rtrim(YOURPARTY_API_URL, '/');
     }
 
-    // Default: internal network IP
-    return 'http://192.168.178.211:8000';
+    // Default: Use public API endpoint (no hardcoded IPs!)
+    return 'https://api.yourparty.tech';
 }
 
 function yourparty_http_defaults(): array
@@ -690,8 +690,8 @@ add_action('rest_api_init', function () {
             'callback' => function (WP_REST_Request $request) {
                 $vote = sanitize_text_field($request->get_param('vote'));
 
-                // Proxy to FastAPI
-                $api_url = 'http://192.168.178.211:8080/control/vote-next';
+                // Proxy to FastAPI (using centralized URL)
+                $api_url = yourparty_api_base_url() . '/control/vote-next';
 
                 $response = wp_remote_post($api_url, [
                     'headers' => ['Content-Type' => 'application/json'],

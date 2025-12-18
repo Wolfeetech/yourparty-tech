@@ -67,7 +67,8 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 }
 
 // --- DATA FETCH ---
-$api_internal = 'http://192.168.178.211:8000'; // Direct IP to FastAPI container
+// Use centralized API URL function (Single Source of Truth)
+$api_internal = function_exists('yourparty_api_base_url') ? yourparty_api_base_url() : 'https://api.yourparty.tech';
 $api_public = 'https://api.yourparty.tech'; // Client-side accessible
 
 // PHP Fetches use Internal
