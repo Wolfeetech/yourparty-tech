@@ -461,7 +461,7 @@ async def startup_event():
         if not mongo_uri:
             user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
             pwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "")
-            host = os.getenv("MONGO_HOST", "192.168.178.222")
+            host = os.getenv("MONGO_HOST", "localhost")
             port = os.getenv("MONGO_PORT", "27017")
             if user and pwd:
                 mongo_uri = f"mongodb://{user}:{pwd}@{host}:{port}/"
@@ -481,8 +481,8 @@ async def startup_event():
             from mood_scheduler import schedule_mood_queue_worker
             from azuracast_client import AzuraCastClient
             
-            azura_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
-            azura_key = os.getenv("AZURACAST_API_KEY", "")
+            azura_url = os.getenv("AZURACAST_URL")
+            azura_key = os.getenv("AZURACAST_API_KEY")
             
             azura_client = AzuraCastClient(azura_url, azura_key, 1)
             
@@ -517,7 +517,10 @@ async def get_queue():
     """Proxy AzuraCast Queue for Mission Control."""
     # We use a public endpoint or admin endpoint from AzuraCast
     # /api/station/{id}/queue
-    url = f"{str(os.getenv('AZURACAST_URL', 'https://192.168.178.210'))}/api/station/1/queue"
+    azura_base = os.getenv('AZURACAST_URL')
+    if not azura_base:
+        return []  # AzuraCast not configured
+    url = f"{azura_base}/api/station/1/queue"
     
     async with httpx.AsyncClient(verify=True) as client:
         try:
@@ -538,7 +541,11 @@ async def public_status_loop():
     while True:
         try:
             # Public Endpoint: No Key Needed
-            url = "http://192.168.178.210/api/nowplaying/1" 
+            azura_base = os.getenv("AZURACAST_URL")
+            if not azura_base:
+                await asyncio.sleep(10)  # Wait for config
+                continue
+            url = f"{azura_base}/api/nowplaying/1" 
             
             async with httpx.AsyncClient(verify=True, follow_redirects=True) as client:
                 # Try HTTP first
@@ -546,7 +553,7 @@ async def public_status_loop():
                     resp = await client.get(url, timeout=5.0)
                 except httpx.ConnectError:
                     # Fallback to HTTPS
-                    url = "https://192.168.178.210/api/nowplaying/1"
+                    url = azura_base.replace('http://', 'https://') + "/api/nowplaying/1"
                     resp = await client.get(url, timeout=5.0)
 
                 if resp.status_code == 200:

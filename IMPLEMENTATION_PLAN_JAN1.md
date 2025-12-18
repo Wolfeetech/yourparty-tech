@@ -7,8 +7,10 @@
 
 1.  **[CRITICAL] SECURE CREDENTIALS**
     *   [x] Audit `functions.php`: Remove exposed AzuraCast API Key.
-    *   [ ] Audit `api.py`: Remove hardcoded IP addresses.
-    *   [ ] Action: Move secrets to System Environment Variables or `wp-config.php`.
+    *   [x] Audit `enrich_ratings.py`: Removed hardcoded MongoDB password and API key.
+    *   [x] Audit `backend/api.py`: Removed 5 hardcoded IP fallbacks.
+    *   [x] Created `.env.example` template for all secrets.
+    *   [ ] Action: Deploy `.env` file to production servers.
 
 2.  **[CRITICAL] BACKEND STABILITY**
     *   [ ] **Dependency Lock**: Generate strict `requirements.txt` to prevent random crashes on updates.
