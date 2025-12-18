@@ -64,7 +64,39 @@ export default class RatingModule {
         this.currentSongId = songId;
         this.currentRating = userRating;
         this.highlightGlobal(userRating, false);
-        this.updateDisplay(average, total);
+
+        // If no rating data provided, fetch from FastAPI
+        if (average == null && songId) {
+            this.fetchRating(songId);
+        } else {
+            this.updateDisplay(average, total);
+        }
+    }
+
+    async fetchRating(songId) {
+        try {
+            // Fetch all ratings and find this song
+            const baseUrl = this.config.restBase || '/api';
+            const response = await fetch(`${baseUrl}/ratings`);
+
+            if (!response.ok) {
+                console.warn('[RatingModule] Could not fetch ratings');
+                return;
+            }
+
+            const allRatings = await response.json();
+            const songRating = allRatings[songId];
+
+            if (songRating) {
+                console.log(`[RatingModule] Loaded rating for ${songId}: ${songRating.average} (${songRating.total} votes)`);
+                this.updateDisplay(songRating.average, songRating.total);
+            } else {
+                // No rating yet - show default
+                this.updateDisplay(null, 0);
+            }
+        } catch (e) {
+            console.warn('[RatingModule] Fetch error:', e);
+        }
     }
 
     highlightGlobal(count, isHover) {
