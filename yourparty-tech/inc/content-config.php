@@ -26,14 +26,16 @@ function yourparty_get_default_content(string $key): string
 
 /**
  * Get content from theme mod or fallback to default.
+ * NOTE: Temporarily bypassing theme_mods to force new defaults (Dec 2025 content refresh)
  *
  * @param string $key Content key.
  * @return string Content value.
  */
 function yourparty_get_content(string $key): string
 {
-    $default = yourparty_get_default_content($key);
-    return get_theme_mod("yourparty_content_{$key}", $default);
+    // FORCE NEW DEFAULTS - bypass old theme_mods values
+    // To re-enable customizer control: return get_theme_mod("yourparty_content_{$key}", yourparty_get_default_content($key));
+    return yourparty_get_default_content($key);
 }
 
 /**
