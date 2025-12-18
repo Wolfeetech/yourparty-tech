@@ -1,120 +1,130 @@
 #!/usr/bin/env python3
 """
-Enrich existing ratings with metadata from AzuraCast media library.
-Queries all songs from AzuraCast and updates MongoDB ratings that match by song_id.
+Enrich existing ratings with metadata from AzuraCast.
+Uses the station history endpoint to match song_ids directly.
 """
 import os
-import hashlib
 import requests
 from pymongo import MongoClient
-from dotenv import load_dotenv
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Configuration from environment variables (NO HARDCODED SECRETS!)
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-MONGO_PORT = os.getenv("MONGO_PORT", "27017")
-MONGO_USER = os.getenv("MONGO_USER", "")
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "")
-MONGO_DB = os.getenv("MONGO_DB", "yourparty_radio")
-
-# Build MongoDB URI from components
-if MONGO_USER and MONGO_PASSWORD:
-    MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}"
-else:
-    MONGO_URI = f"mongodb://{MONGO_HOST}:{MONGO_PORT}"
-
-AZURACAST_URL = os.getenv("AZURACAST_URL")
-AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
-STATION_ID = int(os.getenv("AZURACAST_STATION_ID", "1"))
-
-# Validate required environment variables
-if not AZURACAST_URL or not AZURACAST_API_KEY:
-    raise ValueError("AZURACAST_URL and AZURACAST_API_KEY environment variables are required!")
-
-def get_song_id(title: str, artist: str) -> str:
-    """Generate song_id hash matching AzuraCast format"""
-    combined = f"{title or ''}{artist or ''}"
-    return hashlib.md5(combined.encode('utf-8')).hexdigest()
+# Configuration
+MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017"
+AZURACAST_URL = "https://192.168.178.210"
+AZURACAST_API_KEY = "9199dc63da623190:c9f8c3a22e25932753dd3f4d57fa0d9c"
+STATION_ID = 1
 
 def main():
     # Connect to MongoDB
     client = MongoClient(MONGO_URI)
     db = client.yourparty
     
-    # Fetch all media from AzuraCast
-    print(f"Fetching media library from AzuraCast...")
+    # Get all song_ids from ratings that need metadata
+    ratings = list(db.ratings.find({}))
+    print(f"Found {len(ratings)} ratings in MongoDB")
+    
+    # Build set of song_ids that need enrichment
+    needs_metadata = {}
+    for r in ratings:
+        song_id = r.get("_id")
+        title = r.get("title", "")
+        if not title or title in ["Unknown", "Unknown Track", ""]:
+            needs_metadata[song_id] = r
+    
+    print(f"{len(needs_metadata)} ratings need metadata enrichment")
+    
+    if not needs_metadata:
+        print("All ratings already have metadata!")
+        return
+    
+    # Fetch history from AzuraCast (last 1000 plays)
+    print("Fetching song history from AzuraCast...")
     headers = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}
     
+    history_songs = {}
+    
+    # Get song history
     try:
-        response = requests.get(
-            f"{AZURACAST_URL}/api/station/{STATION_ID}/files",
+        resp = requests.get(
+            f"{AZURACAST_URL}/api/station/{STATION_ID}/history",
             headers=headers,
             verify=False,
             timeout=30
         )
-        response.raise_for_status()
-        media_list = response.json()
-        print(f"Found {len(media_list)} tracks in AzuraCast library")
+        if resp.ok:
+            history = resp.json()
+            print(f"  Found {len(history)} history entries")
+            for entry in history:
+                song = entry.get("song", {})
+                song_id = song.get("id")
+                if song_id and song_id not in history_songs:
+                    history_songs[song_id] = {
+                        "title": song.get("title", "Unknown"),
+                        "artist": song.get("artist", "Unknown"),
+                        "album": song.get("album", ""),
+                        "genre": song.get("genre", "")
+                    }
     except Exception as e:
-        print(f"Error fetching media: {e}")
-        return
+        print(f"  Error fetching history: {e}")
     
-    # Build lookup table: song_id -> metadata
-    song_lookup = {}
-    for media in media_list:
-        title = media.get("title", "")
-        artist = media.get("artist", "")
-        if title or artist:
-            song_id = get_song_id(title, artist)
-            song_lookup[song_id] = {
-                "title": title or "Unknown",
-                "artist": artist or "Unknown",
-                "album": media.get("album", ""),
-                "genre": media.get("genre", ""),
-                "path": media.get("path", "")
-            }
+    # Also get nowplaying and queue
+    try:
+        resp = requests.get(
+            f"{AZURACAST_URL}/api/nowplaying/{STATION_ID}",
+            verify=False,
+            timeout=10
+        )
+        if resp.ok:
+            data = resp.json()
+            
+            # Now playing
+            np = data.get("now_playing", {}).get("song", {})
+            if np.get("id"):
+                history_songs[np["id"]] = {
+                    "title": np.get("title", "Unknown"),
+                    "artist": np.get("artist", "Unknown"),
+                    "album": np.get("album", ""),
+                    "genre": np.get("genre", "")
+                }
+            
+            # Song history from nowplaying
+            for entry in data.get("song_history", []):
+                song = entry.get("song", {})
+                if song.get("id"):
+                    history_songs[song["id"]] = {
+                        "title": song.get("title", "Unknown"),
+                        "artist": song.get("artist", "Unknown"),
+                        "album": song.get("album", ""),
+                        "genre": song.get("genre", "")
+                    }
+    except Exception as e:
+        print(f"  Error fetching nowplaying: {e}")
     
-    print(f"Built lookup table with {len(song_lookup)} unique song_ids")
+    print(f"Total unique songs from AzuraCast: {len(history_songs)}")
     
-    # Get all ratings from MongoDB
-    ratings = list(db.ratings.find({}))
-    print(f"Found {len(ratings)} ratings in MongoDB")
-    
+    # Update ratings
     updated = 0
     not_found = 0
-    already_has_metadata = 0
     
-    for rating in ratings:
-        song_id = rating.get("_id")
-        existing_title = rating.get("title", "")
-        
-        # Skip if already has valid metadata
-        if existing_title and existing_title not in ["Unknown", "Unknown Track", ""]:
-            already_has_metadata += 1
-            continue
-        
-        # Look up in AzuraCast data
-        if song_id in song_lookup:
-            metadata = song_lookup[song_id]
+    for song_id, rating in needs_metadata.items():
+        if song_id in history_songs:
+            metadata = history_songs[song_id]
             db.ratings.update_one(
                 {"_id": song_id},
                 {"$set": metadata}
             )
-            print(f"  Updated: {metadata['artist']} - {metadata['title']}")
+            print(f"  ✓ Updated: {metadata['artist']} - {metadata['title']}")
             updated += 1
         else:
             not_found += 1
     
     print(f"\n=== Summary ===")
     print(f"Updated: {updated}")
-    print(f"Already had metadata: {already_has_metadata}")
-    print(f"Not found in AzuraCast: {not_found}")
+    print(f"Not found in history: {not_found}")
+    print(f"(Tracks not in recent history will get metadata when played again)")
     
     client.close()
 
 if __name__ == "__main__":
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     main()

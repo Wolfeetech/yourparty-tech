@@ -67,7 +67,7 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 }
 
 // --- DATA FETCH ---
-$api_internal = 'http://backend:8000'; // Docker internal
+$api_internal = 'http://192.168.178.211:8000'; // Direct IP to FastAPI container
 $api_public = 'https://api.yourparty.tech'; // Client-side accessible
 
 // PHP Fetches use Internal
@@ -85,6 +85,43 @@ $steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", [
 $steering_status = json_decode($steer_body, true);
 if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' => null];
 
+// Fetch AzuraCast Queue
+$azura_base = yourparty_azuracast_base_url();
+$queue_response = wp_remote_get("$azura_base/api/station/1/queue", array_merge(yourparty_http_defaults(), ['timeout' => 5]));
+$queue_data = json_decode(wp_remote_retrieve_body($queue_response), true);
+if (!is_array($queue_data)) $queue_data = [];
+
+// Fetch Now Playing
+$np_response = wp_remote_get("$azura_base/api/nowplaying/1", array_merge(yourparty_http_defaults(), ['timeout' => 5]));
+$np_data = json_decode(wp_remote_retrieve_body($np_response), true);
+$now_playing = $np_data['now_playing']['song'] ?? null;
+$listeners = $np_data['listeners']['current'] ?? 0;
+
+// Calculate Voting Stats
+$top_rated = null;
+$most_votes = null;
+$low_rated = null;
+$total_votes = 0;
+
+foreach ($ratings_data as $id => $data) {
+    if (!is_array($data)) continue;
+    $avg = $data['average'] ?? 0;
+    $total = $data['total'] ?? 0;
+    $total_votes += $total;
+    
+    if ($total >= 3) { // Minimum threshold for stats
+        if (!$top_rated || $avg > ($top_rated['average'] ?? 0)) {
+            $top_rated = array_merge($data, ['id' => $id]);
+        }
+        if (!$most_votes || $total > ($most_votes['total'] ?? 0)) {
+            $most_votes = array_merge($data, ['id' => $id]);
+        }
+        if ($avg < 3 && (!$low_rated || $avg < ($low_rated['average'] ?? 5))) {
+            $low_rated = array_merge($data, ['id' => $id]);
+        }
+    }
+}
+
 
 // Combine Data
 $combined_data = [];
@@ -93,16 +130,16 @@ if (isset($ratings_data) && is_array($ratings_data)) {
     foreach ($ratings_data as $id => $data) {
         if (!$id) continue;
         
-        $title = $data['title'] ?? 'Unknown';
-        $artist = $data['artist'] ?? 'Unknown';
+        $title = $data['title'] ?? '';
+        $artist = $data['artist'] ?? '';
         
-        // FILTER: Skip useless data (User Request)
-        if ($title === 'Unknown' && $artist === 'Unknown') continue;
-        if ($title === 'Unknown Track' && $artist === 'Unknown Artist') continue;
+        // Use song_id hash as fallback display name if no metadata
+        $display_title = $title && $title !== 'Unknown' ? $title : substr($id, 0, 8) . '...';
+        $display_artist = $artist && $artist !== 'Unknown' ? $artist : 'Unbekannt';
 
         $combined_data[$id] = [
-            'title' => $title,
-            'artist' => $artist,
+            'title' => $display_title,
+            'artist' => $display_artist,
             'path' => $data['path'] ?? '',
             'rating_avg' => $data['average'] ?? 0,
             'rating_total' => $data['total'] ?? 0,
@@ -164,17 +201,84 @@ get_header();
             </div>
             <div class="vibe-stats">
                 <div class="stat">
-                    <span class="stat-value" id="total-votes-today">--</span>
+                    <span class="stat-value"><?php echo number_format($total_votes); ?></span>
                     <span class="stat-label">TOTAL VOTES</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-value" id="active-listeners">--</span>
+                    <span class="stat-value"><?php echo $listeners; ?></span>
                     <span class="stat-label">LISTENERS</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-value" id="tracks-rated">--</span>
+                    <span class="stat-value"><?php echo count($ratings_data); ?></span>
                     <span class="stat-label">TRACKS RATED</span>
                 </div>
+            </div>
+            
+            <!-- Voting Highlights -->
+            <div class="voting-highlights">
+                <?php if ($top_rated): ?>
+                <div class="highlight-card top">
+                    <span class="highlight-label">🏆 TOP RATED</span>
+                    <span class="highlight-title"><?php echo esc_html($top_rated['title'] ?? 'Unknown'); ?></span>
+                    <span class="highlight-value"><?php echo number_format($top_rated['average'] ?? 0, 1); ?> ★</span>
+                </div>
+                <?php endif; ?>
+                <?php if ($most_votes): ?>
+                <div class="highlight-card votes">
+                    <span class="highlight-label">🔥 MOST VOTES</span>
+                    <span class="highlight-title"><?php echo esc_html($most_votes['title'] ?? 'Unknown'); ?></span>
+                    <span class="highlight-value"><?php echo $most_votes['total'] ?? 0; ?> votes</span>
+                </div>
+                <?php endif; ?>
+                <?php if ($low_rated): ?>
+                <div class="highlight-card low">
+                    <span class="highlight-label">⚠️ LOW RATED</span>
+                    <span class="highlight-title"><?php echo esc_html($low_rated['title'] ?? 'Unknown'); ?></span>
+                    <span class="highlight-value"><?php echo number_format($low_rated['average'] ?? 0, 1); ?> ★ (<?php echo $low_rated['total'] ?? 0; ?>)</span>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+    
+    <!-- RADIO QUEUE SECTION -->
+    <section class="deck-panel queue-panel">
+        <div class="panel-head">
+            <h3>📻 RADIO QUEUE</h3>
+            <span class="live-tag">LIVE</span>
+        </div>
+        <div class="queue-content">
+            <?php if ($now_playing): ?>
+            <div class="now-playing-card">
+                <span class="np-label">NOW PLAYING</span>
+                <div class="np-info">
+                    <span class="np-title"><?php echo esc_html($now_playing['title'] ?? 'Unknown'); ?></span>
+                    <span class="np-artist"><?php echo esc_html($now_playing['artist'] ?? 'Unknown Artist'); ?></span>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="queue-list">
+                <?php if (empty($queue_data)): ?>
+                <p class="no-queue">Queue empty or AutoDJ active</p>
+                <?php else: ?>
+                <?php foreach (array_slice(array_values($queue_data), 0, 8) as $i => $item): ?>
+                <div class="queue-item" data-id="<?php echo esc_attr($item['id'] ?? $i); ?>">
+                    <span class="queue-pos"><?php echo $i + 1; ?></span>
+                    <div class="queue-track">
+                        <span class="queue-title"><?php echo esc_html($item['song']['title'] ?? 'Unknown'); ?></span>
+                        <span class="queue-artist"><?php echo esc_html($item['song']['artist'] ?? ''); ?></span>
+                    </div>
+                    <?php if ($is_admin): ?>
+                    <div class="queue-actions">
+                        <button class="queue-btn move-up" title="Move Up">▲</button>
+                        <button class="queue-btn move-down" title="Move Down">▼</button>
+                        <button class="queue-btn remove" title="Remove">✕</button>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -547,6 +651,73 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
     color: #666; 
     letter-spacing: 0.1em; 
 }
+
+/* VOTING HIGHLIGHTS */
+.voting-highlights {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    padding: 0 20px 20px;
+}
+.highlight-card {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+.highlight-card.top { border-color: rgba(0,255,136,0.3); }
+.highlight-card.votes { border-color: rgba(255,165,0,0.3); }
+.highlight-card.low { border-color: rgba(255,68,68,0.3); }
+.highlight-label { display: block; font-size: 10px; color: #666; margin-bottom: 8px; }
+.highlight-title { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.highlight-value { display: block; font-size: 16px; font-weight: 800; margin-top: 5px; }
+.highlight-card.top .highlight-value { color: var(--emerald); }
+.highlight-card.votes .highlight-value { color: #ffa500; }
+.highlight-card.low .highlight-value { color: var(--danger); }
+
+/* QUEUE PANEL */
+.queue-panel { margin-bottom: 20px; }
+.queue-content { padding: 20px; }
+.now-playing-card {
+    background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(0,200,100,0.05));
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.np-label { display: block; font-size: 10px; color: var(--emerald); letter-spacing: 0.1em; margin-bottom: 8px; }
+.np-info { display: flex; flex-direction: column; }
+.np-title { font-size: 16px; font-weight: 700; }
+.np-artist { font-size: 13px; color: #888; }
+
+.queue-list { display: flex; flex-direction: column; gap: 8px; }
+.no-queue { color: #666; text-align: center; padding: 30px; font-style: italic; }
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 15px;
+    transition: all 0.2s;
+}
+.queue-item:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.15); }
+.queue-pos { width: 24px; height: 24px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #888; }
+.queue-track { flex: 1; overflow: hidden; }
+.queue-title { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-artist { display: block; font-size: 12px; color: #888; }
+.queue-actions { display: flex; gap: 5px; }
+.queue-btn { width: 28px; height: 28px; background: #222; border: 1px solid #333; color: #888; font-size: 12px; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+.queue-btn:hover { background: #333; color: #fff; }
+.queue-btn.remove:hover { background: #330000; border-color: var(--danger); color: var(--danger); }
+
+@media(max-width: 600px) {
+    .voting-highlights { flex-direction: column; }
+    .queue-actions { display: none; }
+}
 </style>
 
 <?php get_footer(); ?>
@@ -554,12 +725,18 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody=document.querySelector('.control-table tbody');
-    const apiBase='<?php echo esc_js($api_public); ?>';
+    const apiBase='<?php echo esc_url(rest_url('yourparty/v1/control')); ?>';
+    const wpNonce='<?php echo wp_create_nonce('wp_rest'); ?>';
 
     function updateData() {
+        const fetchOptions = {
+            credentials: 'same-origin',
+            headers: { 'X-WP-Nonce': wpNonce }
+        };
+        
         Promise.all([ 
-            fetch(`${apiBase}/ratings`).then(r=> r.json()),
-            fetch(`${apiBase}/moods`).then(r=> r.json())
+            fetch(`${apiBase}/ratings`, fetchOptions).then(r=> r.json()),
+            fetch(`${apiBase}/moods`, fetchOptions).then(r=> r.json())
         ]).then(([ratings, moods])=> {
             const allIds=new Set([...Object.keys(ratings), ...Object.keys(moods)]);
 
@@ -627,8 +804,11 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function updateVibeOverview() {
-        // Fetch from FastAPI directly (since it has the right data structure)
-        fetch('<?php echo function_exists("yourparty_api_base_url") ? yourparty_api_base_url() : "http://192.168.178.211:8000"; ?>/moods')
+        // FIXED: Use WP REST proxy with nonce for auth
+        fetch('<?php echo esc_url(rest_url('yourparty/v1/control/moods')); ?>', {
+            credentials: 'same-origin',
+            headers: { 'X-WP-Nonce': wpNonce }
+        })
             .then(r => r.json())
             .then(data => {
                 const topMoods = data.top_moods || [];

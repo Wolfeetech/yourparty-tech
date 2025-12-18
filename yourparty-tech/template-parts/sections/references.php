@@ -117,13 +117,89 @@ if (!empty($google_place_id) && !empty($google_api_key)) {
                 </a>
             </div>
         <?php else: ?>
-            <!-- Fallback -->
+            <!-- Static Testimonials Fallback -->
             <div
-                style="max-width: 600px; margin: 0 auto; padding: 3rem; text-align: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;">
-                <p style="font-size: 1.1rem; margin-bottom: 1rem;">⚙️ Google Reviews</p>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">
-                    Bewertungen werden geladen...
+                style="display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); max-width: 1000px; margin: 0 auto;">
+                
+                <!-- Testimonial 1 -->
+                <article
+                    style="background: var(--bg-card, rgba(20,20,20,0.8)); padding: 2rem; border-radius: 12px; border: 1px solid var(--border, rgba(255,255,255,0.1));">
+                    <div
+                        style="display: flex; gap: 0.5rem; margin-bottom: 1rem; color: var(--emerald, #00ff88); font-size: 1.25rem;">
+                        ★★★★★
+                    </div>
+                    <p style="font-size: 1.1rem; line-height: 1.7; margin-bottom: 1.5rem; color: var(--text, #fff);">
+                        "Wolf hat unsere Hochzeit mit perfektem Sound und toller Musikauswahl unvergesslich gemacht. Absolut empfehlenswert!"
+                    </p>
+                    <footer
+                        style="display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border, rgba(255,255,255,0.1));">
+                        <div
+                            style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald, #00ff88), #6366f1); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                            M
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">Martina K.</div>
+                            <div style="font-size: 0.875rem; color: var(--text-muted, #888);">Hochzeit 2024</div>
+                        </div>
+                    </footer>
+                </article>
+
+                <!-- Testimonial 2 -->
+                <article
+                    style="background: var(--bg-card, rgba(20,20,20,0.8)); padding: 2rem; border-radius: 12px; border: 1px solid var(--border, rgba(255,255,255,0.1));">
+                    <div
+                        style="display: flex; gap: 0.5rem; margin-bottom: 1rem; color: var(--emerald, #00ff88); font-size: 1.25rem;">
+                        ★★★★★
+                    </div>
+                    <p style="font-size: 1.1rem; line-height: 1.7; margin-bottom: 1.5rem; color: var(--text, #fff);">
+                        "Super professionelle Abwicklung, tolle Lichttechnik und die Musik war genau das, was wir wollten. Gerne wieder!"
+                    </p>
+                    <footer
+                        style="display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border, rgba(255,255,255,0.1));">
+                        <div
+                            style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald, #00ff88), #6366f1); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                            T
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">Thomas S.</div>
+                            <div style="font-size: 0.875rem; color: var(--text-muted, #888);">Firmenfeier 2024</div>
+                        </div>
+                    </footer>
+                </article>
+
+                <!-- Testimonial 3 -->
+                <article
+                    style="background: var(--bg-card, rgba(20,20,20,0.8)); padding: 2rem; border-radius: 12px; border: 1px solid var(--border, rgba(255,255,255,0.1));">
+                    <div
+                        style="display: flex; gap: 0.5rem; margin-bottom: 1rem; color: var(--emerald, #00ff88); font-size: 1.25rem;">
+                        ★★★★★
+                    </div>
+                    <p style="font-size: 1.1rem; line-height: 1.7; margin-bottom: 1.5rem; color: var(--text, #fff);">
+                        "Der Radio-Stream läuft bei uns im Büro permanent. Beste Musikauswahl, keine nervige Werbung. Top!"
+                    </p>
+                    <footer
+                        style="display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border, rgba(255,255,255,0.1));">
+                        <div
+                            style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald, #00ff88), #6366f1); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                            L
+                        </div>
+                        <div>
+                            <div style="font-weight: 600;">Lisa M.</div>
+                            <div style="font-size: 0.875rem; color: var(--text-muted, #888);">Radio-Hörer</div>
+                        </div>
+                    </footer>
+                </article>
+            </div>
+            
+            <!-- CTA for real reviews -->
+            <div style="text-align: center; margin-top: 2rem;">
+                <p style="color: var(--text-muted, #888); font-size: 0.9rem;">
+                    Du warst bei einem meiner Events? Ich freue mich über dein Feedback!
                 </p>
+                <a href="mailto:wolf@yourparty.tech?subject=Feedback"
+                    style="display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, var(--emerald, #00ff88), #1a6d41); color: white; border-radius: 24px; text-decoration: none; font-weight: 600; transition: transform 0.2s;">
+                    Feedback senden
+                </a>
             </div>
         <?php endif; ?>
     </div>

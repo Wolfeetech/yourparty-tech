@@ -89,6 +89,7 @@ if (file_exists(__DIR__ . '/inc/content-config.php')) {
 require_once __DIR__ . '/inc/customizer.php';
 require_once __DIR__ . '/inc/api.php';
 require_once __DIR__ . '/inc/admin-dashboard.php';
+require_once __DIR__ . '/inc/cookie-consent.php';
 
 add_action('wp_enqueue_scripts', function () {
     // Fonts
