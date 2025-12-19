@@ -28,6 +28,11 @@ POTENTIAL_CONNECTIONS = [
     # External access from Windows host
     f"mongodb://192.168.178.210:27017/",
     f"mongodb://azuracast:azuracast@192.168.178.210:27017/",
+    # Production DB Candidates
+    f"mongodb://192.168.178.222:27017/",
+    f"mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin",
+    f"mongodb://192.168.178.202:27017/",
+    f"mongodb://192.168.178.208:27017/",
 ]
 
 DATABASE_NAMES = [

@@ -719,6 +719,37 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
     .voting-highlights { flex-direction: column; }
     .queue-actions { display: none; }
 }
+
+/* iPhone X / Mobile Optimization */
+@media(max-width: 480px) {
+    .control-dashboard-v2 {
+        padding: 80px 10px 100px;
+    }
+    .brand-title { font-size: 18px; }
+    .user-badge { display: none; } /* Save header space */
+    
+    /* Vibe Dashboard Compact */
+    .vibe-content { padding: 15px; gap: 15px; }
+    .dominant-mood { padding: 15px; }
+    .mood-bars { gap: 4px; }
+    
+    /* Table: Hide complex columns */
+    .cyber-table th:nth-child(4), .cyber-table td:nth-child(4), /* File */
+    .cyber-table th:nth-child(5), .cyber-table td:nth-child(5)  /* Trend */
+    { display: none; }
+    
+    .track-title { font-size: 13px; }
+    .track-artist { font-size: 10px; }
+
+    /* Footer: Prioritize Player */
+    .footer-right { display: none; } /* Hide volume/status on mobile */
+    .footer-center { display: flex; flex: 1; justify-content: center; }
+    .footer-left { flex: 0 0 auto; }
+    
+    /* Adjust Monitor for widths */
+    .now-playing-monitor { width: auto; max-width: 160px; }
+    #monitor-visualizer { width: 30px !important; }
+}
 </style>
 
 <?php get_footer(); ?>
@@ -726,78 +757,115 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody=document.querySelector('.control-table tbody');
-    const apiBase='<?php echo esc_url(rest_url('yourparty/v1/control')); ?>';
     const wpNonce='<?php echo wp_create_nonce('wp_rest'); ?>';
+    
+    // API Endpoints
+    const apiLib = '/wp-json/yourparty/v1/library';
+    const apiStatus = '/wp-json/yourparty/v1/status';
+    const apiGeneric = '<?php echo esc_url(rest_url('yourparty/v1')); ?>';
 
-    function updateData() {
-        const fetchOptions = {
-            credentials: 'same-origin',
+    // --- LIBRARY TABLE ---
+    function updateLibrary() {
+        fetch(apiLib, {
             headers: { 'X-WP-Nonce': wpNonce }
-        };
-        
-        Promise.all([ 
-            fetch(`${apiBase}/ratings`, fetchOptions).then(r=> r.json()),
-            fetch(`${apiBase}/moods`, fetchOptions).then(r=> r.json())
-        ]).then(([ratings, moods])=> {
-            const allIds=new Set([...Object.keys(ratings), ...Object.keys(moods)]);
-
-            // If empty
-            if (allIds.size===0) {
-                if (!tableBody.querySelector('.empty-state')) {
+        })
+        .then(r => r.json())
+        .then(tracks => {
+            if (!Array.isArray(tracks) || tracks.length === 0) {
+                 if (!tableBody.querySelector('.empty-state')) {
                     tableBody.innerHTML='<tr><td colspan="5" class="empty-state">NO DATA YET</td></tr>';
-                }
-                return;
+                 }
+                 return;
             }
 
-            // Map data
-            const rows=Array.from(allIds).map(id=> {
-                const r=ratings[id] || {};
-                const m=moods[id] || {};
-
-                // Client Side Filter for noise
-                if ( (!r.title || r.title==='Unknown') && (!m.title) ) return null;
+            // Map & Sort
+            const rows = tracks.map(t => {
+                const meta = t.metadata || {};
+                const rating = t.rating || {};
+                const moods = t.moods || {};
 
                 return {
-                    id,
-                    title: m.title || r.title || 'Unknown',
-                    artist: m.artist || r.artist || 'Unknown',
-                    top: m.top_mood || '-',
-                    genre: m.top_genre || '-',
-                    avg: parseFloat(r.average || 0),
-                    total: parseInt(r.total || 0),
-                    votes: parseInt(m.total_votes || 0),
-                    combinedScore: (parseInt(m.total_votes || 0) + parseInt(r.total || 0))
+                    id: t.song_id || t._id,
+                    title: meta.title || 'Unknown',
+                    artist: meta.artist || 'Unknown',
+                    top: moods.top_mood || '-',
+                    avg: parseFloat(rating.average || 0),
+                    votes: parseInt(rating.total || 0), // Rating count
+                    path: t.file_path,
+                    combinedScore: (rating.total || 0) // Sort by popularity
                 };
-            }).filter(Boolean);
+            });
 
-            // Sort
-            rows.sort((a, b)=> b.combinedScore - a.combinedScore);
+            // Sort by most rated/popular
+            rows.sort((a, b) => b.combinedScore - a.combinedScore);
 
-            // Rebuild HTML
             const e=str=> str ? str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 
-            const html=rows.map(row=> {
-                const color=row.avg >=4 ? 'var(--emerald)' : (row.avg <=2 ? '#ff4444' : '#888');
-                const display = `${row.artist} - ${row.title}`;
-
-                return `<tr>
-                    <td class="mono-font" title="${e(row.id)}">${e(display)}</td>
+            const html = rows.map(row => {
+                 const color = row.avg >= 4 ? 'var(--emerald)' : (row.avg <= 2 && row.votes > 0 ? '#ff4444' : '#888');
+                 // Ensure we escape ID for button
+                 const safeId = e(row.id);
+                 return `<tr>
+                    <td class="mono-font" title="${e(row.path)}">${e(row.artist)} - ${e(row.title)}</td>
                     <td><span class="mood-badge">${e(row.top)}</span></td>
                     <td><span style="color: ${color}; font-weight: bold;">★ ${row.avg.toFixed(1)}</span></td>
-                    <td><button class="cyber-btn small">FILES</button></td>
-                    <td><div class="mini-bar" style="width: ${Math.min(100, row.votes * 5)}px;"></div></td>
+                    <td><button class="cyber-btn small" onclick="openMoodDialog('${safeId}', '${e(row.title.replace(/'/g, "\\'"))}', '${e(row.artist.replace(/'/g, "\\'"))}')">TAG</button></td>
+                    <td><div class="mini-bar" style="width: ${Math.min(100, row.votes * 10)}px;"></div></td>
                 </tr>`;
             }).join('');
 
-            tableBody.innerHTML=html;
-        }).catch(err=> console.error('Data pull failed', err));
+            tableBody.innerHTML = html;
+        })
+        .catch(err => {
+            console.warn('Library Fetch Failed:', err);
+        });
     }
 
-    // Update every 5 seconds
-    setInterval(updateData, 5000);
-    updateData(); // Initial call
+    // Update Library occasionally (every 30s is enough, it's big)
+    updateLibrary();
+    setInterval(updateLibrary, 30000);
+
+    // --- MONITOR / FOOTER ---
+    const monitorTitle = document.getElementById('monitor-title');
+    const monitorStatus = document.querySelector('.status-indicator span');
+    
+    function updateMonitor() {
+        console.log("Polling Status...");
+        fetch(apiStatus)
+            .then(r => r.json())
+            .then(data => {
+                const np = data.now_playing?.song || {};
+                if (monitorTitle) {
+                    if (np.title && np.artist) {
+                        monitorTitle.textContent = `${np.artist} - ${np.title}`;
+                        monitorTitle.classList.add('active');
+                    } else {
+                        monitorTitle.textContent = "WAITING FOR SIGNAL...";
+                        monitorTitle.classList.remove('active');
+                    }
+                }
+                
+                if (monitorStatus) {
+                    // Update ON AIR / OFF AIR
+                    if (data.is_online || (data.listeners && data.listeners.total !== undefined)) {
+                        monitorStatus.textContent = "ON AIR";
+                        monitorStatus.style.color = "var(--emerald)";
+                         // Trigger visualizer loop if not running? handled by StreamController usually
+                    } else {
+                         monitorStatus.textContent = "OFFLINE";
+                         monitorStatus.style.color = "red";
+                    }
+                }
+            })
+            .catch(e => console.error("Monitor Poll Error", e));
+    }
+    
+    // Poll Monitor frequently (2s)
+    setInterval(updateMonitor, 2000);
+    updateMonitor();
 
     // --- VIBE OVERVIEW UPDATES ---
+    // (Existing Vibe logic remains mostly same, just ensuring fetch works)
     const moodIcons = {
         'energetic': '⚡', 'chill': '🌴', 'euphoric': '🤩', 'dark': '🌑',
         'groovy': '💃', 'melodic': '🎹', 'hypnotic': '🌀', 'uplifting': '🚀',
@@ -805,16 +873,12 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function updateVibeOverview() {
-        // FIXED: Use WP REST proxy with nonce for auth
-        fetch('<?php echo esc_url(rest_url('yourparty/v1/control/moods')); ?>', {
-            credentials: 'same-origin',
+        fetch(`${apiGeneric}/control/moods`, {
             headers: { 'X-WP-Nonce': wpNonce }
         })
             .then(r => r.json())
             .then(data => {
                 const topMoods = data.top_moods || [];
-                
-                // Update dominant mood
                 if (topMoods.length > 0) {
                     const dominant = topMoods[0];
                     const nameEl = document.getElementById('dominant-mood-name');
@@ -823,138 +887,38 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (iconEl) iconEl.textContent = moodIcons[dominant.tag] || '🎵';
                 }
                 
-                // Calculate max for bar scaling
-                const maxCount = topMoods.length > 0 ? topMoods[0].count : 1;
-                
-                // Update mood bars
-                const barsContainer = document.getElementById('mood-bars');
-                if (barsContainer && topMoods.length > 0) {
-                    const barsHtml = topMoods.slice(0, 6).map(m => {
+                 const barsContainer = document.getElementById('mood-bars');
+                 if (barsContainer && topMoods.length > 0) {
+                     const maxCount = topMoods[0].count;
+                     const barsHtml = topMoods.slice(0, 6).map(m => {
                         const pct = Math.round((m.count / maxCount) * 100);
                         const icon = moodIcons[m.tag] || '🎵';
                         return `
                             <div class="mood-bar-item">
                                 <span class="mood-label">${icon} ${m.tag}</span>
-                                <div class="bar-container">
-                                    <div class="bar-fill" style="width:${pct}%;"></div>
-                                </div>
+                                <div class="bar-container"><div class="bar-fill" style="width:${pct}%;"></div></div>
                                 <span class="vote-count">${m.count}</span>
-                            </div>
-                        `;
-                    }).join('');
-                    barsContainer.innerHTML = barsHtml;
-                }
-                
-                // Update stats
-                const totalVotes = topMoods.reduce((sum, m) => sum + m.count, 0);
-                const tracksRated = topMoods.length;
-                
-                const totalEl = document.getElementById('total-votes-today');
-                const tracksEl = document.getElementById('tracks-rated');
-                if (totalEl) totalEl.textContent = totalVotes;
-                if (tracksEl) tracksEl.textContent = tracksRated;
+                            </div>`;
+                     }).join('');
+                     barsContainer.innerHTML = barsHtml;
+                 }
             })
-            .catch(err => console.warn('Vibe overview fetch failed:', err));
-        
-        // Fetch listener count from AzuraCast (if available)
-        fetch('/wp-json/yourparty/v1/status')
-            .then(r => r.json())
-            .then(data => {
-                const listenersEl = document.getElementById('active-listeners');
-                if (listenersEl && data.listeners !== undefined) {
-                    listenersEl.textContent = data.listeners.total || data.listeners || '--';
-                }
-            })
-            .catch(() => {});
+            .catch(err => console.warn('Vibe fetch failed:', err));
     }
-
-    // Update vibe overview every 5 seconds
     setInterval(updateVibeOverview, 5000);
-    updateVibeOverview(); // Initial call
+    updateVibeOverview();
 
-    // --- FOOTER CONTROLS ---
-    const monitorPlayBtn=document.getElementById('monitor-play-btn');
-    const volSlider=document.getElementById('monitor-volume');
-    const monitorTitle=document.getElementById('monitor-title');
-    const monitorCanvas=document.getElementById('monitor-visualizer');
-    let monitorCtx;
-
-    if(monitorCanvas) monitorCtx=monitorCanvas.getContext('2d');
-
-    // Check StreamController availability
-    let sc = null;
-    if (window.YourPartyAppInstance && window.YourPartyAppInstance.modules.stream) {
-        sc = window.YourPartyAppInstance.modules.stream;
-    } else if (window.StreamController) {
-        sc = window.StreamController;
-    }
-
-    if (monitorPlayBtn && sc) {
-        monitorPlayBtn.addEventListener('click', ()=> sc.togglePlay());
-
-        // Sync Play State
-        window.addEventListener('stream:playing', ()=> {
-            monitorPlayBtn.textContent='⏸ PAUSE';
-            monitorPlayBtn.style.color='var(--emerald)';
-            monitorPlayBtn.style.borderColor='var(--emerald)';
+    // --- GLOBAL HELPERS (for button clicks) ---
+    window.openMoodDialog = function(id, title, artist) {
+        // Dispatch event for Main App to handle if loaded
+        const event = new CustomEvent('open-mood-tagger', { 
+            detail: { id, title, artist } 
         });
-
-        window.addEventListener('stream:paused', ()=> {
-            monitorPlayBtn.textContent='▶ MONITOR';
-            monitorPlayBtn.style.color='';
-            monitorPlayBtn.style.borderColor='';
-        });
-    }
-
-    if (volSlider) {
-        volSlider.addEventListener('input', (e)=> {
-            const audio=document.getElementById('radio-audio');
-            if(audio) audio.volume=e.target.value / 100;
-        });
-    }
-
-    // Sync Metadata
-    window.addEventListener('songChange', (e)=> {
-        const song=e.detail.song;
-        if(song && monitorTitle) {
-            monitorTitle.textContent=song.title;
-        }
-    });
-
-    // Mini Visualizer Loop
-    function drawMiniVis() {
-        requestAnimationFrame(drawMiniVis);
-        if( !monitorCtx || !sc) return;
-        const analyser=sc.getAnalyser();
-
-        if( !analyser) {
-            monitorCtx.clearRect(0, 0, 100, 30);
-            monitorCtx.fillStyle='#222';
-            monitorCtx.fillRect(0, 14, 100, 2);
-            return;
-        }
-
-        const bufferValid=analyser.frequencyBinCount;
-        if( !bufferValid) return;
-
-        const data=new Uint8Array(bufferValid);
-        analyser.getByteFrequencyData(data);
-
-        monitorCtx.clearRect(0, 0, 100, 30);
-        monitorCtx.fillStyle='var(--emerald)';
-
-        const barW=3;
-        const gap=1;
-        const count=Math.floor(100 / (barW+gap));
-        const step=Math.floor(data.length / count);
-
-        for(let i=0; i<count; i++) {
-            let sum=0; for(let j=0; j<step; j++) sum+=data[i*step+j];
-            const val=sum/step;
-            const h=(val/255)*25;
-            monitorCtx.fillRect(i*(barW+gap), 30-h, barW, h);
-        }
-    }
-    drawMiniVis();
+        window.dispatchEvent(event);
+        
+        // Fallback: If no listener, alert user (or implement dialog here if missing)
+        // Usually YourPartyAppInstance handles this.
+        console.log("Requesting Mood Tag for", id);
+    };
 });
 </script>

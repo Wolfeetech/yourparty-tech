@@ -424,8 +424,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Update Main Player (Always update, even if not live DJ)
-    if (titleElement) titleElement.textContent = trackTitle;
-    if (artistElement) artistElement.textContent = trackArtist;
+    if (titleElement) {
+      titleElement.textContent = trackTitle;
+      titleElement.classList.remove('skeleton');
+    }
+    if (artistElement) {
+      artistElement.textContent = trackArtist;
+      artistElement.classList.remove('skeleton');
+    }
     if (albumElement) albumElement.textContent = trackAlbum;
     if (listenersElement) listenersElement.textContent = listeners;
 

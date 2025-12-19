@@ -398,8 +398,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/ws/logrmp")
-async def websocket_endpoint(websocket: WebSocket):
+@app.websocket("/ws/{station_id}")
+async def websocket_endpoint(websocket: WebSocket, station_id: str):
     await manager.connect(websocket)
     logger.info("New WebSocket connection established")
     try:
@@ -468,9 +468,15 @@ async def startup_event():
                 mongo_uri = f"mongodb://{host}:{port}/"
         
         state.mongo_client = MongoDatabaseClient(mongo_uri)
-        # Use simple timeout if possible, or just hope it doesn't hang forever
-        await asyncio.wait_for(state.mongo_client.init(), timeout=5.0)
-        logger.info("Connected to MongoDB.")
+        # Note: PyMongo client connects lazily/synchronously usually. No async init needed.
+        # But we can verify connection:
+        # state.mongo_client.client.admin.command('ping') 
+        
+        # Initialize Services dependent on Mongo
+        state.track_matcher = TrackMatcher(state.mongo_client)
+        state.library_service = get_library_service(state.mongo_client)
+        
+        logger.info("Connected to MongoDB & Services Initialized.")
     except Exception as e:
         logger.error(f"Failed to connect to Mongo (Non-critical for Playback): {e}")
 

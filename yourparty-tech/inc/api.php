@@ -741,6 +741,32 @@ add_action('rest_api_init', function () {
             'permission_callback' => '__return_true',
         ]
     );
+
+    register_rest_route(
+        'yourparty/v1',
+        '/library',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                // Forward to Python Backend
+                $api_url = yourparty_api_base_url() . '/library/all';
+                $response = wp_remote_get($api_url, [
+                    'timeout' => 15, // Library might look big
+                    'sslverify' => false
+                ]);
+
+                if (is_wp_error($response)) {
+                    return $response;
+                }
+
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                return rest_ensure_response($data);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+    
     register_rest_route(
         'yourparty/v1',
         '/content',
@@ -808,22 +834,7 @@ add_action('rest_api_init', function () {
         ]
     );
 
-    register_rest_route(
-        'yourparty/v1',
-        '/control/ratings',
-        [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => function () {
-                if (!current_user_can('manage_options')) {
-                    return new WP_Error('rest_forbidden', 'Nur für Admins.', ['status' => 403]);
-                }
-                return rest_ensure_response(yourparty_get_ratings());
-            },
-            'permission_callback' => function () {
-                return current_user_can('manage_options');
-            },
-        ]
-    );
+
 
     // Mood Tagging Endpoint
     register_rest_route(
@@ -938,111 +949,10 @@ add_action('rest_api_init', function () {
     );
 
     // NEW: Dual Mood Voting Endpoint (current + next)
-    register_rest_route(
-        'yourparty/v1',
-        '/vote-mood',
-        [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => function (WP_REST_Request $request) {
-                $song_id = preg_replace('/[^a-zA-Z0-9]/', '', (string) $request->get_param('song_id'));
-                $mood_current = sanitize_text_field((string) $request->get_param('mood_current'));
-                $mood_next = sanitize_text_field((string) $request->get_param('mood_next'));
-                $title = sanitize_text_field((string) $request->get_param('title'));
-                $artist = sanitize_text_field((string) $request->get_param('artist'));
 
-                if (empty($song_id)) {
-                    return new WP_Error('yourparty_invalid_payload', 'Song ID erforderlich.', ['status' => 400]);
-                }
-
-                if (empty($mood_current) && empty($mood_next)) {
-                    return new WP_Error('yourparty_invalid_payload', 'Mindestens ein Mood erforderlich.', ['status' => 400]);
-                }
-
-                // Valid moods (Sync with MoodModule.js)
-                $valid_moods = [
-                    'energetic', 'chill', 'euphoric', 'dark', 'groovy', 
-                    'melodic', 'melancholic', 'aggressive', 'hypnotic', 
-                    'trippy', 'warm', 'uplifting', 'atmospheric', 'raw',
-                    // Keep legacy for backward compatibility if needed
-                    'energy', 'groove' 
-                ];
-
-                if (!empty($mood_current) && !in_array($mood_current, $valid_moods, true)) {
-                    return new WP_Error('yourparty_invalid_mood', 'Invalid mood_current: ' . $mood_current, ['status' => 400]);
-                }
-
-                if (!empty($mood_next) && !in_array($mood_next, $valid_moods, true)) {
-                    return new WP_Error('yourparty_invalid_mood', 'Invalid mood_next: ' . $mood_next, ['status' => 400]);
-                }
-
-                // Proxy to FastAPI backend
-                $api_url = yourparty_api_base_url() . '/vote-mood';
-
-                $body_args = [
-                    'song_id' => $song_id,
-                    'title' => $title,
-                    'artist' => $artist
-                ];
-
-                if (!empty($mood_current)) {
-                    $body_args['mood_current'] = $mood_current;
-                }
-                if (!empty($mood_next)) {
-                    $body_args['mood_next'] = $mood_next;
-                }
-
-                $response = wp_remote_post($api_url, [
-                    'headers' => ['Content-Type' => 'application/json'],
-                    'body' => json_encode($body_args),
-                    'timeout' => 5
-                ]);
-
-                if (is_wp_error($response)) {
-                    return new WP_Error('api_error', 'Backend nicht erreichbar: ' . $response->get_error_message(), ['status' => 503]);
-                }
-
-                $code = wp_remote_retrieve_response_code($response);
-                $body = wp_remote_retrieve_body($response);
-
-                if ($code !== 200) {
-                    return new WP_Error('api_error', 'Backend Fehler: ' . $body, ['status' => $code]);
-                }
-
-                $data = json_decode($body, true);
-                return rest_ensure_response($data ?: [
-                    'success' => true,
-                    'song_id' => $song_id,
-                    'mood_current' => $mood_current,
-                    'mood_next' => $mood_next
-                ]);
-            },
-            'permission_callback' => '__return_true',
-            'args' => [
-                'song_id' => ['required' => true, 'type' => 'string'],
-                'mood_current' => ['required' => false, 'type' => 'string'],
-                'mood_next' => ['required' => false, 'type' => 'string'],
-            ],
-        ]
-    );
 
     // Get all mood tags (Admin only)
-    register_rest_route(
-        'yourparty/v1',
-        '/control/moods',
-        [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => function () {
-                if (!current_user_can('manage_options')) {
-                    return new WP_Error('rest_forbidden', 'Nur für Admins.', ['status' => 403]);
-                }
-                $moods = get_option('yourparty_mood_tags', []);
-                return rest_ensure_response($moods);
-            },
-            'permission_callback' => function () {
-                return current_user_can('manage_options');
-            },
-        ]
-    );
+
 
     // Generate playlist by mood (Admin only)
     register_rest_route(

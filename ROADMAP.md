@@ -2,22 +2,24 @@
 
 ## 🚨 KRITISCH - SOFORT
 
-### 1. Proxmox Speicher entlasten
-- **Problem**: Thin Pool bei 96.6% - System instabil (Muss noch geprüft werden)
-- **Lösungsansätze**:
-  - [x] **ERLEDIGT**: 1TB HDD als Proxmox Storage 'hdd-backup' eingerichtet (646GB frei)
-  - [x] Container-Größen optimieren (brauchen die alle soviel?)
-  - [x] CT 100 (alte radio-api, inaktiv) löschen → ~8GB frei
-  - [x] Nicht benötigte Container identifizieren (CT 100 gone)
-  - [/] Migration WordPress CT 207 (Failed - Volume Error)
+### 0. Database Connection Error (SOLVED ✅)
+- **Status**: ✅ FIXED via MariaDB Grant Flush (User `wp_user` from `192.168.178.207` allowed).
+- **Verification**: Site returns HTTP 200.
 
-### 2. Frontend Integration (CRITICAL / BROKEN)
-- **Status**: ✅ FIXED via modularization
-- **Current Issues**:
-    - [x] **API Proxy**: Fixed (`/api/` -> `211`) via Apache config. Data available.
-    - [x] **"Station Loading" Bug**: Fixed via StatusManager.js.
-    - [x] **Interactive Features**: Visualizer Pro & Mood Tagging active.
-    - [x] **Control Dashboard**: CSS styling fixed and deployed.
+### 0.1 Critical Loose Ends (MUST FIX NEXT)
+- [ ] **NPM Proxy 502**: `api.yourparty.tech` returns 502. Needs Nginx Proxy Manager configuration fix (Destination: `192.168.178.211:8000`).
+- [ ] **Content Verification**: Validate Impressum/Datenschutz pages now that DB is back.
+- [ ] **Async Tasks**: Refactor `/scan` to use `BackgroundTasks` in FastAPI to prevent blocking.
+
+### 0.2 Frontend & Theme Cleanup
+- [ ] **Fix Theme Root**: Remove artifacts (`README.md`, `SERVER_INFO.md`, `main.js`) from `/wp-content/themes/yourparty-tech/`.
+- [ ] **Verified `main.js`**: Ensure `src/js/main.js` is reachable.
+- [ ] **Mobile-perfect Control Dashboard**: Final touch for "Admin on the Dancefloor" (Responsive UI).
+
+### 0.3 Backend Hardening
+- [x] **Secrets Management**: Audit `api.py` (Fixed).
+- [x] **Dependency Management**: Locked `requirements.txt`.
+- [ ] **API Security**: Global Exception Handler.
 
 ---
 
@@ -32,14 +34,21 @@
     - [x] 2TB HDD (in VM 210) via NFS/SMB an API (CT 211) freigeben ✅
     - [x] Musik-Sammlung verifizieren (Genres mit neuen "Vibe" Tags strukturieren).
     - [x] Auto-Tagging Script deployed and tested on CT 211 (venv ready).
+    - [ ] **Drive M: Mounting (LOSE ENDE)**: Configuration in `smb.conf` on VM 210 finished, but service restart and final `net use` mount on StudioPC pending.
+    - [ ] **API Access Fix (LOSE ENDE)**: AzuraCast API Key permissions need upgrade (current 403 for file list).
 - [ ] **Playlisten-Design**:
     - [ ] Definieren: Was läuft morgens? Was läuft abends? (Smart Playlists in AzuraCast).
+    - [ ] **Library Sync (LOSE ENDE)**: Execute `sync_library.py` after M: drive is up and API permissions are fixed.
 
 ## 5. FRONTEND POLISH (Das Gesicht)
 - [x] Visualizer (Deep Space Background).
 - [x] Brand Copywriting ("Sonay Audio Engineering").
 - [x] Admin Dashboard (Mission Control) wired to Python Backend.
-- [x] **Mobile Optimierung**: Tested on iPhone X viewport (375x812).
+- [ ] **Mobile Optimierung**: Tested on iPhone X viewport (375x812).
+- [ ] **JS Standardisierung**:
+    - [ ] Remove remaining `[DEBUG]` logs from `app.js` and modules.
+    - [ ] Standardize DOM IDs (Clean up `immersive-` fallbacks).
+    - [ ] Review `style.css` for orphaned classes (Reduce 38KB size).
 
 ### Backend API
 - [x] REST-API gibt 200 zurück
@@ -58,16 +67,18 @@
 | Radio API (alt) | CT 100 | 8GB | 🗑️ DELETED |
 | AzuraCast | VM 210 | 64GB + 2TB HDD | ✅ Läuft |
 | MongoDB | CT 202 | 15GB | ✅ Läuft (Storing Ratings) |
-| **Thin Pool** | pve/data | 157GB | ⚠️ 87.97% voll |
+| **Thin Pool** | pve/data | 157GB | ⚠️ 88.07% voll |
 | **PVE Control** | Host | Script | ✅ Active (Cron) |
+| **VM 103/106** | Disk | 10G/5G | 🚨 >94% VOLL |
 
 ---
 
 ## 🎯 NÄCHSTE SCHRITTE (PRIORITÄT)
 
-1.  **🔥 Cleanup & Stability**:
+2.  **🔥 Cleanup & Stability**:
     - [x] **Backup**: Full Server Snapshot (`.tar.gz`) for Backend/Frontend stored offline.
     - [ ] **Proxmox Space**: Delete unused CTs immediately.
+    - [ ] **Fix DB Connection (LOSE ENDE)**: `yourparty.tech` currently shows Database Error. Check CT 208 Status.
 
 2.  **💾 Datenbank Persistence (Kein Mock mehr)**:
     - [x] `/rate` Endpoint an MongoDB anschließen✅ (Verified functionality)
@@ -78,6 +89,8 @@
     - [x] Dashboard zeigt jetzt Live-Daten aus der API.
     - [x] "Playlist Generator" testen (AzuraCast native .m3u export verified).
     - [x] **Stream Stability**: Rewrite of `StreamController.js` to fix paused states.
+    - [ ] **Flatten Subdirectories**: Clean up `yourparty-tech/yourparty-tech/` redundancy.
+    - [ ] **AzuraCast Sync**: Verify why titles are lagging in frontend.
 
 ---
 
@@ -93,4 +106,40 @@
 | `SERVER_INFO.md` documentation | ✅ CREATED |
 
 ---
-*Zuletzt aktualisiert: 2025-12-18 22:55*
+- [x] **Metadata Enrichment (PARTIAL)**: API fixed, `tracks` collection populated (1636 items), but UI still showing some "Unknowns".
+- [ ] **SSL Polling Fix (NEW)**: `radio-api` polling AzuraCast (`192.168.178.210`) fails due to self-signed SSL cert. Need `verify=False` or internal HTTP path.
+- [ ] **WebSocket Proxy Fix (NEW)**: `wss://radio.yourparty.tech/ws/radio.yourparty` returns 404/503. Check Nginx `proxy_set_header Upgrade` config.
+- [ ] **Library Intel Rendering**: Frontend JS not displaying table data despite API 200 OK. Check `StatusManager.js` data mapping.
+
+---
+...
+## 7. Website Professional Optimization (Dec 2025)
+
+**Ziel**: Rechtliche Absicherung (GDPR) und professionelle Außendarstellung (Impressum, Datenschutz, Testimonials).
+
+### 7.1 Rechtliche Compliance (Impressum & Datenschutz)
+- [x] **Templates erstellt**: `page-impressum.php` und `page-datenschutz.php` im Theme deployed.
+- [x] **Daten aktualisiert**: Inhaber Wolfgang Prinz, Stockenweiler 3, Hergensweiler hinterlegt.
+- [x] **Seiten erstellt**: WordPress-Seiten "Impressum" (ID 15) und "Datenschutz" (ID 16) via Script erstellt.
+- [ ] **Verifizierung (LOSE ENDE)**: Templates wurden zugewiesen, aber Anzeige ist noch blockiert durch Datenbank-Fehler.
+
+### 7.2 GDPR - Cookie Consent Banner
+- [x] **Implementation**: Minimalistischer Banner in `inc/cookie-consent.php` implementiert.
+- [x] **Hooking**: In `functions.php` via `wp_footer` eingebunden.
+- [ ] **Verifizierung (LOSE ENDE)**: Muss in Incognito-Fenster geprüft werden, sobald DB wieder läuft.
+
+### 7.3 Content & Social Proof
+- [x] **Kontakt-Email**: Auf `wolf@yourparty.tech` aktualisiert.
+- [ ] **Content-Refactor (LOSE ENDE)**: Großer Content-Rewrite wurde wegen Encoding-Problemen (Umlaute) zurückgerollt. Muss via WordPress Customizer oder UTF-8 Deployment nachgeholt werden.
+- [x] **Statische Testimonials**: In `references.php` vorbereitet (Fallback für fehlende Google API).
+
+### [LOSE ENDEN & OFFENE AUFGABEN AUS DIESEM CHAT]
+- [x] **Git Identity**: `user.name` "wwolfitec" und `user.email` "wwolfitec@gmail.com" konfiguriert.
+- [ ] **🔥 CRITICAL: Database Error**: `yourparty.tech` und `wp-admin` werfen aktuell Datenbank-/WordPress-Fehler. (Muss sofort nach Chat-Archivierung geprüft werden!)
+- [ ] **API Security**: Globaler Exception Handler in `backend/api.py` implementiert (geplant).
+- [ ] **API Polling**: SSL Verification Problem bei AzuraCast-Abfrage (CT 211 -> VM 210) lösen.
+- [ ] **Frontend Rendering**: `StatusManager.js` Datenmapping prüfen (200 OK aber keine Daten-Anzeige).
+- [ ] **Mission Control Mobile**: UI-Anpassungen für mobile Endgeräte (iPhone X Viewport).
+
+---
+*Zuletzt aktualisiert: 2025-12-19 09:45*

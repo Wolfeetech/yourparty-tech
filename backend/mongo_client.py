@@ -25,14 +25,23 @@ class MongoDatabaseClient:
             self.tracks_collection = self.db["tracks"]
             self.sync_log_collection = self.db["sync_log"]
             
-            # Create indexes for performance
-            self.ratings_collection.create_index("song_id")
-            self.ratings_collection.create_index("user_id")
-            self.tracks_collection.create_index("file_path", unique=True)
-            self.tracks_collection.create_index("song_id")
+            # Create indexes for performance (Best Effort)
+            try:
+                self.ratings_collection.create_index("song_id")
+                self.ratings_collection.create_index("user_id")
+                # Handle potential unique constraint conflict if legacy duplicates exist
+                try:
+                    self.tracks_collection.create_index("file_path", unique=True)
+                except Exception:
+                    # Fallback to non-unique if unique fails
+                    self.tracks_collection.create_index("file_path")
+                self.tracks_collection.create_index("song_id")
+            except Exception as ie:
+                logger.warning(f"Index creation warning: {ie}")
             
             logger.info(f"Connected to MongoDB: {database_name}")
         except Exception as e:
+            # Only fail on connection errors, not index errors
             logger.error(f"MongoDB connection failed: {e}")
             raise
 

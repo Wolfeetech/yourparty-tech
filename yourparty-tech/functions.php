@@ -103,17 +103,16 @@ add_action('wp_enqueue_scripts', function () {
     // Core Styles
     wp_enqueue_style('yourparty-tech-style', get_stylesheet_uri(), [], YOURPARTY_VERSION);
 
-    // LOAD SOURCE FILES DIRECTLY (Bypass Build Step)
-    $dist_path = home_url('/?asset=1');
-    $dist_ver = file_exists(get_template_directory() . '/main.js') 
-        ? filemtime(get_template_directory() . '/main.js') . '.' . time() // FORCE BUST
-        : YOURPARTY_VERSION . '.' . time();
+    // Load Main Application Bundle (assets/app.js)
+    $dist_path = get_template_directory_uri() . '/assets/app.js';
+    $dist_ver = file_exists(get_template_directory() . '/assets/app.js')
+        ? filemtime(get_template_directory() . '/assets/app.js')
+        : YOURPARTY_VERSION;
 
-    // Load Main Application Bundle (Source Mode)
     wp_enqueue_script(
         'yourparty-app-bundle',
         $dist_path,
-        [], // No dependencies, everything is bundled
+        [], 
         $dist_ver,
         true
     );
@@ -252,7 +251,7 @@ add_filter(
 add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
-    add_rewrite_rule('^app-bundle\.js$', 'index.php?yourparty_asset=1', 'top');
+
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     
     // Auto-flush if needed (Self-cleaning)
@@ -273,7 +272,7 @@ add_filter('redirect_canonical', function ($redirect_url) {
 add_filter('query_vars', function ($vars) {
     $vars[] = 'yourparty_control';
     $vars[] = 'yourparty_stream';
-    $vars[] = 'yourparty_asset';
+
     $vars[] = 'yourparty_module';
     return $vars;
 });
@@ -301,25 +300,7 @@ add_action('template_redirect', function () {
         }
     }
 
-    if (get_query_var('yourparty_asset') || isset($_GET['asset'])) {
-        $file = get_template_directory() . '/main.js';
-        error_log("ASSET DEBUG: Request for $file");
-        
-        if (file_exists($file)) {
-            // error_log("ASSET DEBUG: File found, serving.");
-            header('Content-Type: application/javascript');
-            header('Cache-Control: no-cache');
-            readfile($file);
-            exit;
-        } else {
-            // DEBUG: Show why it failed on live
-            header('Content-Type: text/plain');
-            echo "Error: Asset not found at path: " . $file;
-            echo "\nDir: " . get_template_directory();
-            // error_log("ASSET DEBUG: File NOT found.");
-            exit;
-        }
-    }
+
 
     if (get_query_var('yourparty_stream')) {
         yourparty_handle_stream_request();
