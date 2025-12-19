@@ -4,6 +4,7 @@ Enrich existing ratings with metadata from AzuraCast.
 Uses the station history endpoint to match song_ids directly.
 """
 import os
+from datetime import datetime
 import requests
 from pymongo import MongoClient
 import urllib3
@@ -110,11 +111,17 @@ def main():
     for song_id, rating in needs_metadata.items():
         if song_id in history_songs:
             metadata = history_songs[song_id]
-            db.ratings.update_one(
-                {"_id": song_id},
-                {"$set": metadata}
+            # Correct Logic: Update 'tracks' collection where API looks for metadata
+            # We use upsert=True to ensure the track record exists even if not previously scanned
+            db.tracks.update_one(
+                {"song_id": song_id},
+                {"$set": {
+                    "metadata": metadata,
+                    "last_updated": datetime.utcnow()
+                }},
+                upsert=True
             )
-            print(f"  ✓ Updated: {metadata['artist']} - {metadata['title']}")
+            print(f"  ✓ Synced Track: {metadata['artist']} - {metadata['title']}")
             updated += 1
         else:
             not_found += 1

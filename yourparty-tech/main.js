@@ -60,10 +60,27 @@ class YourPartyApp {
 
         // Connect Status Manager to other modules
         this.modules.status.subscribe((data) => {
+            if (this.loadingTimeout) clearTimeout(this.loadingTimeout);
             this.handleStatusUpdate(data);
         });
 
         this.modules.status.start();
+
+        // Safety: If API is dead, remove loading state after 2.5s
+        this.loadingTimeout = setTimeout(() => {
+            console.warn('[Main] API Timeout - Forcing Default State');
+            this.handleStatusUpdate({
+                now_playing: {
+                    song: {
+                        title: 'Station Online',
+                        artist: 'YourParty Radio',
+                        art: 'https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png',
+                        id: 'offline_fallback'
+                    }
+                },
+                is_live: false
+            });
+        }, 2500);
 
         console.log('[Main] App Ready');
 
@@ -73,6 +90,12 @@ class YourPartyApp {
 
     handleStatusUpdate(data) {
         if (!data) return;
+
+        // Clear safety timeout if it's still running
+        if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
+        }
 
         const song = data.now_playing?.song;
         if (song) {
@@ -93,8 +116,14 @@ class YourPartyApp {
             );
 
             // Fix Station Loading Bug by verifying we have real data
-            if (song.title === 'Unknown Title' && !data.is_live && !data.now_playing?.song?.id) {
-                // Keep default state or show "Offline"
+            // If unknown, ensure we at least show "Station Online"
+            if (song.title === 'Unknown Title' || song.title === '') {
+                if (!data.is_live && (!data.now_playing?.song?.id || data.now_playing?.song?.id === '0')) {
+                    // Force valid text to ensure skeleton removal
+                    song.title = 'Station Online';
+                    song.artist = 'YourParty Radio';
+                    this.modules.player.updateTrackInfo(song);
+                }
             }
         }
     }

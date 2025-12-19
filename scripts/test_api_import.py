@@ -2,8 +2,11 @@
 """Test full api import."""
 import sys
 import os
-os.chdir('/opt/radio-api')
-sys.path.insert(0, '/opt/radio-api')
+# Adjust path for local execution (Windows)
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+print(f"Adding to sys.path: {backend_path}")
+sys.path.insert(0, backend_path)
+os.chdir(backend_path)
 
 # Load env
 from dotenv import load_dotenv

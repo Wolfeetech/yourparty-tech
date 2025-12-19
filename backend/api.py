@@ -542,11 +542,14 @@ async def public_status_loop():
             # Public Endpoint: No Key Needed
             azura_base = os.getenv("AZURACAST_URL")
             if not azura_base:
+                # logger.warning("AZURACAST_URL not set, waiting...")
                 await asyncio.sleep(10)  # Wait for config
                 continue
+            
+            # Use public endpoint (more reliable for read-only)
             url = f"{azura_base}/api/nowplaying/1" 
             
-            async with httpx.AsyncClient(verify=True, follow_redirects=True) as client:
+            async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
                 # Try HTTP first
                 try:
                     resp = await client.get(url, timeout=5.0)
@@ -554,23 +557,35 @@ async def public_status_loop():
                     # Fallback to HTTPS
                     url = azura_base.replace('http://', 'https://') + "/api/nowplaying/1"
                     resp = await client.get(url, timeout=5.0)
+                except Exception as e:
+                    logger.error(f"Connection error to AzuraCast: {e}")
+                    resp = None
 
-                if resp.status_code == 200:
+                if resp and resp.status_code == 200:
                     data = resp.json()
                     np = data.get('now_playing', {}).get('song', {})
                     
+                    # Update Stream URL if available
                     for mount in data.get('station', {}).get('mounts', []):
                          if mount.get('is_default'):
-                             state.stream_url = mount.get('url')
+                             # Ensure HTTPS for mixed content
+                             stream_url = mount.get('url', '')
+                             if stream_url.startswith('http://'):
+                                 stream_url = stream_url.replace('http://', 'https://')
+                             state.stream_url = stream_url
 
                     current_track = {
                         "title": np.get('title', ''),
                         "artist": np.get('artist', ''),
                         "album": np.get('album', ''),
-                        "art": np.get('art', '').replace('http://192.168.178.210', 'https://radio.yourparty.tech').replace('https://192.168.178.210', 'https://radio.yourparty.tech'), 
-                        "id": str(np.get('id', '0')), 
+                        "art": np.get('art', ''), 
+                        "id": str(np.get('id', '')), 
                         "duration": np.get('duration', 0)
                     }
+
+                    # Fix Art URL (Internal IP -> Public Domain)
+                    if '192.168' in current_track['art']:
+                        current_track['art'] = "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png"
 
                     # Fallback logic if AzuraCast returns empty fields but has 'text'
                     if not current_track['title'] or not current_track['artist']:
@@ -585,11 +600,11 @@ async def public_status_loop():
                              current_track['title'] = full_text
                     
                     # Final fallback
-                    if not current_track['title']: current_track['title'] = 'Unknown Track'
-                    if not current_track['artist']: current_track['artist'] = 'Unknown Artist'
+                    if not current_track['title']: current_track['title'] = 'Station Online'
+                    if not current_track['artist']: current_track['artist'] = 'YourParty Radio'
                     
                     # Inject Mongo Data if connected
-                    if state.mongo_client:
+                    if state.mongo_client and current_track['id']:
                          song_id = current_track['id']
                          # Fetch Rating
                          rating_data = state.mongo_client.get_track_rating(song_id=song_id)
@@ -606,7 +621,7 @@ async def public_status_loop():
                               current_track['top_mood'] = None
 
                     state.now_playing = current_track
-                    logger.info(f"Polled Track: {current_track['title']}")
+                    # logger.info(f"Polled Track: {current_track['title']}")
                     
                     # Broadcast to WS
                     await manager.broadcast({
@@ -614,7 +629,7 @@ async def public_status_loop():
                         "song": current_track
                     })
         except Exception as e:
-            logger.error(f"Polling Error: {e}")
+            logger.error(f"Polling Main Loop Error: {e}")
             
         await asyncio.sleep(2.0) # Faster polling for more responsiveness
 

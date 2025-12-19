@@ -20,10 +20,16 @@ export default class RealtimeModule {
 
         // Fix: Use the configured public base (AzuraCast) instead of local WP host
         let wsHost = window.location.host;
+
+        // Smart fallback logic
+        if (wsHost === 'yourparty.tech' || wsHost === 'www.yourparty.tech') {
+            wsHost = 'radio.yourparty.tech';
+        }
+
         if (this.config.publicBase) {
             try {
                 const url = new URL(this.config.publicBase);
-                wsHost = url.host;
+                if (url.host) wsHost = url.host;
             } catch (e) { }
         }
 
