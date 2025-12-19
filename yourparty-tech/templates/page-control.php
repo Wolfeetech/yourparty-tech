@@ -14,6 +14,12 @@ if (!is_user_logged_in()) {
             <h1 class="neon-text glow">SYSTEM ACCESS</h1>
             <p class="subtitle">IDENTITY_VERIFICATION_REQUIRED</p>
             
+            <?php if (isset($_GET['login']) && $_GET['login'] == 'failed'): ?>
+            <div class="login-error" style="background: rgba(255,68,68,0.1); border: 1px solid #ff4444; color: #ff4444; padding: 10px; border-radius: 8px; font-size: 11px; margin-bottom: 20px; text-align: center; text-transform: uppercase; letter-spacing: 0.1em;">
+                Access Denied: Invalid Credentials
+            </div>
+            <?php endif; ?>
+            
             <form name="loginform" id="loginform" action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">
                 <div class="input-group">
                     <input type="text" name="log" placeholder="CODENAME" class="cyber-input" autofocus required>
@@ -405,10 +411,11 @@ get_header();
 <div class="control-footer">
     <div class="footer-left">
         <div class="now-playing-monitor">
-             <canvas id="monitor-visualizer" style="width:40px; height:20px; margin-right:5px; opacity:0.7;"></canvas>
+             <canvas id="inline-visualizer" style="width:40px; height:20px; margin-right:5px; opacity:0.7;"></canvas>
              <div class="monitor-info">
                  <span style="font-size:9px; color:var(--emerald); letter-spacing:1px; font-weight:bold;">ON AIR</span>
-                 <span id="monitor-title">WAITING FOR SIGNAL...</span>
+                 <span id="track-title" class="skeleton">WAITING FOR SIGNAL...</span>
+                 <span id="track-artist" style="display:none;">Artist</span>
              </div>
              <button id="mood-tag-button" class="footer-btn" style="margin-left: 10px; border-color: var(--emerald); color: var(--emerald);" title="Tag Current Vibe">
                  &#127991; TAG
@@ -417,7 +424,9 @@ get_header();
     </div>
 
     <div class="footer-center">
-        <button id="monitor-play-btn" class="footer-btn">▶ MONITOR</button>
+        <button id="mini-play-toggle" class="footer-btn">
+            <span class="play-state-icon">▶</span> MONITOR
+        </button>
     </div>
 
     <div class="footer-right">

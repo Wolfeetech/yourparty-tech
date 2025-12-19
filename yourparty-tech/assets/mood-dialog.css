@@ -1,75 +1,213 @@
 /* === MOOD DIALOG / MODAL === */
-.mood-dialog {
+
+/* Overlay - the full-screen backdrop container */
+.mood-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 2147483647 !important; /* Nuclear Option: Max Z-Index */
-    display: none; align-items: center; justify-content: center;
+    z-index: 2147483647 !important;
+    display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
 }
-.mood-dialog.active { display: flex !important; }
-
-.mood-dialog-backdrop {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(10px);
-    z-index: 1;
+.mood-overlay.active { 
+    display: flex !important; 
+}
+.mood-overlay.active .mood-dialog {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-.mood-dialog-content {
-    position: relative; z-index: 10;
-    background: rgba(20,20,20,0.95);
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
-    border-radius: 20px;
-    padding: 30px;
+/* Dialog - the actual content box inside overlay */
+.mood-dialog {
+    position: relative;
     width: 90%; max-width: 500px;
-    max-height: 85vh; /* Prevent screen overflow */
-    overflow-y: auto; /* Enable scrolling */
+    max-height: 85vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, rgba(30,30,30,0.98) 0%, rgba(15,15,15,0.98) 100%);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+    border-radius: 24px;
+    padding: 32px;
     text-align: center;
     color: #fff;
     animation: zoomIn 0.3s ease;
 }
+.mood-dialog:focus { outline: none; }
 
-@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-.mood-dialog h3 { font-size: 1.5rem; margin-bottom: 5px; }
-.track-info { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
-
-.tag-section { margin-bottom: 20px; }
-.tag-section h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--neon-green, #00ff88); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
-
-.mood-grid, .genre-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;
+@keyframes zoomIn { 
+    from { transform: scale(0.9); opacity: 0; } 
+    to { transform: scale(1); opacity: 1; } 
 }
 
-.mood-btn {
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-    padding: 10px; border-radius: 10px; cursor: pointer; color: #fff;
-    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px;
+/* Header */
+.mood-dialog__header { margin-bottom: 20px; }
+.mood-dialog__title { 
+    font-size: 1.5rem; 
+    margin: 0 0 5px 0; 
+    color: #fff;
+    font-weight: bold;
 }
-.mood-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: #fff; }
-.mood-btn .emoji { font-size: 1.5rem; }
-.mood-btn .label { font-size: 0.8rem; font-weight: bold; }
-
-.genre-grid .mood-btn { padding: 8px; }
-
-.status-msg { margin-top: 15px; font-weight: bold; min-height: 20px; }
-.status-msg.success { color: #00ff88; }
-.status-msg.error { color: #ff4444; }
-
-.close-btn {
-    position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7;
+.mood-dialog__subtitle { 
+    color: #888; 
+    margin: 0; 
+    font-size: 0.9rem; 
 }
-.close-btn:hover { opacity: 1; color: var(--neon-green, #00ff88); }
 
-/* TABS */
-.mood-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+/* Track Info */
+.mood-dialog__track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.mood-dialog__track-title { 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    color: #fff;
+}
+.mood-dialog__track-artist { 
+    font-size: 0.9rem; 
+    color: var(--neon-green, #00ff88); 
+}
+
+/* Tabs */
+.mood-tabs { 
+    display: flex; 
+    gap: 0; 
+    margin-bottom: 20px; 
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+}
 .mood-tab {
-    background: none; border: none; color: #666; padding: 10px; cursor: pointer; font-weight: bold; border-bottom: 2px solid transparent; flex: 1;
+    background: none; 
+    border: none; 
+    color: #666; 
+    padding: 12px 16px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 0.9rem;
+    border-bottom: 3px solid transparent; 
+    flex: 1;
+    transition: all 0.2s;
 }
-.mood-tab.active { color: #fff; border-bottom-color: var(--neon-green, #00ff88); }
-.hint { font-size: 0.8rem; color: #888; font-style: italic; margin-bottom: 10px; }
+.mood-tab:hover { color: #aaa; }
+.mood-tab.active { 
+    color: #fff; 
+    border-bottom-color: var(--neon-green, #00ff88); 
+}
 
-.submit-btn {
-    background: var(--neon-green, #00ff88); color: #000; padding: 15px 30px; border: none; border-radius: 30px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; width: 100%; transition: all 0.2s;
+/* Panels */
+.mood-panel { display: none; }
+.mood-panel.active { display: block; }
+.mood-panel__hint { 
+    font-size: 0.85rem; 
+    color: #888; 
+    font-style: italic; 
+    margin-bottom: 15px; 
 }
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
-.submit-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+
+/* Mood Options Grid */
+.mood-options {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); 
+    gap: 10px;
+}
+
+/* Mood Buttons */
+.mood-btn {
+    background: rgba(255,255,255,0.05); 
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 12px 8px; 
+    border-radius: 12px; 
+    cursor: pointer; 
+    color: #fff;
+    transition: all 0.2s; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 5px;
+}
+.mood-btn:hover { 
+    background: rgba(255,255,255,0.1); 
+    transform: translateY(-2px); 
+    border-color: rgba(255,255,255,0.3); 
+}
+.mood-btn.selected,
+.mood-btn[aria-checked="true"] { 
+    background: rgba(0, 255, 136, 0.2); 
+    border-color: var(--neon-green, #00ff88); 
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+}
+.mood-btn__emoji, 
+.mood-btn .emoji { 
+    font-size: 1.5rem; 
+}
+.mood-btn span:not(.mood-btn__emoji) { 
+    font-size: 0.75rem; 
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Selection Display */
+.mood-dialog__selection {
+    background: rgba(0, 255, 136, 0.1);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 15px;
+    font-size: 0.85rem;
+    min-height: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.mood-dialog__selection:empty { display: none; }
+
+/* Action Buttons */
+.mood-dialog__actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.mood-dialog__btn-cancel {
+    flex: 1;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mood-dialog__btn-cancel:hover {
+    background: rgba(255,255,255,0.15);
+}
+.mood-dialog__btn-submit {
+    flex: 2;
+    background: var(--neon-green, #00ff88);
+    border: none;
+    color: #000;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.mood-dialog__btn-submit:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+.mood-dialog__btn-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+/* Feedback */
+.mood-dialog__feedback {
+    margin-top: 15px;
+    min-height: 24px;
+    font-weight: bold;
+    color: var(--neon-green, #00ff88);
+}

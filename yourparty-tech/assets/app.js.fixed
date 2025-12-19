@@ -1,4 +1,4 @@
-﻿// Toast Notification System
+// Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {
   let container = document.querySelector('.toast-container');
   if (!container) {
@@ -196,17 +196,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const miniTrackTitle = document.getElementById("mini-track-title");
   const miniTrackArtist = document.getElementById("mini-track-artist");
   const miniListenerCount = document.getElementById("mini-listener-count");
-
-  // Use either playToggle OR miniPlayToggle - front-page.php only has miniPlayToggle
-  const activePlayButton = playToggle || miniPlayToggle;
-
-  if (audioPlayer && activePlayButton) {
-    const playToggleIcon = activePlayButton.querySelector("[aria-hidden]");
+  if (audioPlayer && playToggle) {
+    const playToggleIcon = playToggle.querySelector("[aria-hidden]");
 
     // Visualizer Setup
     // Variables lifted to top scope
-    let sourceConnected = false;
-
     const initAudioContext = () => {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -215,31 +209,16 @@ document.addEventListener("DOMContentLoaded", () => {
         analyser.smoothingTimeConstant = 0.88;
         const bufferLength = analyser.frequencyBinCount;
         dataArray = new Uint8Array(bufferLength);
-        console.log('[Visualizer] AudioContext created');
-      }
 
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
-        console.log('[Visualizer] AudioContext resumed');
-      }
-
-      // Connect source (may need reconnection after load())
-      if (!sourceConnected) {
         try {
           source = audioContext.createMediaElementSource(audioPlayer);
           source.connect(analyser);
           analyser.connect(audioContext.destination);
-          sourceConnected = true;
-          console.log('[Visualizer] MediaElementSource connected');
         } catch (e) {
-          // This is expected if already connected
-          if (e.name === 'InvalidStateError') {
-            sourceConnected = true; // Already connected
-            console.log('[Visualizer] MediaElementSource was already connected');
-          } else {
-            console.warn('[Visualizer] Connection error:', e);
-          }
+          console.warn("MediaElementSource already connected or CORS issue", e);
         }
+      } else if (audioContext.state === 'suspended') {
+        audioContext.resume();
       }
     };
 
@@ -248,17 +227,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const icon = isPaused ? "▶" : "❚❚";
       const label = isPaused ? "Stream starten" : "Stream pausieren";
 
-      console.log('[Player] updateIcon called, paused:', isPaused);
-
       // Main Player
       if (playToggleIcon) {
         playToggleIcon.textContent = icon;
-      } else if (activePlayButton) {
-        activePlayButton.textContent = icon;
+      } else {
+        playToggle.textContent = icon;
       }
-      if (activePlayButton) {
-        activePlayButton.setAttribute("aria-label", label);
-      }
+      playToggle.setAttribute("aria-label", label);
 
       // Mini Player
       if (miniPlayToggle) {
@@ -279,8 +254,21 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         initAudioContext();
         if (audioPlayer.paused) {
-          // For live streams, just play without reload to preserve MediaElementSource
-          // Only reload if stream has been paused for a long time (stale connection)
+          // LIVESTREAM FIX: Reload source to resync with live position
+          // This prevents playing stale cached audio after pause
+          const sourceEl = audioPlayer.querySelector("source");
+          const currentSrc = sourceEl ? sourceEl.src : audioPlayer.src;
+          if (currentSrc) {
+            // Add cache-buster to force reload
+            const cleanSrc = currentSrc.split('?')[0];
+            const newSrc = `${cleanSrc}?_=${Date.now()}`;
+            if (sourceEl) {
+              sourceEl.src = newSrc;
+            } else {
+              audioPlayer.src = newSrc;
+            }
+            audioPlayer.load();
+          }
           await audioPlayer.play();
           // Fetch latest status immediately after resume
           fetchStatus();
@@ -295,7 +283,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    activePlayButton.addEventListener("click", togglePlay);
+    playToggle.addEventListener("click", togglePlay);
+    if (miniPlayToggle) {
+      miniPlayToggle.addEventListener("click", togglePlay);
+    }
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', togglePlay);

@@ -109,7 +109,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
     </section>
 
     <!-- HIDDEN AUDIO -->
-    <audio id="radio-audio" crossorigin="anonymous" preload="none" style="display:none;">
+    <audio id="radio-player" crossorigin="anonymous" preload="none" style="display:none;">
         <source src="<?php echo esc_url($stream_url); ?>" type="audio/mpeg">
     </audio>
 
@@ -353,50 +353,10 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 /* === MOOD DIALOG STYLES MOVED TO assets/mood-dialog.css === */
 </style>
 
-<!-- MOOD DIALOG (Professional Implementation) -->
-<div id="mood-dialog" class="mood-dialog" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; align-items:center; justify-content:center;">
-    <div id="mood-backdrop" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:1;"></div>
-    <div class="mood-dialog-content" style="position:relative; z-index:10; background:linear-gradient(180deg, rgba(30,30,30,0.98) 0%, rgba(15,15,15,0.98) 100%); border:1px solid rgba(255,255,255,0.15); box-shadow:0 25px 80px rgba(0,0,0,0.9); border-radius:24px; padding:32px; width:90%; max-width:480px; text-align:center; color:#fff;">
-        <button id="mood-close" onclick="document.getElementById('mood-dialog').style.display='none';" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:1.3rem; cursor:pointer; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all 0.2s;">&times;</button>
-        
-        <h3 style="font-size:1.4rem; margin:0 0 8px 0; font-weight:700;">🏷️ Tag This Vibe</h3>
-        <p id="mood-track-info" style="color:#888; margin:0 0 24px 0; font-size:0.85rem;">How does this track make you feel?</p>
-        
-        <div id="mood-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:24px;">
-            <button class="mood-option" data-mood="energetic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">⚡</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Energetic</span>
-            </button>
-            <button class="mood-option" data-mood="chill" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🌴</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Chill</span>
-            </button>
-            <button class="mood-option" data-mood="euphoric" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🤩</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Euphoric</span>
-            </button>
-            <button class="mood-option" data-mood="dark" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🌑</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Dark</span>
-            </button>
-            <button class="mood-option" data-mood="groovy" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">💃</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Groovy</span>
-            </button>
-            <button class="mood-option" data-mood="melodic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🎹</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Melodic</span>
-            </button>
-            <button class="mood-option" data-mood="hypnotic" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🌀</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Hypnotic</span>
-            </button>
-            <button class="mood-option" data-mood="uplifting" style="background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); padding:14px 8px; border-radius:12px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.2s;">
-                <span style="font-size:1.6rem;">🚀</span><span style="font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;">Uplifting</span>
-            </button>
-        </div>
-        
-        <div id="mood-status" style="min-height:20px; margin-bottom:12px; font-size:0.8rem; color:#888;"></div>
-        
-        <button id="mood-submit-btn" disabled style="background:linear-gradient(135deg, #00ff88 0%, #00cc6a 100%); color:#000; padding:16px 32px; border:none; border-radius:30px; font-weight:700; font-size:1rem; cursor:pointer; width:100%; transition:all 0.3s; opacity:0.5; text-transform:uppercase; letter-spacing:0.05em;">Select a Vibe First</button>
-    </div>
-</div>
+<!-- MOOD DIALOG: Created dynamically by assets/mood-dialog.js -->
+<!-- Do NOT add inline dialog HTML here - mood-dialog.js handles it -->
 
-
-<!-- Inline script removed. Logic handled by assets/js/modules/MoodModule.js -->
+<!-- Inline script removed. Logic handled by assets/mood-dialog.js -->
 
 
 <?php get_footer(); ?>

@@ -117,6 +117,15 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    // Mood Dialog JS - defines window.openMoodDialog
+    wp_enqueue_script(
+        'yourparty-mood-dialog',
+        get_template_directory_uri() . '/assets/mood-dialog.js',
+        ['yourparty-app-bundle'], // depends on app.js for track info
+        YOURPARTY_VERSION,
+        true
+    );
+
     // Load CSS (if any was extracted by Vite, usually style.css handles it, but check dist)
     if (file_exists(get_template_directory() . '/assets/dist/style.css')) {
          wp_enqueue_style(
@@ -129,11 +138,14 @@ add_action('wp_enqueue_scripts', function () {
     
     // We still need the Mood Dialog CSS if not imported in JS (it's not imported in main.js yet)
     // Actually, I should import it in JS, but for now keep it separate to be safe
+    $mood_css_ver = file_exists(get_template_directory() . '/assets/mood-dialog.css')
+        ? filemtime(get_template_directory() . '/assets/mood-dialog.css')
+        : YOURPARTY_VERSION;
     wp_enqueue_style(
         'yourparty-mood-dialog',
         get_template_directory_uri() . '/assets/mood-dialog.css',
         [],
-        YOURPARTY_VERSION
+        $mood_css_ver
     );
 
     // Config & URLs
