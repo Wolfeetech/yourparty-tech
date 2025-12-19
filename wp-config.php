@@ -17,6 +17,9 @@ define( 'WP_SITEURL', 'https://yourparty.tech' );
 define('YOURPARTY_AZURACAST_URL', 'http://192.168.178.210');
 define('YOURPARTY_AZURACAST_API_KEY', '9199dc63da623190:c9f8c3a22e25932753dd3f4d57fa0d9c');
 
+// FastAPI Backend (CT 211)
+define('YOURPARTY_API_URL', 'http://192.168.178.211:8000');
+
 define('FS_METHOD', 'direct');
 
 $table_prefix = 'wp_';
