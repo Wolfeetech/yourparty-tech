@@ -58,7 +58,7 @@
 | Radio API (alt) | CT 100 | 8GB | 🗑️ DELETED |
 | AzuraCast | VM 210 | 64GB + 2TB HDD | ✅ Läuft |
 | MongoDB | CT 202 | 15GB | ✅ Läuft (Storing Ratings) |
-| **Thin Pool** | pve/data | 157GB | ⚠️ 92.79% voll |
+| **Thin Pool** | pve/data | 157GB | ⚠️ 87.97% voll |
 | **PVE Control** | Host | Script | ✅ Active (Cron) |
 
 ---
@@ -93,4 +93,4 @@
 | `SERVER_INFO.md` documentation | ✅ CREATED |
 
 ---
-*Zuletzt aktualisiert: 2025-12-17 14:30*
+*Zuletzt aktualisiert: 2025-12-18 22:55*

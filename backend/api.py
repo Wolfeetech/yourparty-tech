@@ -119,7 +119,6 @@ class RatingRequest(BaseModel):
 async def root():
     return {"message": "Music Library Automation API is running"}
 
-    return {"count": len(all_files), "files": all_files[:100]}
 
 async def run_scan_background(paths: List[str]):
     """Background task to run the scan without blocking the main thread."""

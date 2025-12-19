@@ -18,7 +18,7 @@ STATION_ID = 1
 def main():
     # Connect to MongoDB
     client = MongoClient(MONGO_URI)
-    db = client.yourparty
+    db = client.yourparty_radio
     
     # Get all song_ids from ratings that need metadata
     ratings = list(db.ratings.find({}))

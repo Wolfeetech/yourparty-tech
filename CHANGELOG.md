@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.0.8] - 2025-12-18
+### Fixed
+- **Critical**: WordPress Core repariert (`class-wp-html-doctype-info.php` fehlte).
+- **Security**: Wordfence 8.1.3 neu installiert (war beschädigt).
+
+### Infrastructure
+- Thin Pool von 92.79% auf 87.97% reduziert.
+- Alle Container verifiziert und laufend.
+
 ## [v1.0.7] - 2025-12-17
 ### Security
 - **Critical**: Deleted malicious WordPress user `adminbockup` (ID 5).

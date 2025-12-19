@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from typing import Dict, Any, Optional, List
 from pymongo import MongoClient
 from datetime import datetime
@@ -474,3 +474,4 @@ if __name__ == "__main__":
     client = MongoDatabaseClient()
     print("MongoDB client initialized successfully")
     client.close()
+

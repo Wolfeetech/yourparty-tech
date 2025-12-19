@@ -77,8 +77,8 @@ function yourparty_content_defaults(): array
         'contact_eyebrow' => 'Kontakt',
         'contact_title' => 'Start a Project',
         'contact_lead' => 'Planst du einen Club, ein Festival oder suchst du das perfekte System für dein Studio?',
-        'contact_email' => 'engineering@yourparty.tech',
-        'contact_phone' => '+49 751 12345678',
+        'contact_email' => 'wolf@yourparty.tech',
+        'contact_phone' => '',
 
         // Services Section
         'services_eyebrow' => 'Expertise',
