@@ -2,7 +2,8 @@ import os
 import logging
 import asyncio
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, WebSocket, BackgroundTasks
+from fastapi import FastAPI, HTTPException, WebSocket, BackgroundTasks, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx # NEW: For Public API Polling
@@ -17,6 +18,7 @@ FEATURE_MOOD_SYNC = os.getenv("FEATURE_MOOD_SYNC", "false").lower() == "true"
 FEATURE_MOOD_AUTODJ = os.getenv("FEATURE_MOOD_AUTODJ", "false").lower() == "true"
 MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
 MOOD_VOTE_COOLDOWN_MINUTES = int(os.getenv("MOOD_VOTE_COOLDOWN_MINUTES", "5"))
+AZURACAST_VERIFY_SSL = os.getenv("AZURACAST_VERIFY_SSL", "false").lower() == "true"
 
 from music_scanner import MusicScanner
 from tag_improver import TagImprover
@@ -33,6 +35,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Music Library Automation API")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all handler to avoid leaking stack traces and return a stable JSON error body.
+    """
+    logger.exception("Unhandled exception", exc_info=exc)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "internal_server_error", "path": str(request.url.path)},
+    )
 
 @app.get("/debug/ping")
 async def debug_ping():
@@ -131,12 +144,13 @@ async def run_scan_background(paths: List[str]):
             logger.warning(f"Path does not exist: '{path}'")
             continue
         valid_paths.append(path)
-        # Assuming scanner.scan_directory is synchronous/CPU bound:
-        # In a real prod env, run this in a threadpool:
-        # await asyncio.to_thread(state.scanner.scan_directory, path)
-        files = state.scanner.scan_directory(path) 
-        all_files.extend(files)
-    
+        try:
+            # Run the expensive scan in a worker thread so the event loop stays responsive.
+            files = await asyncio.to_thread(state.scanner.scan_directory, path)
+            all_files.extend(files)
+        except Exception as exc:
+            logger.exception(f"Scan failed for path '{path}'", exc_info=exc)
+
     if valid_paths:
         state.scan_path = ";".join(valid_paths)
         state.organizer = GenreOrganizer(valid_paths[0])
@@ -527,7 +541,7 @@ async def get_queue():
         return []  # AzuraCast not configured
     url = f"{azura_base}/api/station/1/queue"
     
-    async with httpx.AsyncClient(verify=True) as client:
+    async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL) as client:
         try:
              # This endpoint often requires API Key, let's try with headers
              headers = {"X-API-Key": os.getenv("AZURACAST_API_KEY", "")}
@@ -555,7 +569,7 @@ async def public_status_loop():
             # Use public endpoint (more reliable for read-only)
             url = f"{azura_base}/api/nowplaying/1" 
             
-            async with httpx.AsyncClient(verify=False, follow_redirects=True) as client:
+            async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL, follow_redirects=True) as client:
                 # Try HTTP first
                 try:
                     resp = await client.get(url, timeout=5.0)
