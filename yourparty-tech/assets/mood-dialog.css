@@ -1,213 +1,359 @@
-/* === MOOD DIALOG / MODAL === */
+/* =============================================
+   MOOD DIALOG - PREMIUM "NEON GLASSMORPHISM"
+   ============================================= */
 
-/* Overlay - the full-screen backdrop container */
+/* === OVERLAY === */
 .mood-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 2147483647 !important;
     display: none;
-    align-items: center; justify-content: center;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    /* Premium gradient overlay */
+    background: linear-gradient(
+        135deg,
+        rgba(10, 10, 20, 0.92) 0%,
+        rgba(20, 10, 40, 0.88) 50%,
+        rgba(10, 20, 30, 0.92) 100%
+    );
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
-.mood-overlay.active { 
-    display: flex !important; 
+
+.mood-overlay.active {
+    display: flex !important;
 }
+
 .mood-overlay.active .mood-dialog {
     opacity: 1 !important;
     visibility: visible !important;
+    transform: scale(1) translateY(0);
 }
 
-/* Dialog - the actual content box inside overlay */
+/* === DIALOG CONTAINER === */
 .mood-dialog {
     position: relative;
-    width: 90%; max-width: 500px;
-    max-height: 85vh;
+    width: 95%;
+    max-width: 680px;
+    max-height: 90vh;
     overflow-y: auto;
-    background: linear-gradient(180deg, rgba(30,30,30,0.98) 0%, rgba(15,15,15,0.98) 100%);
-    border: 1px solid rgba(255,255,255,0.15);
-    box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+    
+    /* Glassmorphism */
+    background: linear-gradient(
+        180deg,
+        rgba(25, 25, 35, 0.95) 0%,
+        rgba(15, 15, 25, 0.98) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 25px 80px rgba(0, 0, 0, 0.8),
+        0 0 100px rgba(0, 255, 200, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     border-radius: 24px;
-    padding: 32px;
+    padding: 28px 32px;
+    
+    color: #fff;
+    transform: scale(0.95) translateY(20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mood-dialog:focus {
+    outline: none;
+}
+
+/* Custom Scrollbar */
+.mood-dialog::-webkit-scrollbar {
+    width: 6px;
+}
+.mood-dialog::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 3px;
+}
+.mood-dialog::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 136, 0.3);
+    border-radius: 3px;
+}
+.mood-dialog::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 136, 0.5);
+}
+
+/* === HEADER === */
+.mood-dialog__header {
     text-align: center;
-    color: #fff;
-    animation: zoomIn 0.3s ease;
-}
-.mood-dialog:focus { outline: none; }
-
-@keyframes zoomIn { 
-    from { transform: scale(0.9); opacity: 0; } 
-    to { transform: scale(1); opacity: 1; } 
+    margin-bottom: 16px;
 }
 
-/* Header */
-.mood-dialog__header { margin-bottom: 20px; }
-.mood-dialog__title { 
-    font-size: 1.5rem; 
-    margin: 0 0 5px 0; 
-    color: #fff;
-    font-weight: bold;
-}
-.mood-dialog__subtitle { 
-    color: #888; 
-    margin: 0; 
-    font-size: 0.9rem; 
+.mood-dialog__title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    background: linear-gradient(90deg, #fff 0%, #00ff88 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-/* Track Info */
+.mood-dialog__subtitle {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* === TRACK INFO === */
 .mood-dialog__track {
-    background: rgba(255,255,255,0.05);
+    background: rgba(0, 255, 136, 0.05);
+    border: 1px solid rgba(0, 255, 136, 0.15);
     border-radius: 12px;
-    padding: 15px;
+    padding: 14px 16px;
     margin-bottom: 20px;
+    text-align: center;
 }
-.mood-dialog__track-title { 
-    font-size: 1.1rem; 
-    font-weight: bold; 
+
+.mood-dialog__track-title {
+    font-size: 1rem;
+    font-weight: 600;
     color: #fff;
-}
-.mood-dialog__track-artist { 
-    font-size: 0.9rem; 
-    color: var(--neon-green, #00ff88); 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Tabs */
-.mood-tabs { 
-    display: flex; 
-    gap: 0; 
-    margin-bottom: 20px; 
-    border-bottom: 1px solid rgba(255,255,255,0.1); 
+.mood-dialog__track-artist {
+    font-size: 0.85rem;
+    color: #00ff88;
+    margin-top: 2px;
 }
+
+/* === TABS === */
+.mood-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
 .mood-tab {
-    background: none; 
-    border: none; 
-    color: #666; 
-    padding: 12px 16px; 
-    cursor: pointer; 
-    font-weight: bold; 
-    font-size: 0.9rem;
-    border-bottom: 3px solid transparent; 
     flex: 1;
-    transition: all 0.2s;
-}
-.mood-tab:hover { color: #aaa; }
-.mood-tab.active { 
-    color: #fff; 
-    border-bottom-color: var(--neon-green, #00ff88); 
-}
-
-/* Panels */
-.mood-panel { display: none; }
-.mood-panel.active { display: block; }
-.mood-panel__hint { 
-    font-size: 0.85rem; 
-    color: #888; 
-    font-style: italic; 
-    margin-bottom: 15px; 
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
 }
 
-/* Mood Options Grid */
+.mood-tab:hover {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mood-tab.active {
+    color: #fff;
+    background: rgba(0, 255, 136, 0.15);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+/* === PANELS === */
+.mood-panel {
+    display: none;
+}
+
+.mood-panel.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.mood-panel__hint {
+    text-align: center;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 14px;
+}
+
+/* === MOOD OPTIONS GRID (5 columns!) === */
 .mood-options {
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); 
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px;
 }
 
-/* Mood Buttons */
-.mood-btn {
-    background: rgba(255,255,255,0.05); 
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 12px 8px; 
-    border-radius: 12px; 
-    cursor: pointer; 
-    color: #fff;
-    transition: all 0.2s; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    gap: 5px;
-}
-.mood-btn:hover { 
-    background: rgba(255,255,255,0.1); 
-    transform: translateY(-2px); 
-    border-color: rgba(255,255,255,0.3); 
-}
-.mood-btn.selected,
-.mood-btn[aria-checked="true"] { 
-    background: rgba(0, 255, 136, 0.2); 
-    border-color: var(--neon-green, #00ff88); 
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-}
-.mood-btn__emoji, 
-.mood-btn .emoji { 
-    font-size: 1.5rem; 
-}
-.mood-btn span:not(.mood-btn__emoji) { 
-    font-size: 0.75rem; 
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+/* Responsive: 3 columns on tablet, 2 on mobile */
+@media (max-width: 600px) {
+    .mood-options {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
-/* Selection Display */
-.mood-dialog__selection {
-    background: rgba(0, 255, 136, 0.1);
-    border-radius: 8px;
-    padding: 10px;
-    margin-top: 15px;
-    font-size: 0.85rem;
-    min-height: 40px;
+@media (max-width: 400px) {
+    .mood-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* === MOOD BUTTONS (Pill Style with Glow) === */
+.mood-btn {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    
+    padding: 14px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.mood-dialog__selection:empty { display: none; }
 
-/* Action Buttons */
+.mood-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Selected State - Neon Glow! */
+.mood-btn.selected,
+.mood-btn[aria-checked="true"] {
+    background: rgba(0, 255, 136, 0.12);
+    border-color: #00ff88;
+    color: #fff;
+    box-shadow:
+        0 0 20px rgba(0, 255, 136, 0.25),
+        0 0 40px rgba(0, 255, 136, 0.1),
+        inset 0 0 20px rgba(0, 255, 136, 0.05);
+    animation: neonPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.25), 0 0 40px rgba(0, 255, 136, 0.1); }
+    50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.35), 0 0 60px rgba(0, 255, 136, 0.15); }
+}
+
+/* Emoji */
+.mood-btn__emoji,
+.mood-btn .emoji,
+.mood-btn span:first-child {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+/* Label */
+.mood-btn span:last-child:not(:first-child) {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+/* === SELECTION DISPLAY === */
+.mood-dialog__selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+    min-height: 32px;
+}
+
+.mood-dialog__selection:empty {
+    display: none;
+}
+
+.mood-dialog__selection span {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #00ff88;
+}
+
+/* === ACTION BUTTONS === */
 .mood-dialog__actions {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     margin-top: 20px;
-}
-.mood-dialog__btn-cancel {
-    flex: 1;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: #fff;
-    padding: 14px;
-    border-radius: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.mood-dialog__btn-cancel:hover {
-    background: rgba(255,255,255,0.15);
-}
-.mood-dialog__btn-submit {
-    flex: 2;
-    background: var(--neon-green, #00ff88);
-    border: none;
-    color: #000;
-    padding: 14px;
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.mood-dialog__btn-submit:hover:not(:disabled) {
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-}
-.mood-dialog__btn-submit:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    filter: grayscale(1);
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Feedback */
+.mood-dialog__btn-cancel {
+    flex: 1;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mood-dialog__btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.mood-dialog__btn-submit {
+    flex: 2;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+    border: none;
+    border-radius: 12px;
+    color: #000;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+}
+
+.mood-dialog__btn-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 255, 136, 0.4);
+}
+
+.mood-dialog__btn-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.mood-dialog__btn-submit:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+    box-shadow: none;
+}
+
+/* === FEEDBACK === */
 .mood-dialog__feedback {
-    margin-top: 15px;
+    text-align: center;
+    margin-top: 12px;
     min-height: 24px;
-    font-weight: bold;
-    color: var(--neon-green, #00ff88);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #00ff88;
 }
