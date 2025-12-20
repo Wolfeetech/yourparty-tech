@@ -872,6 +872,33 @@ add_action('rest_api_init', function () {
     );
 
     // --- CONTROL PANEL PROXY ENDPOINTS ---
+
+    // PUBLIC: Live Mood Voting Stats (for Live Voting Widget)
+    register_rest_route('yourparty/v1', '/mood-stats', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            // Proxy to FastAPI for aggregated mood stats
+            $api_url = yourparty_api_base_url() . '/mood-stats';
+            $response = wp_remote_get($api_url, ['timeout' => 5, 'sslverify' => false]);
+            
+            if (is_wp_error($response)) {
+                // Fallback: return empty stats
+                return rest_ensure_response([
+                    'votes' => ['energy' => 0, 'chill' => 0, 'dark' => 0, 'euphoric' => 0],
+                    'total' => 0,
+                    'dominant' => null
+                ]);
+            }
+            
+            $body = json_decode(wp_remote_retrieve_body($response), true);
+            return rest_ensure_response($body ?: [
+                'votes' => ['energy' => 0, 'chill' => 0, 'dark' => 0, 'euphoric' => 0],
+                'total' => 0,
+                'dominant' => null
+            ]);
+        },
+        'permission_callback' => '__return_true'
+    ]);
     
     // Ratings
     register_rest_route('yourparty/v1', '/control/ratings', [

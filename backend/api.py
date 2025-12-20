@@ -794,17 +794,52 @@ async def vote_mood(request: MoodVoteRequest):
 
 @app.get("/mood-stats")
 async def get_mood_stats():
-    """Get aggregated mood statistics for the current time window."""
+    """
+    Get aggregated mood statistics for the live voting widget.
+    
+    Returns:
+        votes: Dict of mood -> count for current song
+        total: Total number of votes
+        dominant: Most voted mood
+    """
     if not state.mongo_client:
-        return {"error": "Database not connected"}
+        return {
+            "votes": {"energy": 0, "chill": 0, "dark": 0, "euphoric": 0},
+            "total": 0,
+            "dominant": None,
+            "error": "Database not connected"
+        }
+    
+    # Get current song ID from now_playing
+    current_song_id = state.now_playing.get("id") if state.now_playing else None
+    
+    # Get mood counts for current song
+    votes = {"energy": 0, "chill": 0, "dark": 0, "euphoric": 0}
+    total = 0
+    dominant = None
+    
+    if current_song_id:
+        mood_data = state.mongo_client.get_song_moods(current_song_id)
+        if mood_data:
+            mood_counts = mood_data.get("mood_counts", {})
+            # Map to our 4 core vibes
+            for mood in ["energy", "chill", "dark", "euphoric"]:
+                votes[mood] = mood_counts.get(mood, 0)
+            total = sum(votes.values())
+            dominant = mood_data.get("top_mood")
+    
+    # Also get the "next mood" votes for DJ steering
+    dominant_next = state.mongo_client.get_dominant_next_mood(time_window_minutes=10)
     
     return {
-        "dominant_next_mood": state.mongo_client.get_dominant_next_mood(time_window_minutes=10),
+        "votes": votes,
+        "total": total,
+        "dominant": dominant,
+        "dominant_next": dominant_next,
+        "song_id": current_song_id,
         "feature_flags": {
             "FEATURE_MOOD_VOTES": FEATURE_MOOD_VOTES,
-            "FEATURE_MOOD_SYNC": FEATURE_MOOD_SYNC,
-            "FEATURE_MOOD_AUTODJ": FEATURE_MOOD_AUTODJ,
-            "MOOD_CYCLE_SECONDS": MOOD_CYCLE_SECONDS
+            "FEATURE_MOOD_AUTODJ": FEATURE_MOOD_AUTODJ
         }
     }
 

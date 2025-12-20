@@ -148,6 +148,29 @@ add_action('wp_enqueue_scripts', function () {
         $mood_css_ver
     );
 
+    // Live Voting Widget JS
+    $live_voting_js_ver = file_exists(get_template_directory() . '/assets/live-voting.js')
+        ? filemtime(get_template_directory() . '/assets/live-voting.js')
+        : YOURPARTY_VERSION;
+    wp_enqueue_script(
+        'yourparty-live-voting',
+        get_template_directory_uri() . '/assets/live-voting.js',
+        ['yourparty-app-bundle'],
+        $live_voting_js_ver,
+        true
+    );
+
+    // Live Voting Widget CSS
+    $live_voting_css_ver = file_exists(get_template_directory() . '/assets/live-voting.css')
+        ? filemtime(get_template_directory() . '/assets/live-voting.css')
+        : YOURPARTY_VERSION;
+    wp_enqueue_style(
+        'yourparty-live-voting',
+        get_template_directory_uri() . '/assets/live-voting.css',
+        [],
+        $live_voting_css_ver
+    );
+
     // Config & URLs
     $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
     $schedule_url = apply_filters(
