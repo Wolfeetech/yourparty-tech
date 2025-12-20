@@ -55,6 +55,56 @@
   50% { opacity: 0.5; }
 }
 
+/* === TRACK MOOD TAGS === */
+.live-voting__track-vibes {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--lv-border);
+}
+
+.live-voting__track-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lv-text-dim);
+  margin-bottom: 10px;
+}
+
+.live-voting__track-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.live-voting__tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--vibe-color, var(--lv-border));
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.live-voting__tag:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vibe-color) 30%, transparent);
+}
+
+.live-voting__tag-icon {
+  font-size: 0.9rem;
+}
+
+.live-voting__tag-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  min-width: 16px;
+  text-align: center;
+}
+
 /* === VOTING BARS === */
 .live-voting__bars {
   display: flex;

@@ -7,19 +7,46 @@
         wsUrl: 'wss://yourparty.tech/ws/votes', // WebSocket endpoint
         apiUrl: '/wp-json/yourparty/v1',
         pollInterval: 5000, // Fallback if WS fails
-        vibes: [
+        // Default vibes - can be overridden by API
+        defaultVibes: [
             { id: 'energy', label: 'Energy', icon: '⚡', color: '#f59e0b' },
             { id: 'chill', label: 'Chill', icon: '🌊', color: '#3b82f6' },
             { id: 'dark', label: 'Dark', icon: '🌑', color: '#6366f1' },
             { id: 'euphoric', label: 'Euphoric', icon: '✨', color: '#ec4899' }
-        ]
+        ],
+        // Genre-specific vibe presets
+        vibePresets: {
+            techno: [
+                { id: 'dark', label: 'Dark', icon: '🌑', color: '#6366f1' },
+                { id: 'hypnotic', label: 'Hypnotic', icon: '🌀', color: '#8b5cf6' },
+                { id: 'driving', label: 'Driving', icon: '🔥', color: '#ef4444' },
+                { id: 'acid', label: 'Acid', icon: '⚗️', color: '#22c55e' }
+            ],
+            house: [
+                { id: 'groovy', label: 'Groovy', icon: '🕺', color: '#f59e0b' },
+                { id: 'soulful', label: 'Soulful', icon: '💜', color: '#a855f7' },
+                { id: 'deep', label: 'Deep', icon: '🌊', color: '#3b82f6' },
+                { id: 'funky', label: 'Funky', icon: '🎸', color: '#ec4899' }
+            ],
+            trance: [
+                { id: 'euphoric', label: 'Euphoric', icon: '✨', color: '#ec4899' },
+                { id: 'uplifting', label: 'Uplifting', icon: '🚀', color: '#f59e0b' },
+                { id: 'progressive', label: 'Progressive', icon: '🌀', color: '#8b5cf6' },
+                { id: 'psy', label: 'Psy', icon: '👁️', color: '#22c55e' }
+            ]
+        }
     };
+
+    // Active vibes (can change based on genre/mode)
+    let activeVibes = CONFIG.defaultVibes;
 
     // ========== STATE ==========
     let state = {
         votes: { energy: 0, chill: 0, dark: 0, euphoric: 0 },
         total: 0,
         dominant: null,
+        trackMoods: {}, // Mood counts for current track
+        currentGenre: null,
         userVoted: false,
         ws: null,
         widgetEl: null
@@ -37,8 +64,21 @@
         <span class="live-voting__live-badge">● LIVE</span>
       </div>
       
+      <!-- TRACK MOOD TAGS - Shows this track's vibes -->
+      <div class="live-voting__track-vibes">
+        <div class="live-voting__track-header">THIS TRACK'S VIBES</div>
+        <div class="live-voting__track-tags">
+          ${activeVibes.map(v => `
+            <div class="live-voting__tag" data-vibe="${v.id}" style="--vibe-color: ${v.color}">
+              <span class="live-voting__tag-icon">${v.icon}</span>
+              <span class="live-voting__tag-count">0</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
       <div class="live-voting__bars">
-        ${CONFIG.vibes.map(v => `
+        ${activeVibes.map(v => `
           <div class="live-voting__bar-row" data-vibe="${v.id}">
             <span class="live-voting__bar-icon">${v.icon}</span>
             <span class="live-voting__bar-label">${v.label}</span>
@@ -56,7 +96,7 @@
       </div>
       
       <div class="live-voting__buttons">
-        ${CONFIG.vibes.map(v => `
+        ${activeVibes.map(v => `
           <button class="live-voting__btn" data-vibe="${v.id}" style="--vibe-color: ${v.color}">
             <span>${v.icon}</span>
             <span>${v.label}</span>
@@ -76,7 +116,7 @@
 
         const total = state.total || 1; // Avoid division by zero
 
-        CONFIG.vibes.forEach(v => {
+        activeVibes.forEach(v => {
             const count = state.votes[v.id] || 0;
             const percent = Math.round((count / total) * 100);
 
@@ -96,7 +136,7 @@
         // Update dominant
         const dominantEl = state.widgetEl.querySelector('.live-voting__dominant');
         if (dominantEl && state.dominant) {
-            const vibeConfig = CONFIG.vibes.find(v => v.id === state.dominant);
+            const vibeConfig = activeVibes.find(v => v.id === state.dominant);
             if (vibeConfig) {
                 dominantEl.textContent = `🏆 ${vibeConfig.icon} ${vibeConfig.label}`;
             }

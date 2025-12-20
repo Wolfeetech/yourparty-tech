@@ -776,6 +776,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- LIBRARY TABLE ---
     function updateLibrary() {
         fetch(apiLib, {
+            credentials: 'same-origin',
             headers: { 'X-WP-Nonce': wpNonce }
         })
         .then(r => r.json())
@@ -840,7 +841,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     function updateMonitor() {
         console.log("Polling Status...");
-        fetch(apiStatus)
+        fetch(apiStatus, { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
                 const np = data.now_playing?.song || {};
@@ -883,6 +884,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateVibeOverview() {
         fetch(`${apiGeneric}/control/moods`, {
+            credentials: 'same-origin',
             headers: { 'X-WP-Nonce': wpNonce }
         })
             .then(r => r.json())
