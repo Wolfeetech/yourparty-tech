@@ -49,7 +49,7 @@ PLAYTIME_SCHEDULE = {
 }
 
 # Genre focus for Discovery mode (can be extended)
-DISCOVERY_GENRES = ["Techno", "House", "Trance", "DeepHouse", "Minimal"]
+DISCOVERY_GENRES = ["Techno", "House", "Trance", "DeepHouse", "Minimal", "Disco"]
 
 # Configuration from environment
 FEATURE_MOOD_AUTODJ = os.getenv("FEATURE_MOOD_AUTODJ", "false").lower() == "true"

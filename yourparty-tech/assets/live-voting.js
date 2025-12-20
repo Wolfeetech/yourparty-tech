@@ -33,6 +33,12 @@
                 { id: 'uplifting', label: 'Uplifting', icon: '🚀', color: '#f59e0b' },
                 { id: 'progressive', label: 'Progressive', icon: '🌀', color: '#8b5cf6' },
                 { id: 'psy', label: 'Psy', icon: '👁️', color: '#22c55e' }
+            ],
+            disco: [
+                { id: 'funky', label: 'Funky', icon: '🕺', color: '#f59e0b' },
+                { id: 'groovy', label: 'Groovy', icon: '🪩', color: '#ec4899' },
+                { id: 'soulful', label: 'Soulful', icon: '💜', color: '#a855f7' },
+                { id: 'classic', label: 'Classic', icon: '🎤', color: '#eab308' }
             ]
         }
     };
