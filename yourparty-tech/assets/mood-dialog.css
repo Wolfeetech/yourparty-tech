@@ -1,8 +1,19 @@
 /* =============================================
-   MOOD DIALOG - PREMIUM "NEON GLASSMORPHISM"
+   MOOD DIALOG - ULTRA PREMIUM V2
+   "Cyberpunk Glassmorphism"
    ============================================= */
 
-/* === OVERLAY === */
+/* === CSS VARIABLES for easy theming === */
+:root {
+    --mood-primary: #00ff88;
+    --mood-primary-glow: rgba(0, 255, 136, 0.4);
+    --mood-secondary: #00d4ff;
+    --mood-accent: #ff00aa;
+    --mood-dark: rgba(10, 10, 18, 0.98);
+    --mood-glass: rgba(25, 25, 40, 0.85);
+}
+
+/* === OVERLAY with animated gradient === */
 .mood-overlay {
     position: fixed;
     top: 0;
@@ -13,19 +24,25 @@
     display: none;
     align-items: center;
     justify-content: center;
-    /* Premium gradient overlay */
-    background: linear-gradient(
-        135deg,
-        rgba(10, 10, 20, 0.92) 0%,
-        rgba(20, 10, 40, 0.88) 50%,
-        rgba(10, 20, 30, 0.92) 100%
-    );
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    
+    /* Animated gradient background */
+    background: 
+        radial-gradient(ellipse at 20% 20%, rgba(0, 255, 136, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(255, 0, 170, 0.04) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(5, 5, 15, 0.95) 0%, rgba(10, 10, 25, 0.97) 100%);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
 }
 
 .mood-overlay.active {
     display: flex !important;
+    animation: overlayFadeIn 0.4s ease;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .mood-overlay.active .mood-dialog {
@@ -34,110 +51,184 @@
     transform: scale(1) translateY(0);
 }
 
-/* === DIALOG CONTAINER === */
+/* === DIALOG with animated border === */
 .mood-dialog {
     position: relative;
     width: 95%;
-    max-width: 680px;
-    max-height: 90vh;
+    max-width: 720px;
+    max-height: 88vh;
     overflow-y: auto;
+    overflow-x: hidden;
     
-    /* Glassmorphism */
+    /* Glass effect */
     background: linear-gradient(
-        180deg,
-        rgba(25, 25, 35, 0.95) 0%,
-        rgba(15, 15, 25, 0.98) 100%
+        165deg,
+        rgba(30, 30, 45, 0.92) 0%,
+        rgba(18, 18, 28, 0.96) 50%,
+        rgba(12, 12, 20, 0.98) 100%
     );
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.05),
-        0 25px 80px rgba(0, 0, 0, 0.8),
-        0 0 100px rgba(0, 255, 200, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    padding: 28px 32px;
     
+    /* Animated border gradient */
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    
+    box-shadow:
+        0 0 0 1px rgba(0, 255, 136, 0.1),
+        0 4px 30px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(0, 255, 136, 0.08),
+        0 0 120px rgba(0, 212, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    
+    border-radius: 28px;
+    padding: 32px 36px;
     color: #fff;
-    transform: scale(0.95) translateY(20px);
+    
+    transform: scale(0.92) translateY(30px);
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.mood-dialog:focus {
-    outline: none;
+/* Glowing border animation on hover */
+.mood-dialog::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    border-radius: 29px;
+    background: linear-gradient(
+        45deg,
+        var(--mood-primary),
+        var(--mood-secondary),
+        var(--mood-accent),
+        var(--mood-secondary),
+        var(--mood-primary)
+    );
+    background-size: 300% 300%;
+    z-index: -1;
+    opacity: 0.15;
+    animation: borderGlow 8s ease infinite;
 }
 
-/* Custom Scrollbar */
+@keyframes borderGlow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Custom Premium Scrollbar */
 .mood-dialog::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 .mood-dialog::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 3px;
+    background: transparent;
 }
 .mood-dialog::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 136, 0.3);
-    border-radius: 3px;
-}
-.mood-dialog::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 255, 136, 0.5);
+    background: linear-gradient(180deg, var(--mood-primary), var(--mood-secondary));
+    border-radius: 10px;
 }
 
 /* === HEADER === */
 .mood-dialog__header {
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .mood-dialog__title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin: 0 0 6px 0;
-    background: linear-gradient(90deg, #fff 0%, #00ff88 100%);
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+    
+    /* Animated gradient text */
+    background: linear-gradient(
+        90deg,
+        #fff 0%,
+        var(--mood-primary) 30%,
+        var(--mood-secondary) 70%,
+        #fff 100%
+    );
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: shimmer 4s ease infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 .mood-dialog__subtitle {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.45);
     font-size: 0.85rem;
     margin: 0;
+    font-weight: 400;
 }
 
-/* === TRACK INFO === */
+/* === TRACK INFO CARD === */
 .mood-dialog__track {
-    background: rgba(0, 255, 136, 0.05);
-    border: 1px solid rgba(0, 255, 136, 0.15);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
+    background: 
+        linear-gradient(135deg, rgba(0, 255, 136, 0.08) 0%, rgba(0, 212, 255, 0.05) 100%);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle shine effect */
+.mood-dialog__track::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.05),
+        transparent
+    );
+    animation: shine 6s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0%, 100% { left: -100%; }
+    50% { left: 150%; }
 }
 
 .mood-dialog__track-title {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
 .mood-dialog__track-artist {
     font-size: 0.85rem;
-    color: #00ff88;
-    margin-top: 2px;
+    color: var(--mood-primary);
+    margin-top: 4px;
+    font-weight: 500;
 }
 
 /* === TABS === */
 .mood-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    padding: 4px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
+    gap: 6px;
+    margin-bottom: 20px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .mood-tab {
@@ -145,23 +236,26 @@
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.4);
-    padding: 10px 14px;
-    border-radius: 8px;
+    padding: 12px 16px;
+    border-radius: 10px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .mood-tab:hover {
-    color: rgba(255, 255, 255, 0.7);
-    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .mood-tab.active {
     color: #fff;
-    background: rgba(0, 255, 136, 0.15);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%);
+    box-shadow: 
+        0 0 25px rgba(0, 255, 136, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* === PANELS === */
@@ -171,42 +265,56 @@
 
 .mood-panel.active {
     display: block;
-    animation: fadeIn 0.3s ease;
+    animation: panelSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes panelSlide {
+    from { 
+        opacity: 0; 
+        transform: translateX(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
 }
 
 .mood-panel__hint {
     text-align: center;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 14px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 16px;
+    font-style: italic;
 }
 
-/* === MOOD OPTIONS GRID (5 columns!) === */
+/* === MOOD OPTIONS GRID === */
 .mood-options {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    gap: 12px;
 }
 
-/* Responsive: 3 columns on tablet, 2 on mobile */
-@media (max-width: 600px) {
+@media (max-width: 650px) {
     .mood-options {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
     }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
+    .mood-options {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+}
+
+@media (max-width: 360px) {
     .mood-options {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* === MOOD BUTTONS (Pill Style with Glow) === */
+/* === MOOD BUTTONS - 3D Glass Pills === */
 .mood-btn {
     display: flex;
     flex-direction: column;
@@ -214,146 +322,252 @@
     justify-content: center;
     gap: 6px;
     
-    padding: 14px 8px;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 16px 10px;
+    min-height: 85px;
+    
+    /* 3D glass effect */
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
+    border-radius: 16px;
     
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-style: preserve-3d;
+}
+
+/* Inner highlight */
+.mood-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+    border-radius: 16px 16px 50% 50%;
+    pointer-events: none;
 }
 
 .mood-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    background: 
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+        0 12px 30px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(0, 255, 136, 0.1);
+    color: #fff;
 }
 
-/* Selected State - Neon Glow! */
+/* === SELECTED STATE - Full Neon Glow === */
 .mood-btn.selected,
 .mood-btn[aria-checked="true"] {
-    background: rgba(0, 255, 136, 0.12);
-    border-color: #00ff88;
+    background: 
+        linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 212, 255, 0.15) 100%);
+    border-color: var(--mood-primary);
     color: #fff;
+    transform: translateY(-6px) scale(1.05);
+    
     box-shadow:
-        0 0 20px rgba(0, 255, 136, 0.25),
-        0 0 40px rgba(0, 255, 136, 0.1),
-        inset 0 0 20px rgba(0, 255, 136, 0.05);
-    animation: neonPulse 2s ease-in-out infinite;
+        0 0 0 2px rgba(0, 255, 136, 0.3),
+        0 10px 40px rgba(0, 255, 136, 0.25),
+        0 0 60px rgba(0, 255, 136, 0.15),
+        0 0 100px rgba(0, 212, 255, 0.1),
+        inset 0 0 30px rgba(0, 255, 136, 0.1);
+    
+    animation: selectedFloat 3s ease-in-out infinite;
 }
 
-@keyframes neonPulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.25), 0 0 40px rgba(0, 255, 136, 0.1); }
-    50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.35), 0 0 60px rgba(0, 255, 136, 0.15); }
+@keyframes selectedFloat {
+    0%, 100% { 
+        transform: translateY(-6px) scale(1.05); 
+        box-shadow:
+            0 0 0 2px rgba(0, 255, 136, 0.3),
+            0 10px 40px rgba(0, 255, 136, 0.25),
+            0 0 60px rgba(0, 255, 136, 0.15);
+    }
+    50% { 
+        transform: translateY(-8px) scale(1.05); 
+        box-shadow:
+            0 0 0 3px rgba(0, 255, 136, 0.4),
+            0 15px 50px rgba(0, 255, 136, 0.35),
+            0 0 80px rgba(0, 255, 136, 0.2);
+    }
 }
 
-/* Emoji */
+/* Emoji styling */
 .mood-btn__emoji,
 .mood-btn .emoji,
 .mood-btn span:first-child {
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+    transition: transform 0.3s ease;
 }
 
-/* Label */
+.mood-btn:hover span:first-child,
+.mood-btn.selected span:first-child {
+    transform: scale(1.15);
+}
+
+/* Label styling */
 .mood-btn span:last-child:not(:first-child) {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.8;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+}
+
+.mood-btn.selected span:last-child:not(:first-child) {
+    opacity: 1;
+    color: var(--mood-primary);
+    text-shadow: 0 0 10px var(--mood-primary-glow);
 }
 
 /* === SELECTION DISPLAY === */
 .mood-dialog__selection {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     justify-content: center;
-    margin-top: 16px;
-    min-height: 32px;
+    margin-top: 20px;
 }
 
 .mood-dialog__selection:empty {
     display: none;
 }
 
-.mood-dialog__selection span {
-    background: rgba(0, 255, 136, 0.1);
-    border: 1px solid rgba(0, 255, 136, 0.3);
-    padding: 6px 14px;
-    border-radius: 20px;
+/* Hide empty spans! */
+.mood-dialog__selection span:empty {
+    display: none;
+}
+
+.mood-dialog__selection span:not(:empty) {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+    border: 1px solid rgba(0, 255, 136, 0.4);
+    padding: 8px 18px;
+    border-radius: 25px;
     font-size: 0.8rem;
-    color: #00ff88;
+    font-weight: 600;
+    color: var(--mood-primary);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
 }
 
 /* === ACTION BUTTONS === */
 .mood-dialog__actions {
     display: flex;
-    gap: 12px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 14px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .mood-dialog__btn-cancel {
     flex: 1;
-    padding: 14px 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.5);
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 }
 
 .mood-dialog__btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
     color: #fff;
 }
 
 .mood-dialog__btn-submit {
     flex: 2;
-    padding: 14px 24px;
-    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+    padding: 16px 28px;
+    position: relative;
+    overflow: hidden;
+    
+    background: linear-gradient(135deg, var(--mood-primary) 0%, #00cc6a 50%, var(--mood-secondary) 100%);
+    background-size: 200% 200%;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
+    
     color: #000;
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
+    
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    box-shadow: 
+        0 6px 25px rgba(0, 255, 136, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+/* Animated gradient on hover */
 .mood-dialog__btn-submit:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 255, 136, 0.4);
+    transform: translateY(-3px) scale(1.02);
+    background-position: 100% 50%;
+    box-shadow: 
+        0 10px 40px rgba(0, 255, 136, 0.45),
+        0 0 60px rgba(0, 255, 136, 0.2);
 }
 
 .mood-dialog__btn-submit:active:not(:disabled) {
-    transform: translateY(0);
+    transform: translateY(-1px) scale(1);
 }
 
 .mood-dialog__btn-submit:disabled {
-    opacity: 0.35;
+    opacity: 0.3;
     cursor: not-allowed;
-    filter: grayscale(0.5);
+    filter: grayscale(0.6) brightness(0.8);
     box-shadow: none;
+    transform: none;
 }
 
-/* === FEEDBACK === */
+/* Shine effect on button */
+.mood-dialog__btn-submit::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.mood-dialog__btn-submit:hover:not(:disabled)::after {
+    left: 150%;
+}
+
+/* === FEEDBACK MESSAGE === */
 .mood-dialog__feedback {
     text-align: center;
-    margin-top: 12px;
-    min-height: 24px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #00ff88;
+    margin-top: 14px;
+    min-height: 28px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--mood-primary);
+    text-shadow: 0 0 20px var(--mood-primary-glow);
+    animation: feedbackPulse 0.5s ease;
+}
+
+@keyframes feedbackPulse {
+    0% { opacity: 0; transform: scale(0.9); }
+    50% { transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
 }
