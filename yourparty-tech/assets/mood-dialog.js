@@ -1,389 +1,222 @@
-// MOOD & GENRE TAGGING SYSTEM - Enhanced with Dual Voting
+// QUICK VIBE REACTIONS - Professional Auto-Submit System
 (function () {
-  // Mood options matching backend VALID_MOODS
-  const MOODS = [
-    { id: 'energy', label: 'Energy', emoji: '🔥' },
-    { id: 'chill', label: 'Chill', emoji: '😌' },
-    { id: 'dark', label: 'Dark', emoji: '🌑' },
-    { id: 'euphoric', label: 'Euphoric', emoji: '✨' },
-    { id: 'melancholic', label: 'Melancholic', emoji: '💙' },
-    { id: 'groove', label: 'Groove', emoji: '🎵' },
-    { id: 'hypnotic', label: 'Hypnotic', emoji: '🌀' },
-    { id: 'aggressive', label: 'Aggressive', emoji: '😤' },
-    { id: 'trippy', label: 'Trippy', emoji: '🍄' },
-    { id: 'warm', label: 'Warm', emoji: '☀️' }
+  'use strict';
+
+  // Core 4 Vibes (reduced from 10)
+  const VIBES = [
+    { id: 'energy', label: 'Energy', icon: '⚡' },
+    { id: 'chill', label: 'Chill', icon: '🌊' },
+    { id: 'dark', label: 'Dark', icon: '🌑' },
+    { id: 'euphoric', label: 'Euphoric', icon: '✨' }
   ];
 
   // Configuration
-  const VOTE_COOLDOWN_MINUTES = 5;
-  const STORAGE_KEY_COOLDOWN = 'yourparty_mood_cooldown';
-  const STORAGE_KEY_PENDING = 'yourparty_pending_votes';
+  const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+  const STORAGE_KEY = 'yp_vibe_cooldown';
 
   let currentTrack = null;
-  let selectedMoodCurrent = null;  // What mood IS this song
-  let selectedMoodNext = null;     // What mood do you WANT next
-  let activeTab = 'current';       // 'current' or 'next'
+  let panelElement = null;
 
-  // ========== LocalStorage Helpers ==========
+  // ========== Cooldown Management ==========
 
-  function getLastVoteTime(songId) {
+  function getLastVote(songId) {
     try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY_COOLDOWN) || '{}');
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       return data[songId] || 0;
     } catch { return 0; }
   }
 
-  function setLastVoteTime(songId) {
+  function setLastVote(songId) {
     try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY_COOLDOWN) || '{}');
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       data[songId] = Date.now();
-      localStorage.setItem(STORAGE_KEY_COOLDOWN, JSON.stringify(data));
-    } catch (e) { console.warn('LocalStorage error:', e); }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { console.warn('[Vibe] Storage error:', e); }
   }
 
   function isOnCooldown(songId) {
-    const lastVote = getLastVoteTime(songId);
-    const cooldownMs = VOTE_COOLDOWN_MINUTES * 60 * 1000;
-    return (Date.now() - lastVote) < cooldownMs;
+    return (Date.now() - getLastVote(songId)) < COOLDOWN_MS;
   }
 
-  function getRemainingCooldown(songId) {
-    const lastVote = getLastVoteTime(songId);
-    const cooldownMs = VOTE_COOLDOWN_MINUTES * 60 * 1000;
-    const remaining = cooldownMs - (Date.now() - lastVote);
-    return Math.max(0, Math.ceil(remaining / 60000)); // minutes
-  }
+  // ========== Create Panel ==========
 
-  // Offline queue support
-  function addPendingVote(voteData) {
-    try {
-      const pending = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-      pending.push({ ...voteData, queued_at: Date.now() });
-      localStorage.setItem(STORAGE_KEY_PENDING, JSON.stringify(pending));
-    } catch (e) { console.warn('Could not queue vote:', e); }
-  }
+  function createVibePanel() {
+    const panel = document.createElement('div');
+    panel.className = 'vibe-panel';
+    panel.id = 'vibe-panel';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', 'Quick Vibe Reactions');
 
-  function getPendingVotes() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY_PENDING) || '[]');
-    } catch { return []; }
-  }
-
-  function clearPendingVotes() {
-    localStorage.removeItem(STORAGE_KEY_PENDING);
-  }
-
-  async function syncPendingVotes() {
-    const pending = getPendingVotes();
-    if (!pending.length || !navigator.onLine) return;
-
-    for (const vote of pending) {
-      try {
-        await submitVoteToServer(vote);
-      } catch (e) {
-        console.warn('Could not sync pending vote:', e);
-        return; // Stop on first failure
-      }
-    }
-    clearPendingVotes();
-  }
-
-  // ========== Dialog Creation ==========
-
-  const createMoodDialog = () => {
-    const overlay = document.createElement('div');
-    overlay.className = 'mood-overlay';
-    overlay.id = 'mood-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-labelledby', 'mood-dialog-title');
-
-    const moodButtonsHTML = MOODS.map(mood => `
-      <button class="mood-btn" data-value="${mood.id}" 
-              aria-label="${mood.label} Stimmung wählen"
-              role="radio" aria-checked="false">
-        <span class="mood-btn__emoji" aria-hidden="true">${mood.emoji}</span>
-        <span>${mood.label}</span>
+    const vibeButtonsHTML = VIBES.map(v => `
+      <button class="vibe-btn" data-vibe="${v.id}" aria-label="${v.label}">
+        <span class="vibe-btn__icon">${v.icon}</span>
+        <span class="vibe-btn__label">${v.label}</span>
       </button>
     `).join('');
 
-    overlay.innerHTML = `
-      <div class="mood-dialog" role="document">
-        <div class="mood-dialog__header">
-          <h3 class="mood-dialog__title" id="mood-dialog-title">Mood Voting</h3>
-          <p class="mood-dialog__subtitle">Bewerte den aktuellen Track & wähle den nächsten Vibe</p>
-        </div>
-        
-        <div class="mood-dialog__track" id="mood-track-info" aria-live="polite">
-          <div class="mood-dialog__track-title">—</div>
-          <div class="mood-dialog__track-artist">—</div>
-        </div>
-
-        <!-- Vote Mode Tabs -->
-        <div class="mood-tabs" role="tablist" aria-label="Abstimmungsmodus">
-          <button class="mood-tab active" data-tab="current" 
-                  role="tab" aria-selected="true" id="tab-current"
-                  aria-controls="panel-current">
-            🎵 Aktueller Song
-          </button>
-          <button class="mood-tab" data-tab="next" 
-                  role="tab" aria-selected="false" id="tab-next"
-                  aria-controls="panel-next">
-            ⏭️ Nächster Vibe
-          </button>
-        </div>
-
-        <!-- Current Song Mood Panel -->
-        <div class="mood-panel active" id="panel-current" 
-             role="tabpanel" aria-labelledby="tab-current">
-          <p class="mood-panel__hint">Welche Stimmung hat dieser Track?</p>
-          <div class="mood-options" role="radiogroup" aria-label="Stimmung des aktuellen Songs">
-            ${moodButtonsHTML.replace(/data-value/g, 'data-target="current" data-value')}
-          </div>
-        </div>
-
-        <!-- Next Mood Preference Panel -->
-        <div class="mood-panel" id="panel-next" 
-             role="tabpanel" aria-labelledby="tab-next" hidden>
-          <p class="mood-panel__hint">Welchen Vibe wünschst du dir als nächstes?</p>
-          <div class="mood-options" role="radiogroup" aria-label="Gewünschte Stimmung für den nächsten Song">
-            ${moodButtonsHTML.replace(/data-value/g, 'data-target="next" data-value')}
-          </div>
-        </div>
-
-        <div class="mood-dialog__selection" id="mood-selection" aria-live="polite">
-          <span id="selection-current"></span>
-          <span id="selection-next"></span>
-        </div>
-
-        <div class="mood-dialog__actions">
-          <button class="mood-dialog__btn-cancel" id="mood-cancel">Abbrechen</button>
-          <button class="mood-dialog__btn-submit" id="mood-submit" disabled 
-                  aria-describedby="mood-feedback">Vote senden</button>
-        </div>
-
-        <div class="mood-dialog__feedback" id="mood-feedback" role="status" aria-live="assertive"></div>
+    panel.innerHTML = `
+      <div class="vibe-panel__header">
+        <span class="vibe-panel__prompt">What's the vibe?</span>
+        <button class="vibe-panel__close" aria-label="Close">&times;</button>
       </div>
+      <div class="vibe-panel__track">
+        <span class="vibe-panel__title">—</span>
+        <span class="vibe-panel__artist">—</span>
+      </div>
+      <div class="vibe-panel__buttons">
+        ${vibeButtonsHTML}
+      </div>
+      <div class="vibe-panel__feedback"></div>
     `;
 
-    document.body.appendChild(overlay);
-    return overlay;
-  };
+    document.body.appendChild(panel);
+    return panel;
+  }
 
-  // ========== Initialize ==========
+  // ========== Show/Hide Panel ==========
 
-  const moodOverlay = createMoodDialog();
-  const moodSubmit = document.getElementById('mood-submit');
-  const moodCancel = document.getElementById('mood-cancel');
-  const moodFeedback = document.getElementById('mood-feedback');
-  const trackInfo = document.getElementById('mood-track-info');
-  const selectionCurrent = document.getElementById('selection-current');
-  const selectionNext = document.getElementById('selection-next');
-
-  // ========== Tab Switching ==========
-
-  moodOverlay.querySelectorAll('.mood-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      activeTab = target;
-
-      // Update tabs
-      moodOverlay.querySelectorAll('.mood-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === target);
-        t.setAttribute('aria-selected', t.dataset.tab === target);
-      });
-
-      // Update panels
-      moodOverlay.querySelectorAll('.mood-panel').forEach(p => {
-        const isActive = p.id === `panel-${target}`;
-        p.classList.toggle('active', isActive);
-        p.hidden = !isActive;
-      });
-    });
-  });
-
-  // ========== Show Dialog ==========
-
-  window.openMoodDialog = (track) => {
-    if (!track && window.currentTrackInfo) {
-      track = window.currentTrackInfo;
+  function showVibePanel(track) {
+    if (!track) {
+      track = {
+        id: window.currentSongId,
+        title: document.getElementById('track-title')?.textContent || 'Unknown',
+        artist: document.getElementById('track-artist')?.textContent || 'Unknown'
+      };
     }
 
-    if (!track || !track.id) {
-      console.warn('[MoodDialog] No track info available');
+    if (!track.id) {
+      console.warn('[Vibe] No track info available');
       return;
     }
 
-    // Check cooldown
     if (isOnCooldown(track.id)) {
-      const remaining = getRemainingCooldown(track.id);
-      alert(`Du hast bereits für diesen Track abgestimmt. Warte noch ${remaining} Minute${remaining !== 1 ? 'n' : ''}.`);
+      showFeedback('Already voted for this track', 'info');
       return;
     }
 
     currentTrack = track;
-    selectedMoodCurrent = null;
-    selectedMoodNext = null;
-    activeTab = 'current';
 
     // Update track display
-    trackInfo.innerHTML = `
-      <div class="mood-dialog__track-title">${track.title || 'Unknown Title'}</div>
-      <div class="mood-dialog__track-artist">${track.artist || 'Unknown Artist'}</div>
-    `;
+    panelElement.querySelector('.vibe-panel__title').textContent = track.title;
+    panelElement.querySelector('.vibe-panel__artist').textContent = track.artist;
 
-    // Reset UI
-    moodFeedback.textContent = '';
-    moodSubmit.disabled = true;
-    selectionCurrent.textContent = '';
-    selectionNext.textContent = '';
-
-    // Reset selections
-    moodOverlay.querySelectorAll('.mood-btn').forEach(btn => {
-      btn.classList.remove('selected');
-      btn.setAttribute('aria-checked', 'false');
+    // Reset buttons
+    panelElement.querySelectorAll('.vibe-btn').forEach(btn => {
+      btn.classList.remove('selected', 'submitting');
+      btn.disabled = false;
     });
 
-    // Reset to first tab
-    moodOverlay.querySelector('.mood-tab[data-tab="current"]').click();
+    // Clear feedback
+    panelElement.querySelector('.vibe-panel__feedback').textContent = '';
+    panelElement.querySelector('.vibe-panel__feedback').className = 'vibe-panel__feedback';
 
-    moodOverlay.classList.add('active');
-    moodOverlay.querySelector('.mood-dialog').focus();
-  };
+    // Show panel
+    panelElement.classList.add('active');
+  }
 
-  // ========== Close Dialog ==========
+  function hideVibePanel() {
+    panelElement.classList.remove('active');
+    currentTrack = null;
+  }
 
-  const closeMoodDialog = () => {
-    moodOverlay.classList.remove('active');
-  };
-
-  // ========== Mood Selection ==========
-
-  moodOverlay.addEventListener('click', (e) => {
-    const btn = e.target.closest('.mood-btn');
-    if (!btn) return;
-
-    const target = btn.dataset.target; // 'current' or 'next'
-    const value = btn.dataset.value;
-
-    // Deselect others in same panel
-    moodOverlay.querySelectorAll(`.mood-btn[data-target="${target}"]`).forEach(b => {
-      b.classList.remove('selected');
-      b.setAttribute('aria-checked', 'false');
-    });
-
-    // Select clicked
-    btn.classList.add('selected');
-    btn.setAttribute('aria-checked', 'true');
-
-    // Update state
-    const mood = MOODS.find(m => m.id === value);
-    if (target === 'current') {
-      selectedMoodCurrent = value;
-      selectionCurrent.textContent = mood ? `Aktuell: ${mood.emoji} ${mood.label}` : '';
-    } else {
-      selectedMoodNext = value;
-      selectionNext.textContent = mood ? `Nächster: ${mood.emoji} ${mood.label}` : '';
-    }
-
-    // Enable submit if at least one is selected
-    moodSubmit.disabled = (!selectedMoodCurrent && !selectedMoodNext);
-  });
+  function showFeedback(message, type = 'success') {
+    const feedback = panelElement.querySelector('.vibe-panel__feedback');
+    feedback.textContent = message;
+    feedback.className = `vibe-panel__feedback vibe-panel__feedback--${type}`;
+  }
 
   // ========== Submit Vote ==========
 
-  async function submitVoteToServer(payload) {
-    const response = await fetch('/wp-json/yourparty/v1/vote-mood', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+  async function submitVibe(vibeId, button) {
+    if (!currentTrack?.id) return;
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  moodSubmit.addEventListener('click', async () => {
-    if ((!selectedMoodCurrent && !selectedMoodNext) || !currentTrack?.id) return;
-
-    moodSubmit.disabled = true;
-    moodFeedback.textContent = 'Wird gesendet...';
+    // Visual feedback
+    button.classList.add('submitting');
+    panelElement.querySelectorAll('.vibe-btn').forEach(b => b.disabled = true);
 
     const payload = {
       song_id: currentTrack.id,
-      mood_current: selectedMoodCurrent || '',
-      mood_next: selectedMoodNext || '',
+      mood_current: vibeId,
       title: currentTrack.title,
       artist: currentTrack.artist
     };
 
     try {
-      if (!navigator.onLine) {
-        // Queue for later
-        addPendingVote(payload);
-        moodFeedback.textContent = '📡 Offline - Vote wird später gesendet';
-        setLastVoteTime(currentTrack.id);
-        setTimeout(closeMoodDialog, 2000);
-        return;
-      }
+      const response = await fetch('/wp-json/yourparty/v1/vote-mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-      await submitVoteToServer(payload);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      moodFeedback.textContent = '✅ Danke für dein Vote!';
-      setLastVoteTime(currentTrack.id);
-      setTimeout(closeMoodDialog, 1500);
+      // Success
+      button.classList.remove('submitting');
+      button.classList.add('selected');
+      setLastVote(currentTrack.id);
+      showFeedback('✓ Vibe recorded', 'success');
+
+      // Auto-close after short delay
+      setTimeout(hideVibePanel, 1200);
 
     } catch (e) {
-      console.error('[MoodDialog] Submit error:', e);
-
-      // Queue for retry
-      addPendingVote(payload);
-      moodFeedback.textContent = '⚠️ Netzwerkfehler - Vote wird später gesendet';
-      setLastVoteTime(currentTrack.id);
-      setTimeout(closeMoodDialog, 2000);
+      console.error('[Vibe] Submit error:', e);
+      button.classList.remove('submitting');
+      showFeedback('Network error', 'error');
+      panelElement.querySelectorAll('.vibe-btn').forEach(b => b.disabled = false);
     }
-  });
+  }
 
   // ========== Event Handlers ==========
 
-  moodCancel.addEventListener('click', closeMoodDialog);
+  function setupEventListeners() {
+    // Close button
+    panelElement.querySelector('.vibe-panel__close').addEventListener('click', hideVibePanel);
 
-  moodOverlay.addEventListener('click', (e) => {
-    if (e.target === moodOverlay) closeMoodDialog();
-  });
+    // Click outside to close
+    panelElement.addEventListener('click', (e) => {
+      if (e.target === panelElement) hideVibePanel();
+    });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && moodOverlay.classList.contains('active')) {
-      closeMoodDialog();
-    }
-  });
+    // Vibe buttons - auto submit on click
+    panelElement.querySelectorAll('.vibe-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const vibeId = btn.dataset.vibe;
+        submitVibe(vibeId, btn);
+      });
+    });
 
-  // ========== Init & Sync ==========
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panelElement.classList.contains('active')) {
+        hideVibePanel();
+      }
+    });
+  }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // ========== Initialize ==========
+
+  function init() {
+    panelElement = createVibePanel();
+    setupEventListeners();
+
+    // Global function for TAG VIBE button
+    window.openMoodDialog = showVibePanel;
+
     // Attach to trigger button
     const triggerBtn = document.getElementById('mood-tag-button');
     if (triggerBtn) {
-      triggerBtn.addEventListener('click', () => {
-        const title = document.getElementById('track-title')?.textContent;
-        const artist = document.getElementById('track-artist')?.textContent;
-
-        window.openMoodDialog({
-          id: window.currentSongId,
-          title: title,
-          artist: artist
-        });
-      });
+      triggerBtn.addEventListener('click', () => showVibePanel());
     }
 
-    // Sync pending votes when online
-    window.addEventListener('online', syncPendingVotes);
-    if (navigator.onLine) {
-      syncPendingVotes();
-    }
-  });
+    console.log('[Vibe] Quick Reactions initialized');
+  }
+
+  // Start when DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
