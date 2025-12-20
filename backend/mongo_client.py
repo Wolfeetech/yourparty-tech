@@ -343,6 +343,141 @@ class MongoDatabaseClient:
             logger.error(f"Error getting tracks by mood: {e}")
             return []
 
+    # ========== PLAYTIME MODE QUERIES ==========
+    
+    def get_untagged_tracks(self, genres: List[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        DISCOVERY MODE: Get tracks with no/few mood votes for tagging.
+        
+        Args:
+            genres: Optional list of genres to filter by
+            limit: Maximum tracks to return
+            
+        Returns:
+            List of tracks needing mood tags
+        """
+        try:
+            if not hasattr(self, 'moods_collection'):
+                self.moods_collection = self.db["moods"]
+            
+            # Get all song_ids that have mood entries
+            tagged_song_ids = self.moods_collection.distinct("song_id")
+            
+            # Query for tracks NOT in the tagged list
+            query = {"song_id": {"$nin": list(tagged_song_ids)}}
+            
+            # Optional genre filter
+            if genres:
+                query["$or"] = [
+                    {"metadata.genre": {"$in": genres}},
+                    {"file_path": {"$regex": "|".join(genres), "$options": "i"}}
+                ]
+            
+            tracks = list(self.tracks_collection.find(query).limit(limit))
+            
+            result = []
+            for track in tracks:
+                result.append({
+                    "song_id": track.get("song_id"),
+                    "file_path": track.get("file_path"),
+                    "metadata": track.get("metadata", {}),
+                    "mode": "discovery"
+                })
+            
+            logger.info(f"[DISCOVERY] Found {len(result)} untagged tracks")
+            return result
+        except Exception as e:
+            logger.error(f"Error getting untagged tracks: {e}")
+            return []
+    
+    def get_tagged_tracks(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get tracks that have at least one mood tag.
+        
+        Args:
+            limit: Maximum tracks to return
+            
+        Returns:
+            List of tagged tracks
+        """
+        try:
+            if not hasattr(self, 'moods_collection'):
+                self.moods_collection = self.db["moods"]
+            
+            # Get distinct song_ids with mood tags
+            tagged_song_ids = list(self.moods_collection.distinct("song_id"))[:limit]
+            
+            result = []
+            for song_id in tagged_song_ids:
+                track = self.tracks_collection.find_one({"song_id": song_id})
+                if track:
+                    mood_data = self.get_song_moods(song_id)
+                    result.append({
+                        "song_id": song_id,
+                        "file_path": track.get("file_path"),
+                        "metadata": track.get("metadata", {}),
+                        "top_mood": mood_data.get("top_mood"),
+                        "mood_counts": mood_data.get("mood_counts", {}),
+                        "mode": "refinement"
+                    })
+            
+            logger.info(f"[REFINEMENT] Found {len(result)} tagged tracks")
+            return result
+        except Exception as e:
+            logger.error(f"Error getting tagged tracks: {e}")
+            return []
+    
+    def get_tracks_needing_refinement(self, min_votes: int = 1, max_votes: int = 10, limit: int = 30) -> List[Dict[str, Any]]:
+        """
+        REFINEMENT MODE: Get tracks with some tags but needing more verification.
+        
+        Args:
+            min_votes: Minimum mood votes required
+            max_votes: Maximum mood votes (tracks with more are "verified")
+            limit: Maximum tracks to return
+            
+        Returns:
+            List of tracks needing more community input
+        """
+        try:
+            if not hasattr(self, 'moods_collection'):
+                self.moods_collection = self.db["moods"]
+            
+            # Aggregate to find song_ids with vote counts in range
+            pipeline = [
+                {"$group": {"_id": "$song_id", "vote_count": {"$sum": 1}}},
+                {"$match": {"vote_count": {"$gte": min_votes, "$lte": max_votes}}},
+                {"$sort": {"vote_count": 1}},  # Prioritize lowest vote counts
+                {"$limit": limit}
+            ]
+            
+            song_stats = list(self.moods_collection.aggregate(pipeline))
+            
+            result = []
+            for stat in song_stats:
+                song_id = stat["_id"]
+                if not song_id:
+                    continue
+                    
+                track = self.tracks_collection.find_one({"song_id": song_id})
+                if track:
+                    mood_data = self.get_song_moods(song_id)
+                    result.append({
+                        "song_id": song_id,
+                        "file_path": track.get("file_path"),
+                        "metadata": track.get("metadata", {}),
+                        "vote_count": stat["vote_count"],
+                        "top_mood": mood_data.get("top_mood"),
+                        "mood_counts": mood_data.get("mood_counts", {}),
+                        "mode": "refinement"
+                    })
+            
+            logger.info(f"[REFINEMENT] Found {len(result)} tracks needing more votes")
+            return result
+        except Exception as e:
+            logger.error(f"Error getting tracks needing refinement: {e}")
+            return []
+
 
     def sync_track_metadata(self, file_path: str, metadata: Dict[str, Any], song_id: str = None):
         """
