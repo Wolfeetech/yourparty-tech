@@ -1,18 +1,20 @@
 /* =============================================
-   MOOD DIALOG V3 - "READABLE & UNIQUE"
-   High Contrast, Large Fonts, Clear Hierarchy
+   MOOD DIALOG - PRO AUDIO INTERFACE
+   Clean, Sophisticated, Professional
    ============================================= */
 
-/* === COLORS - YourParty Brand === */
+/* === PROFESSIONAL COLOR PALETTE === */
 :root {
-    --yp-neon: #00ff88;
-    --yp-cyan: #00d4ff;
-    --yp-magenta: #ff0066;
-    --yp-purple: #9b4dff;
-    --yp-dark: #0a0a12;
-    --yp-glass: rgba(15, 15, 25, 0.95);
-    --yp-text: #ffffff;
-    --yp-text-dim: rgba(255, 255, 255, 0.6);
+    --pro-bg: #0d0d12;
+    --pro-surface: #16161d;
+    --pro-surface-hover: #1e1e28;
+    --pro-border: #2a2a38;
+    --pro-border-active: #4a4a5a;
+    --pro-accent: #7c5cff;
+    --pro-accent-glow: rgba(124, 92, 255, 0.15);
+    --pro-text: #e8e8ec;
+    --pro-text-dim: #8a8a98;
+    --pro-success: #3ecf8e;
 }
 
 /* === OVERLAY === */
@@ -23,159 +25,127 @@
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    
-    /* Dark overlay with brand accent */
-    background: rgba(5, 5, 12, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .mood-overlay.active {
     display: flex !important;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 
 .mood-overlay.active .mood-dialog {
     opacity: 1 !important;
     visibility: visible !important;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
 }
 
-/* === DIALOG CONTAINER === */
+/* === DIALOG - CLEAN CARD === */
 .mood-dialog {
-    position: relative;
     width: 100%;
-    max-width: 700px;
+    max-width: 560px;
     max-height: 85vh;
     overflow-y: auto;
     
-    /* Solid dark background for readability */
-    background: linear-gradient(
-        175deg,
-        rgba(20, 20, 35, 0.98) 0%,
-        rgba(12, 12, 22, 0.99) 100%
-    );
+    background: var(--pro-surface);
+    border: 1px solid var(--pro-border);
+    border-radius: 16px;
+    padding: 32px;
     
-    /* Prominent neon border */
-    border: 2px solid var(--yp-neon);
-    box-shadow:
-        0 0 40px rgba(0, 255, 136, 0.2),
-        0 30px 80px rgba(0, 0, 0, 0.8),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    
-    border-radius: 24px;
-    padding: 36px 40px;
-    color: var(--yp-text);
-    
-    transform: translateY(20px) scale(0.95);
+    color: var(--pro-text);
+    transform: translateY(12px);
     opacity: 0;
-    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: all 0.2s ease;
 }
 
-@media (max-width: 500px) {
-    .mood-dialog {
-        padding: 24px 20px;
-        border-radius: 20px;
-    }
-}
-
-/* Custom Scrollbar */
 .mood-dialog::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 .mood-dialog::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
 }
 .mood-dialog::-webkit-scrollbar-thumb {
-    background: var(--yp-neon);
-    border-radius: 3px;
+    background: var(--pro-border);
+    border-radius: 2px;
 }
 
-/* === HEADER - BIG & BOLD === */
+/* === HEADER === */
 .mood-dialog__header {
-    text-align: center;
     margin-bottom: 24px;
 }
 
 .mood-dialog__title {
-    font-size: 2.2rem;
-    font-weight: 900;
-    margin: 0 0 10px 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    color: var(--pro-text);
     letter-spacing: -0.02em;
-    color: #fff;
-    text-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
 }
 
 .mood-dialog__subtitle {
-    color: var(--yp-text-dim);
-    font-size: 1rem;
-    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--pro-text-dim);
     margin: 0;
+    font-weight: 400;
 }
 
-/* === TRACK INFO - HIGHLIGHTED === */
+/* === TRACK INFO === */
 .mood-dialog__track {
-    background: rgba(0, 255, 136, 0.08);
-    border: 2px solid rgba(0, 255, 136, 0.25);
-    border-radius: 16px;
-    padding: 18px 24px;
-    margin-bottom: 28px;
-    text-align: center;
+    background: var(--pro-bg);
+    border: 1px solid var(--pro-border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
 }
 
 .mood-dialog__track-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--pro-text);
     margin-bottom: 4px;
-    text-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mood-dialog__track-artist {
-    font-size: 1rem;
-    color: var(--yp-neon);
+    font-size: 0.9rem;
+    color: var(--pro-accent);
     font-weight: 500;
 }
 
-/* === TABS - CLEAR & PROMINENT === */
+/* === TABS - SEGMENTED CONTROL === */
 .mood-tabs {
     display: flex;
-    gap: 8px;
+    background: var(--pro-bg);
+    border-radius: 10px;
+    padding: 4px;
     margin-bottom: 24px;
-    padding: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--pro-border);
 }
 
 .mood-tab {
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--yp-text-dim);
-    padding: 14px 20px;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 700;
+    color: var(--pro-text-dim);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.15s ease;
 }
 
 .mood-tab:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--pro-text);
 }
 
 .mood-tab.active {
-    color: #000;
-    background: var(--yp-neon);
-    box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+    background: var(--pro-surface-hover);
+    color: var(--pro-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* === PANELS === */
@@ -185,119 +155,101 @@
 
 .mood-panel.active {
     display: block;
-    animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .mood-panel__hint {
-    text-align: center;
-    font-size: 1.1rem;
-    color: var(--yp-text-dim);
-    margin-bottom: 20px;
-    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--pro-text-dim);
+    margin-bottom: 16px;
 }
 
-/* === MOOD GRID - READABLE BUTTONS === */
+/* === MOOD GRID === */
 .mood-options {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 14px;
+    gap: 8px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 520px) {
     .mood-options {
         grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
     }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 360px) {
     .mood-options {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
     }
 }
 
-/* === MOOD BUTTONS - BIG, CLEAR, READABLE === */
+/* === MOOD BUTTONS - MINIMAL TEXT ONLY === */
 .mood-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     
-    padding: 18px 12px;
-    min-height: 100px;
+    padding: 14px 8px;
+    min-height: 64px;
     
-    /* Clear dark background */
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 18px;
+    background: var(--pro-bg);
+    border: 1px solid var(--pro-border);
+    border-radius: 10px;
     
-    color: var(--yp-text);
+    color: var(--pro-text-dim);
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.15s ease;
 }
 
 .mood-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.25);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    background: var(--pro-surface-hover);
+    border-color: var(--pro-border-active);
+    color: var(--pro-text);
 }
 
-/* === SELECTED STATE - SUPER VISIBLE === */
+/* SELECTED - subtle accent */
 .mood-btn.selected,
 .mood-btn[aria-checked="true"] {
-    background: rgba(0, 255, 136, 0.15);
-    border: 3px solid var(--yp-neon);
-    transform: translateY(-5px) scale(1.02);
-    
-    box-shadow:
-        0 0 0 4px rgba(0, 255, 136, 0.15),
-        0 0 40px rgba(0, 255, 136, 0.3),
-        0 15px 40px rgba(0, 0, 0, 0.4);
+    background: var(--pro-accent-glow);
+    border-color: var(--pro-accent);
+    color: var(--pro-text);
 }
 
-/* BIG EMOJI */
+/* Hide emoji, show only on hover for recognition */
 .mood-btn__emoji,
 .mood-btn .emoji,
 .mood-btn span:first-child {
-    font-size: 2.4rem;
+    font-size: 1.3rem;
     line-height: 1;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+    opacity: 0.7;
+    transition: opacity 0.15s;
 }
 
+.mood-btn:hover span:first-child,
 .mood-btn.selected span:first-child {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 15px rgba(0, 255, 136, 0.5));
+    opacity: 1;
 }
 
-/* READABLE LABEL */
+/* Label - clean typography */
 .mood-btn span:last-child:not(:first-child) {
-    font-size: 0.85rem;
-    font-weight: 800;
+    font-size: 0.7rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.04em;
 }
 
 .mood-btn.selected span:last-child:not(:first-child) {
-    color: var(--yp-neon);
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    color: var(--pro-accent);
 }
 
-/* === SELECTION DISPLAY === */
+/* === SELECTION PILLS === */
 .mood-dialog__selection {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
     justify-content: center;
-    margin-top: 24px;
+    margin-top: 20px;
 }
 
 .mood-dialog__selection span:empty {
@@ -305,89 +257,70 @@
 }
 
 .mood-dialog__selection span:not(:empty) {
-    background: rgba(0, 255, 136, 0.12);
-    border: 2px solid var(--yp-neon);
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--yp-neon);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+    background: var(--pro-accent-glow);
+    border: 1px solid var(--pro-accent);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--pro-accent);
 }
 
-/* === ACTION BUTTONS - SUPER CLEAR === */
+/* === ACTION BUTTONS === */
 .mood-dialog__actions {
     display: flex;
-    gap: 16px;
-    margin-top: 32px;
+    gap: 12px;
+    margin-top: 28px;
     padding-top: 24px;
-    border-top: 2px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--pro-border);
 }
 
 .mood-dialog__btn-cancel {
     flex: 1;
-    padding: 18px 24px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    border-radius: 14px;
-    color: var(--yp-text-dim);
-    font-size: 1rem;
-    font-weight: 700;
+    padding: 14px 20px;
+    background: transparent;
+    border: 1px solid var(--pro-border);
+    border-radius: 10px;
+    color: var(--pro-text-dim);
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .mood-dialog__btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #fff;
+    background: var(--pro-surface-hover);
+    border-color: var(--pro-border-active);
+    color: var(--pro-text);
 }
 
 .mood-dialog__btn-submit {
     flex: 2;
-    padding: 18px 32px;
-    
-    /* Solid neon button */
-    background: var(--yp-neon);
+    padding: 14px 24px;
+    background: var(--pro-accent);
     border: none;
-    border-radius: 14px;
-    
-    color: #000;
-    font-size: 1.1rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.25s ease;
-    
-    box-shadow: 0 8px 30px rgba(0, 255, 136, 0.4);
+    transition: all 0.15s ease;
 }
 
 .mood-dialog__btn-submit:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 
-        0 12px 40px rgba(0, 255, 136, 0.5),
-        0 0 60px rgba(0, 255, 136, 0.2);
-}
-
-.mood-dialog__btn-submit:active:not(:disabled) {
-    transform: translateY(-1px);
+    filter: brightness(1.1);
 }
 
 .mood-dialog__btn-submit:disabled {
-    opacity: 0.3;
+    opacity: 0.4;
     cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
 }
 
-/* === FEEDBACK MESSAGE === */
+/* === FEEDBACK === */
 .mood-dialog__feedback {
     text-align: center;
-    margin-top: 16px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--yp-neon);
-    text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+    margin-top: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--pro-success);
 }
