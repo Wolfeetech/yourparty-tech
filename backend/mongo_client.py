@@ -1,10 +1,20 @@
 import logging
 from typing import Dict, Any, Optional, List
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ========== GAMIFICATION CONFIG ==========
+POINTS_CONFIG = {
+    "mood_vote": 10,           # Points for voting on current track mood
+    "mood_next_vote": 5,       # Points for voting on next mood
+    "rating": 15,              # Points for rating a track
+    "discovery_tag": 25,       # Bonus for tagging an untagged track
+    "streak_bonus_per_day": 5, # Extra points per day streak
+    "streak_max_bonus": 50     # Maximum streak bonus
+}
 
 class MongoDatabaseClient:
     """
@@ -605,6 +615,171 @@ class MongoDatabaseClient:
             self.sync_log_collection.insert_one(log_doc)
         except Exception as e:
             logger.error(f"Error logging sync operation: {e}")
+
+    # ========== GAMIFICATION SYSTEM ==========
+    
+    def _ensure_gamification_collections(self):
+        """Ensure gamification collections exist with proper indexes."""
+        if not hasattr(self, 'user_points_collection'):
+            self.user_points_collection = self.db["user_points"]
+            self.user_points_collection.create_index("user_id", unique=True)
+            self.user_points_collection.create_index([("total_points", -1)])  # For leaderboard
+    
+    def award_points(self, user_id: str, action: str, bonus_multiplier: float = 1.0, song_id: str = None) -> Dict[str, Any]:
+        """
+        Award points to a user for an action (vote, rating, etc.).
+        
+        Args:
+            user_id: User identifier
+            action: Action type from POINTS_CONFIG
+            bonus_multiplier: Optional multiplier (e.g., for discovery mode)
+            song_id: Optional song context
+            
+        Returns:
+            Updated user stats including points and streak
+        """
+        try:
+            self._ensure_gamification_collections()
+            
+            base_points = POINTS_CONFIG.get(action, 0)
+            points = int(base_points * bonus_multiplier)
+            
+            # Get current user data
+            user_doc = self.user_points_collection.find_one({"user_id": user_id}) or {
+                "user_id": user_id,
+                "total_points": 0,
+                "streak_days": 0,
+                "last_activity_date": None,
+                "created_at": datetime.utcnow(),
+                "actions": []
+            }
+            
+            # Calculate streak
+            today = datetime.utcnow().date()
+            last_date = user_doc.get("last_activity_date")
+            
+            if last_date:
+                if isinstance(last_date, datetime):
+                    last_date = last_date.date()
+                days_diff = (today - last_date).days
+                
+                if days_diff == 0:
+                    # Same day, keep streak
+                    pass
+                elif days_diff == 1:
+                    # Consecutive day, increment streak
+                    user_doc["streak_days"] = user_doc.get("streak_days", 0) + 1
+                else:
+                    # Streak broken
+                    user_doc["streak_days"] = 1
+            else:
+                user_doc["streak_days"] = 1
+            
+            # Calculate streak bonus
+            streak_bonus = min(
+                user_doc["streak_days"] * POINTS_CONFIG["streak_bonus_per_day"],
+                POINTS_CONFIG["streak_max_bonus"]
+            )
+            
+            total_points_awarded = points + streak_bonus
+            
+            # Update user document
+            user_doc["total_points"] = user_doc.get("total_points", 0) + total_points_awarded
+            user_doc["last_activity_date"] = datetime.utcnow()
+            user_doc["actions"].append({
+                "action": action,
+                "points": points,
+                "streak_bonus": streak_bonus,
+                "song_id": song_id,
+                "timestamp": datetime.utcnow()
+            })
+            
+            # Keep only last 100 actions
+            if len(user_doc["actions"]) > 100:
+                user_doc["actions"] = user_doc["actions"][-100:]
+            
+            # Save
+            self.user_points_collection.update_one(
+                {"user_id": user_id},
+                {"$set": user_doc},
+                upsert=True
+            )
+            
+            logger.info(f"[GAMIFY] {user_id}: +{total_points_awarded} pts ({action} + streak)")
+            
+            return {
+                "success": True,
+                "points_awarded": total_points_awarded,
+                "base_points": points,
+                "streak_bonus": streak_bonus,
+                "total_points": user_doc["total_points"],
+                "streak_days": user_doc["streak_days"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Error awarding points: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+        """Get gamification stats for a user."""
+        try:
+            self._ensure_gamification_collections()
+            
+            user_doc = self.user_points_collection.find_one({"user_id": user_id})
+            
+            if not user_doc:
+                return {
+                    "user_id": user_id,
+                    "total_points": 0,
+                    "streak_days": 0,
+                    "rank": None,
+                    "recent_actions": []
+                }
+            
+            # Get rank
+            rank = self.user_points_collection.count_documents({
+                "total_points": {"$gt": user_doc.get("total_points", 0)}
+            }) + 1
+            
+            return {
+                "user_id": user_id,
+                "total_points": user_doc.get("total_points", 0),
+                "streak_days": user_doc.get("streak_days", 0),
+                "rank": rank,
+                "recent_actions": user_doc.get("actions", [])[-10:]  # Last 10
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user stats: {e}")
+            return {"user_id": user_id, "total_points": 0, "streak_days": 0, "rank": None}
+    
+    def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get the top users by total points.
+        
+        Args:
+            limit: Number of top users to return
+            
+        Returns:
+            List of user stats sorted by points
+        """
+        try:
+            self._ensure_gamification_collections()
+            
+            top_users = list(self.user_points_collection.find(
+                {},
+                {"user_id": 1, "total_points": 1, "streak_days": 1, "_id": 0}
+            ).sort("total_points", -1).limit(limit))
+            
+            # Add rank
+            for i, user in enumerate(top_users):
+                user["rank"] = i + 1
+            
+            return top_users
+            
+        except Exception as e:
+            logger.error(f"Error getting leaderboard: {e}")
+            return []
 
     def close(self):
         """Close MongoDB connection."""

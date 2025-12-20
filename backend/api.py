@@ -1061,6 +1061,40 @@ async def run_playlist_sync():
     else:
         logger.warning("No tracks matched. Check file paths or naming.")
 
+# ========== GAMIFICATION ENDPOINTS ==========
+
+@app.get("/leaderboard")
+async def get_leaderboard(limit: int = 10):
+    """Get the top users by total points."""
+    if not state.mongo_client:
+        return {"leaderboard": [], "error": "Database not connected"}
+    
+    leaderboard = state.mongo_client.get_leaderboard(limit=limit)
+    return {"leaderboard": leaderboard}
+
+@app.get("/user-stats/{user_id}")
+async def get_user_stats(user_id: str):
+    """Get gamification stats for a specific user."""
+    if not state.mongo_client:
+        return {"error": "Database not connected"}
+    
+    stats = state.mongo_client.get_user_stats(user_id)
+    return stats
+
+@app.post("/award-points")
+async def award_points_endpoint(user_id: str, action: str, song_id: str = None, bonus: float = 1.0):
+    """Award points to a user (internal/admin use)."""
+    if not state.mongo_client:
+        return {"error": "Database not connected"}
+    
+    result = state.mongo_client.award_points(
+        user_id=user_id,
+        action=action,
+        bonus_multiplier=bonus,
+        song_id=song_id
+    )
+    return result
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
