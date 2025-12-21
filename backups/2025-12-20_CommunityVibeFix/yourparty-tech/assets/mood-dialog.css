@@ -1,0 +1,280 @@
+/* =============================================
+   QUICK VIBE REACTIONS - Professional Panel
+   Compact, Clean, Auto-Submit
+   ============================================= */
+
+/* === VARIABLES === */
+:root {
+  --vibe-bg: #12121a;
+  --vibe-surface: #1a1a24;
+  --vibe-border: #2a2a38;
+  --vibe-text: #e8e8ec;
+  --vibe-text-dim: #6a6a78;
+  --vibe-accent: #7c5cff;
+  --vibe-success: #22c55e;
+  --vibe-error: #ef4444;
+}
+
+/* === PANEL OVERLAY === */
+.vibe-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.vibe-panel.active {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* === PANEL CARD === */
+.vibe-panel > div:not(.vibe-panel__feedback),
+.vibe-panel__header,
+.vibe-panel__track,
+.vibe-panel__buttons {
+  /* Layout handled by panel itself */
+}
+
+.vibe-panel {
+  /* Flex column for content */
+}
+
+.vibe-panel.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Card container */
+.vibe-panel::before {
+  display: none;
+}
+
+/* Style the inner container */
+.vibe-panel > .vibe-panel__header,
+.vibe-panel > .vibe-panel__track,
+.vibe-panel > .vibe-panel__buttons,
+.vibe-panel > .vibe-panel__feedback {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* Wrap everything in visual card */
+.vibe-panel.active {
+  /* Already a flex container */
+}
+
+/* Background card effect */
+.vibe-panel__header,
+.vibe-panel__track,
+.vibe-panel__buttons {
+  background: var(--vibe-surface);
+}
+
+.vibe-panel__header {
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--vibe-border);
+  border-bottom: none;
+}
+
+.vibe-panel__track {
+  border-left: 1px solid var(--vibe-border);
+  border-right: 1px solid var(--vibe-border);
+}
+
+.vibe-panel__buttons {
+  border-radius: 0 0 16px 16px;
+  border: 1px solid var(--vibe-border);
+  border-top: none;
+}
+
+/* === HEADER === */
+.vibe-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.vibe-panel__prompt {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vibe-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vibe-panel__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--vibe-text-dim);
+  font-size: 1.4rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.vibe-panel__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--vibe-text);
+}
+
+/* === TRACK INFO === */
+.vibe-panel__track {
+  padding: 12px 20px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--vibe-border);
+}
+
+.vibe-panel__title {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--vibe-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.vibe-panel__artist {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--vibe-accent);
+}
+
+/* === VIBE BUTTONS - 2x2 GRID === */
+.vibe-panel__buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 16px;
+}
+
+.vibe-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 12px;
+  min-height: 72px;
+  
+  background: var(--vibe-bg);
+  border: 1px solid var(--vibe-border);
+  border-radius: 12px;
+  
+  color: var(--vibe-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vibe-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--vibe-accent);
+  transform: translateY(-2px);
+}
+
+.vibe-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Submitting state */
+.vibe-btn.submitting {
+  border-color: var(--vibe-accent);
+  animation: pulse 0.6s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Selected/Success state */
+.vibe-btn.selected {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--vibe-success);
+  color: var(--vibe-success);
+}
+
+.vibe-btn.selected .vibe-btn__icon {
+  animation: pop 0.3s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Icon */
+.vibe-btn__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* Label */
+.vibe-btn__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vibe-text-dim);
+}
+
+.vibe-btn:hover .vibe-btn__label,
+.vibe-btn.selected .vibe-btn__label {
+  color: inherit;
+}
+
+/* === FEEDBACK MESSAGE === */
+.vibe-panel__feedback {
+  text-align: center;
+  padding: 12px 20px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-height: 32px;
+  max-width: 360px;
+}
+
+.vibe-panel__feedback:empty {
+  display: none;
+}
+
+.vibe-panel__feedback--success {
+  color: var(--vibe-success);
+}
+
+.vibe-panel__feedback--error {
+  color: var(--vibe-error);
+}
+
+.vibe-panel__feedback--info {
+  color: var(--vibe-text-dim);
+}
+
+/* === OLD CLASSES (compatibility) === */
+.mood-overlay,
+.mood-dialog {
+  display: none !important;
+}

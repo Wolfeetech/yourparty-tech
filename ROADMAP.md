@@ -8,7 +8,7 @@
 
 ### 0.1 Critical Loose Ends (MUST FIX NEXT)
 - [ ] **NPM Proxy 502**: `api.yourparty.tech` returns 502. Needs Nginx Proxy Manager configuration fix (Destination: `192.168.178.211:8000`).
-- [ ] **Content Verification**: Validate Impressum/Datenschutz pages now that DB is back.
+- [x] **Content Verification**: Validate Impressum/Datenschutz pages verified Live (Content visible).
 - [ ] **Async Tasks**: Refactor `/scan` to use `BackgroundTasks` in FastAPI to prevent blocking.
 
 ### 0.2 Frontend & Theme Cleanup
@@ -89,6 +89,7 @@
     - [x] Dashboard zeigt jetzt Live-Daten aus der API.
     - [x] "Playlist Generator" testen (AzuraCast native .m3u export verified).
     - [x] **Stream Stability**: Rewrite of `StreamController.js` to fix paused states.
+    - [x] **Community Vibe**: Backend Integration & Dislike Display completed.
     - [ ] **Flatten Subdirectories**: Clean up `yourparty-tech/yourparty-tech/` redundancy.
     - [ ] **AzuraCast Sync**: Verify why titles are lagging in frontend.
 

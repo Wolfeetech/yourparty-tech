@@ -879,44 +879,57 @@ document.addEventListener('DOMContentLoaded', function () {
     const moodIcons = {
         'energetic': '⚡', 'chill': '🌴', 'euphoric': '🤩', 'dark': '🌑',
         'groovy': '💃', 'melodic': '🎹', 'hypnotic': '🌀', 'uplifting': '🚀',
-        'atmospheric': '🌌', 'driving': '🏎️', 'trashey': '🗑️'
+        'atmospheric': '🌌', 'driving': '🏎️', 'trashey': '🗑️',
+        'dislike': '⚠️'
     };
 
     function updateVibeOverview() {
-        fetch(`${apiGeneric}/control/moods`, {
-            credentials: 'same-origin',
-            headers: { 'X-WP-Nonce': wpNonce }
-        })
+        // Use the public mood-stats endpoint (same as frontend)
+        fetch('/wp-json/yourparty/v1/mood-stats')
             .then(r => r.json())
             .then(data => {
-                const topMoods = data.top_moods || [];
-                if (topMoods.length > 0) {
-                    const dominant = topMoods[0];
+                // Backend returns: { votes: { energy: 0, ... }, total: 0, dominant: '...' }
+                const votes = data.votes || {};
+                
+                // Convert votes object to array for sorting
+                const sortedMoods = Object.entries(votes)
+                    .map(([tag, count]) => ({ tag, count }))
+                    .sort((a, b) => b.count - a.count);
+
+                if (sortedMoods.length > 0) {
+                    const dominant = sortedMoods[0];
                     const nameEl = document.getElementById('dominant-mood-name');
                     const iconEl = document.getElementById('dominant-mood-icon');
-                    if (nameEl) nameEl.textContent = dominant.tag.toUpperCase();
-                    if (iconEl) iconEl.textContent = moodIcons[dominant.tag] || '🎵';
+                    
+                    if (nameEl) nameEl.textContent = dominant.count > 0 ? dominant.tag.toUpperCase() : 'NEUTRAL';
+                    if (iconEl) iconEl.textContent = dominant.count > 0 ? (moodIcons[dominant.tag] || '🎵') : '😐';
+                    
+                    const barsContainer = document.getElementById('mood-bars');
+                    if (barsContainer) {
+                        const maxCount = dominant.count > 0 ? dominant.count : 1;
+                        
+                        const barsHtml = sortedMoods.slice(0, 6).map(m => {
+                           const pct = Math.round((m.count / maxCount) * 100);
+                           const icon = moodIcons[m.tag] || '✨';
+                           const isDislike = m.tag === 'dislike';
+                           const barColor = isDislike ? 'var(--danger)' : 'linear-gradient(90deg, var(--emerald), #00ccaa)';
+                           const labelColor = isDislike ? 'var(--danger)' : '#888';
+                           
+                           return `
+                               <div class="mood-bar-item">
+                                   <span class="mood-label" style="color:${labelColor}">${icon} ${m.tag}</span>
+                                   <div class="bar-container"><div class="bar-fill" style="width:${pct}%; background:${barColor}"></div></div>
+                                   <span class="vote-count">${m.count}</span>
+                               </div>`;
+                        }).join('');
+                        
+                        barsContainer.innerHTML = barsHtml;
+                    }
                 }
-                
-                 const barsContainer = document.getElementById('mood-bars');
-                 if (barsContainer && topMoods.length > 0) {
-                     const maxCount = topMoods[0].count;
-                     const barsHtml = topMoods.slice(0, 6).map(m => {
-                        const pct = Math.round((m.count / maxCount) * 100);
-                        const icon = moodIcons[m.tag] || '🎵';
-                        return `
-                            <div class="mood-bar-item">
-                                <span class="mood-label">${icon} ${m.tag}</span>
-                                <div class="bar-container"><div class="bar-fill" style="width:${pct}%;"></div></div>
-                                <span class="vote-count">${m.count}</span>
-                            </div>`;
-                     }).join('');
-                     barsContainer.innerHTML = barsHtml;
-                 }
             })
             .catch(err => console.warn('Vibe fetch failed:', err));
     }
-    setInterval(updateVibeOverview, 5000);
+    setInterval(updateVibeOverview, 3000);
     updateVibeOverview();
 
     // --- GLOBAL HELPERS (for button clicks) ---

@@ -1,0 +1,105 @@
+/**
+ * YourParty Tech - Status Badges Component
+ * Live status, listener count, etc.
+ */
+
+/* Base Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+}
+
+/* Live Status */
+.status-badge.status-online,
+.status-badge:not(.status-offline) {
+  background: var(--color-primary);
+  color: white;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+.status-badge.status-offline {
+  background: var(--text-disabled);
+  color: var(--text-muted);
+  animation: none;
+}
+
+/* Pulse Animation */
+@keyframes statusPulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(46, 139, 87, 0.4);
+  }
+  50% { 
+    opacity: 0.85;
+    box-shadow: 0 0 0 4px rgba(46, 139, 87, 0);
+  }
+}
+
+/* Live Dot Indicator */
+.status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: var(--radius-full);
+  animation: liveDot 1.5s ease-in-out infinite;
+}
+
+.status-badge.status-offline::before {
+  animation: none;
+}
+
+@keyframes liveDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Listener Badge */
+.listener-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.listener-badge strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status Pill (alternative style) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+}
+
+.status-pill--online {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.status-pill--online::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-right: var(--space-2);
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: liveDot 1.5s ease-in-out infinite;
+}

@@ -98,7 +98,31 @@ class AppState:
         self.steering_status = {"mode": "auto", "target": "neutral"}
         self.stream_url = "https://radio.yourparty.tech/radio.mp3" # Default mount
 
+class AppState:
+    def __init__(self):
+        self.library = []
+        self.organizer = None
+        self.tag_improver = None
+        self.mongo_client = None
+        self.track_matcher = None
+        self.library_service = None # Single source of truth
+        self.now_playing = {}
+        self.steering_status = {"mode": "auto", "target": None, "updated_at": None}
+
 state = AppState()
+
+# HELPERS
+def get_metadata_context(song_id: str) -> Optional[Dict[str, Any]]:
+    """Get metadata for the song if it is currently playing."""
+    if state.now_playing and str(state.now_playing.get('id')) == str(song_id):
+        return {
+            "title": state.now_playing.get("title"),
+            "artist": state.now_playing.get("artist"),
+            "album": state.now_playing.get("album"),
+            "cover_art": state.now_playing.get("art"),
+            "genre": state.now_playing.get("genre")
+        }
+    return None
 
 # Models
 class ScanRequest(BaseModel):
@@ -600,7 +624,8 @@ async def public_status_loop():
                         "album": np.get('album', ''),
                         "art": np.get('art', ''), 
                         "id": str(np.get('id', '')), 
-                        "duration": np.get('duration', 0)
+                        "duration": np.get('duration', 0),
+                        "genre": np.get('genre', '')
                     }
 
                     # Fix Art URL (Internal IP -> Public Domain)
@@ -673,7 +698,8 @@ async def rate_track(request: RatingRequest):
             song_id=request.song_id,
             rating=request.rating,
             user_id=request.user_id,
-            file_path=request.file_path
+            file_path=request.file_path,
+            metadata=get_metadata_context(request.song_id)
         )
         return result
     else:
@@ -721,7 +747,9 @@ class MoodVoteRequest(BaseModel):
 
 VALID_MOODS = [
     "energy", "chill", "groove", "dark", "euphoric",
-    "melancholic", "hypnotic", "aggressive", "trippy", "warm"
+    "melancholic", "hypnotic", "aggressive", "trippy", "warm",
+    "driving", "acid", "soulful", "deep", "funky", 
+    "uplifting", "progressive", "psy", "classic"
 ]
 
 @app.post("/vote-mood")
@@ -763,7 +791,8 @@ async def vote_mood(request: MoodVoteRequest):
         if request.mood_current:
             state.mongo_client.submit_mood(
                 song_id=request.song_id,
-                mood=request.mood_current
+                mood=request.mood_current,
+                metadata=get_metadata_context(request.song_id)
             )
         
         # Store mood_next preference in a separate collection for DJ decisions
@@ -771,7 +800,8 @@ async def vote_mood(request: MoodVoteRequest):
             state.mongo_client.submit_mood_next_vote(
                 song_id=request.song_id,
                 mood_next=request.mood_next,
-                user_id=request.user_id
+                user_id=request.user_id,
+                metadata=get_metadata_context(request.song_id)
             )
         
         # Handle rating if provided
@@ -779,7 +809,8 @@ async def vote_mood(request: MoodVoteRequest):
             state.mongo_client.submit_rating(
                 song_id=request.song_id,
                 rating=request.rating,
-                user_id=request.user_id
+                user_id=request.user_id,
+                metadata=get_metadata_context(request.song_id)
             )
             result["rating"] = request.rating
         
@@ -787,6 +818,22 @@ async def vote_mood(request: MoodVoteRequest):
         mood_data = state.mongo_client.get_song_moods(request.song_id)
         result["mood_counts"] = mood_data.get("mood_counts", {})
         result["dominant_mood"] = mood_data.get("top_mood")
+
+        # GAMIFICATION: Award points if user is identified
+        if request.user_id and request.user_id != "anonymous":
+            if request.mood_current:
+                state.mongo_client.award_points(request.user_id, "mood_vote", song_id=request.song_id)
+            
+            if request.mood_next:
+                # Bonus for next mood suggestion? Or same?
+                # For now same type "mood_vote"
+                state.mongo_client.award_points(request.user_id, "mood_vote", song_id=request.song_id)
+
+            if request.rating:
+                 state.mongo_client.award_points(request.user_id, "rating", song_id=request.song_id)
+            
+            result["gamification"] = {"points_awarded": True}
+        
     else:
         result["warning"] = "Database not connected - vote not persisted"
     
@@ -818,18 +865,34 @@ async def get_mood_stats():
     total = 0
     dominant = None
     
+    
     if current_song_id:
-        mood_data = state.mongo_client.get_song_moods(current_song_id)
-        if mood_data:
-            mood_counts = mood_data.get("mood_counts", {})
-            # Map to our 4 core vibes
-            for mood in ["energy", "chill", "dark", "euphoric"]:
-                votes[mood] = mood_counts.get(mood, 0)
-            total = sum(votes.values())
-            dominant = mood_data.get("top_mood")
+        try:
+            mood_data = state.mongo_client.get_song_moods(current_song_id)
+            if mood_data:
+                mood_counts = mood_data.get("mood_counts", {})
+                # Merge with defaults but keep ALL dynamic moods
+                votes.update(mood_counts) 
+                
+                # Fetch Dislikes (Rating = 1)
+                rating_data = state.mongo_client.get_track_rating(song_id=current_song_id)
+                if rating_data and "distribution" in rating_data:
+                    # '1' key in distribution holds count of 1-star ratings
+                    dislikes = rating_data["distribution"].get("1.0", 0) + rating_data["distribution"].get("1", 0)
+                    if dislikes > 0:
+                        votes["dislike"] = dislikes
+
+                total = sum(votes.values())
+                dominant = mood_data.get("top_mood")
+        except Exception as e:
+            logger.error(f"Error fetching mood stats for song {current_song_id}: {e}")
     
     # Also get the "next mood" votes for DJ steering
-    dominant_next = state.mongo_client.get_dominant_next_mood(time_window_minutes=10)
+    dominant_next = None
+    try:
+        dominant_next = state.mongo_client.get_dominant_next_mood(time_window_minutes=10)
+    except Exception as e:
+        logger.error(f"Error fetching next mood: {e}")
     
     return {
         "votes": votes,
@@ -837,6 +900,7 @@ async def get_mood_stats():
         "dominant": dominant,
         "dominant_next": dominant_next,
         "song_id": current_song_id,
+        "genre": state.now_playing.get("genre") if state.now_playing else None,
         "feature_flags": {
             "FEATURE_MOOD_VOTES": FEATURE_MOOD_VOTES,
             "FEATURE_MOOD_AUTODJ": FEATURE_MOOD_AUTODJ
