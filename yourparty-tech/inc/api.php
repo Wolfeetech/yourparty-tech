@@ -15,8 +15,8 @@ function yourparty_azuracast_base_url(): string
         return rtrim(YOURPARTY_AZURACAST_URL, '/');
     }
 
-    // Use internal IP to bypass DNS/NAT issues on local network
-    return 'https://192.168.178.210';
+    // Use public URL for remote connectivity (Safe via HTTPS + API Key)
+    return 'https://radio.yourparty.tech';
 }
 
 /**
