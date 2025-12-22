@@ -1,4 +1,6 @@
-﻿const REST_BASE = (
+﻿import MoodModule from './js/modules/MoodModule.js';
+
+const REST_BASE = (
   window.YourPartyConfig && window.YourPartyConfig.restBase
     ? window.YourPartyConfig.restBase
     : "/wp-json/yourparty/v1"
@@ -38,6 +40,13 @@ const buildEndpoint = (slug) => `${REST_BASE}/${slug.replace(/^\//, "")}`;
 document.addEventListener("DOMContentLoaded", () => {
   const navToggle = document.getElementById("nav-toggle");
   const mobileMenu = document.getElementById("mobile-menu");
+
+  // Initialize Mood Module
+  if (window.YourPartyConfig) {
+    window.YourPartyAppInstance = window.YourPartyAppInstance || {};
+    window.YourPartyAppInstance.modules = window.YourPartyAppInstance.modules || {};
+    window.YourPartyAppInstance.modules.mood = new MoodModule(window.YourPartyConfig);
+  }
 
   // Audio Context Variables (Lifted Scope)
   let audioContext, analyser, dataArray, source;
