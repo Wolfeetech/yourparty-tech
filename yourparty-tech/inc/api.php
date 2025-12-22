@@ -608,7 +608,7 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
 function yourparty_rest_post_vote_mood(WP_REST_Request $request)
 {
     $song_id = preg_replace('/[^a-zA-Z0-9]/', '', (string) $request->get_param('song_id'));
-    
+
     // Validate ID
     if (empty($song_id)) {
         return new WP_Error('invalid_payload', 'Invalid Song ID', ['status' => 400]);
@@ -633,7 +633,7 @@ function yourparty_rest_post_vote_mood(WP_REST_Request $request)
     ]);
 
     if (is_wp_error($response)) {
-         return new WP_Error('backend_error', 'Service unavailable', ['status' => 503]);
+        return new WP_Error('backend_error', 'Service unavailable', ['status' => 503]);
     }
 
     $body = json_decode(wp_remote_retrieve_body($response), true);
@@ -766,7 +766,7 @@ add_action('rest_api_init', function () {
             'permission_callback' => '__return_true',
         ]
     );
-    
+
     register_rest_route(
         'yourparty/v1',
         '/content',
@@ -826,11 +826,52 @@ add_action('rest_api_init', function () {
                     return $response;
                 }
 
-                return rest_ensure_response(['status' => 'skipped']);
             },
             'permission_callback' => function () {
                 return current_user_can('manage_options');
             },
+        ]
+    );
+
+    // CONTROL: Enqueue / Reorder
+    register_rest_route(
+        'yourparty/v1',
+        '/control/queue',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                if (!current_user_can('manage_options')) {
+                    return new WP_Error('rest_forbidden', 'Admin only.', ['status' => 403]);
+                }
+
+                $action = $request->get_param('action'); // 'add', 'remove', 'reorder'
+                $uri = $request->get_param('uri'); // For 'add' (media path/id)
+                $queue_id = $request->get_param('queue_id'); // For 'remove'
+        
+                $azura_base = yourparty_azuracast_base_url();
+                $station_id = 1;
+
+                if ($action === 'add' && $uri) {
+                    // AzuraCast: POST /api/station/{id}/queue/add
+                    $body = ['media_id' => $uri]; // Assuming internal match or ID
+                    $endpoint = "/api/station/$station_id/queue/add";
+                } elseif ($action === 'remove' && $queue_id) {
+                    // AzuraCast: DELETE /api/station/{id}/queue/{queue_id}
+                    $endpoint = "/api/station/$station_id/queue/$queue_id";
+                    $response = wp_remote_request($azura_base . $endpoint, array_merge(yourparty_http_defaults(), ['method' => 'DELETE']));
+                    return rest_ensure_response(['status' => 'deleted']);
+                } else {
+                    return new WP_Error('invalid_param', 'Missing action or params', ['status' => 400]);
+                }
+
+                $response = wp_remote_post($azura_base . $endpoint, array_merge(yourparty_http_defaults(), ['body' => json_encode($body)]));
+
+                if (is_wp_error($response))
+                    return $response;
+                return rest_ensure_response(json_decode(wp_remote_retrieve_body($response), true));
+            },
+            'permission_callback' => function () {
+                return current_user_can('manage_options'); }
         ]
     );
 
@@ -872,41 +913,50 @@ add_action('rest_api_init', function () {
     );
 
     // --- CONTROL PANEL PROXY ENDPOINTS ---
-    
+
     // Ratings
     register_rest_route('yourparty/v1', '/control/ratings', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
-            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            if (!current_user_can('manage_options'))
+                return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
             $resp = wp_remote_get(yourparty_api_base_url() . '/ratings', ['timeout' => 5]);
-            if (is_wp_error($resp)) return [];
+            if (is_wp_error($resp))
+                return [];
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
-        'permission_callback' => function() { return current_user_can('manage_options'); }
+        'permission_callback' => function () {
+            return current_user_can('manage_options'); }
     ]);
 
     // Moods
     register_rest_route('yourparty/v1', '/control/moods', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
-            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            if (!current_user_can('manage_options'))
+                return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
             $resp = wp_remote_get(yourparty_api_base_url() . '/moods', ['timeout' => 5]);
-            if (is_wp_error($resp)) return [];
+            if (is_wp_error($resp))
+                return [];
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
-        'permission_callback' => function() { return current_user_can('manage_options'); }
+        'permission_callback' => function () {
+            return current_user_can('manage_options'); }
     ]);
 
     // Steer
     register_rest_route('yourparty/v1', '/control/steer', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
-            if (!current_user_can('manage_options')) return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
+            if (!current_user_can('manage_options'))
+                return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
             $resp = wp_remote_get(yourparty_api_base_url() . '/control/steer', ['timeout' => 5]);
-            if (is_wp_error($resp)) return $resp;
+            if (is_wp_error($resp))
+                return $resp;
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
-        'permission_callback' => function() { return current_user_can('manage_options'); }
+        'permission_callback' => function () {
+            return current_user_can('manage_options'); }
     ]);
 
     // NEW: Contact Form Endpoint
@@ -919,14 +969,14 @@ add_action('rest_api_init', function () {
                 $name = sanitize_text_field($request->get_param('name'));
                 $email = sanitize_email($request->get_param('email'));
                 $message = sanitize_textarea_field($request->get_param('message'));
-                
+
                 if (empty($name) || empty($email) || empty($message)) {
                     return new WP_Error('missing_fields', 'Bitte alle Felder ausfüllen.', ['status' => 400]);
                 }
 
                 // Rate Limit Check (reuse existing function)
                 if (!yourparty_check_rate_limit($_SERVER['REMOTE_ADDR'] ?? 'unknown')) {
-                     return new WP_Error('rate_limit', 'Zu viele Anfragen.', ['status' => 429]);
+                    return new WP_Error('rate_limit', 'Zu viele Anfragen.', ['status' => 429]);
                 }
 
                 $to = get_option('admin_email');
@@ -1024,7 +1074,7 @@ add_action('rest_api_init', function () {
             'callback' => function () {
                 $upload_dir = wp_upload_dir();
                 $status_file = $upload_dir['basedir'] . '/pve_status.json';
-                
+
                 $data = [
                     'pve' => null,
                     'last_updated' => null,
@@ -1050,7 +1100,8 @@ add_action('rest_api_init', function () {
 /**
  * Handle Contact Form Submission
  */
-function yourparty_handle_contact($request) {
+function yourparty_handle_contact($request)
+{
     // 1. Honeypot Check
     if (!empty($request['_honeypot'])) {
         // Return fake success to confuse bots
@@ -1069,14 +1120,14 @@ function yourparty_handle_contact($request) {
     $name = $request['name'];
     $email = $request['email'];
     $message = $request['message'];
-    
+
     $to = get_option('admin_email');
     $subject = "Neue Nachricht von $name (YourParty)";
-    
+
     $body = "Name: $name\n";
     $body .= "Email: $email\n\n";
     $body .= "Nachricht:\n$message\n";
-    
+
     $headers = ['Reply-To: ' . "$name <$email>"];
 
     // 4. Send Mail
