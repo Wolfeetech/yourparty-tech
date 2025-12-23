@@ -165,6 +165,41 @@
     color: #888;
 }
 
+/* Error State */
+.voting-error {
+    text-align: center;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.voting-error__icon {
+    font-size: 2rem;
+}
+
+.voting-error__message {
+    color: #888;
+    font-size: 0.95rem;
+}
+
+.voting-error__retry {
+    background: var(--neon-green, #00ff88);
+    color: black;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.voting-error__retry:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .live-voting__track-cards {

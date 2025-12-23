@@ -5,7 +5,7 @@
     // ========== CONFIGURATION ==========
     const CONFIG = {
         apiUrl: '/wp-json/yourparty/v1',
-        backendUrl: 'https://yourparty.tech', // Proxy to FastAPI
+        backendUrl: '/wp-json/yourparty/v1', // WordPress proxy to FastAPI
         pollInterval: 5000, // Poll for vote updates
         mode: 'track_voting' // 'track_voting' or 'vibe_tagging'
     };
@@ -43,7 +43,7 @@
     function renderTrackVotingUI() {
         state.widgetEl.innerHTML = `
             <div class="live-voting__header">
-                <h3 class="live-voting__title">🎵 VOTE FOR NEXT TRACK</h3>
+                <h3 class="live-voting__title">VOTE FOR NEXT TRACK</h3>
                 <span class="live-voting__status">LIVE</span>
             </div>
             <div class="live-voting__track-cards" id="track-cards">
@@ -100,15 +100,55 @@
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
+
+            // Check for backend error
+            if (data.error) {
+                console.warn('[LiveVoting] Backend returned error:', data.error);
+                renderError('Voting temporarily unavailable');
+                return;
+            }
+
             state.candidates = data.candidates || [];
             state.votes = data.votes || {};
 
             console.log('[LiveVoting] Candidates loaded:', state.candidates);
-            renderTrackCards();
+
+            if (state.candidates.length === 0) {
+                renderNoCandidates();
+            } else {
+                renderTrackCards();
+            }
         } catch (error) {
             console.error('[LiveVoting] Failed to fetch candidates:', error);
+            renderError('Could not load voting options');
         }
     }
+
+    function renderError(message) {
+        const cardsContainer = document.getElementById('track-cards');
+        if (!cardsContainer) return;
+
+        cardsContainer.innerHTML = `
+            <div class="voting-error">
+                <span class="voting-error__icon">⚠️</span>
+                <span class="voting-error__message">${message}</span>
+                <button class="voting-error__retry" onclick="window.dispatchEvent(new Event('retryVoting'))">Retry</button>
+            </div>
+        `;
+    }
+
+    function renderNoCandidates() {
+        const cardsContainer = document.getElementById('track-cards');
+        if (!cardsContainer) return;
+
+        cardsContainer.innerHTML = '<div class="no-candidates">No candidates available right now. Check back soon!</div>';
+    }
+
+    // Allow retry from error state
+    window.addEventListener('retryVoting', () => {
+        renderTrackVotingUI();
+        fetchCandidates();
+    });
 
     async function fetchVoteUpdates() {
         if (!state.candidates.length) return;

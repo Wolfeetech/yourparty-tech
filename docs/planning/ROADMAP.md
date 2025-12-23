@@ -143,4 +143,58 @@
 - [x] **Mission Control Mobile**: UI-Anpassungen für mobile Endgeräte (iPhone X Viewport). ✅ Done
 
 ---
-*Zuletzt aktualisiert: 2025-12-19 09:45*
+
+## 8. MTV-Style Track Voting Implementation (Dec 2025)
+
+**Ziel**: Ersetze abstrakte "Vibe Tagging" durch direktes Track-Voting (MTV TRL-Style).
+
+### 8.1 Backend API (✅ COMPLETED)
+- [x] **Endpoint `/vote-next-candidates`**: Liefert 3 zufällige Track-Kandidaten aus MongoDB
+- [x] **Endpoint `/vote-next-track`**: Nimmt User-Votes entgegen und broadcastet via WebSocket
+- [x] **Endpoint `/vote-next-winner`**: Berechnet Gewinner und resettet Voting-State
+- [x] **VotingState Management**: In-Memory State mit 3-Minuten Refresh-Logik
+
+### 8.2 Frontend UI (✅ COMPLETED)
+- [x] **`live-voting.js` Rewrite**: Track-Karten statt Vibe-Buttons
+- [x] **`live-voting.css` Update**: Card-Layout mit Hover-Effekten und Vote-Counts
+- [x] **Widget Container**: In `front-page.php` hinzugefügt
+- [ ] **End-to-End Testing**: Voting-Flow auf Live-Site testen
+
+### 8.3 n8n Automation (⏳ IN PROGRESS)
+- [x] **Workflow JSON erstellt**: 4-Node Workflow (Trigger → Candidates → Winner → Queue)
+- [ ] **Import in n8n**: Workflow via UI importieren
+- [ ] **AzuraCast Credential**: API Key in n8n hinterlegen
+- [ ] **Activation**: Workflow aktivieren und testen
+
+### 8.4 Critical Fixes (✅ COMPLETED)
+- [x] **Heart Button**: Super-Like Funktionalität (5-Sterne Rating)
+- [x] **Queue Time Display**: Echte Dauer-Berechnung statt Schätzungen
+- [x] **SSL Certificate**: `radio.yourparty.tech` Cert-Mismatch behoben
+
+**Status**: Backend + Frontend deployed, n8n Import pending
+
+---
+
+## 9. SSL Certificate Incident (Dec 2025)
+
+**Problem**: `radio.yourparty.tech` zeigte `ERR_CERT_COMMON_NAME_INVALID`
+
+### Root Cause Analysis
+- **22. Dez 14:05**: Manuell falsches Cert (#14 statt #12) zugewiesen
+- **User**: Wolf Prinz (via NPM UI)
+- **Impact**: 6h Downtime für AzuraCast-Zugriff
+
+### Resolution
+- [x] **NPM UI Disable/Enable**: Config neu generiert mit korrektem Cert
+- [x] **Incident Report**: Vollständige Dokumentation mit Prevention-Maßnahmen
+- [x] **Audit Log Review**: Change-History analysiert
+
+### Prevention Measures
+- [ ] **SSL Monitoring**: Expiry Alerts in NPM aktivieren
+- [ ] **Wildcard Cert**: `*.yourparty.tech` evaluieren
+- [ ] **Runbook**: Quick Recovery Procedure dokumentiert
+
+**Status**: ✅ Resolved, Dokumentation complete
+
+---
+*Zuletzt aktualisiert: 2025-12-23 11:00*

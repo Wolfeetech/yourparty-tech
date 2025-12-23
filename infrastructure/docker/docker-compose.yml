@@ -33,7 +33,7 @@ services:
       - WORDPRESS_DEBUG=${WP_DEBUG:-false}
     volumes:
       - wp_data:/var/www/html
-      - ./yourparty-tech:/var/www/html/wp-content/themes/yourparty-tech:ro
+      - ../../apps/web:/var/www/html/wp-content/themes/yourparty-tech:ro
     networks:
       - radio-net
 
@@ -52,7 +52,7 @@ services:
 
   # FastAPI Backend (Radio API)
   backend:
-    build: ./backend
+    build: ../../apps/api
     container_name: yourparty-api
     restart: unless-stopped
     ports:
@@ -78,7 +78,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./infrastructure/nginx/nginx-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/nginx-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
       - ${SSL_CERT_PATH:-./certs}:/etc/ssl/certs:ro
       - ${SSL_KEY_PATH:-./certs}:/etc/ssl/private:ro
     depends_on:

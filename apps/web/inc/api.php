@@ -711,6 +711,95 @@ add_action('rest_api_init', function () {
         ]
     );
 
+    // MTV-STYLE TRACK VOTING: Get candidates
+    register_rest_route(
+        'yourparty/v1',
+        '/vote-next-candidates',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                // Proxy to FastAPI backend
+                $api_url = yourparty_api_base_url() . '/vote-next-candidates';
+                
+                $response = wp_remote_get($api_url, [
+                    'timeout' => 5,
+                    'sslverify' => false
+                ]);
+
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] vote-next-candidates fetch failed: ' . $response->get_error_message());
+                    return rest_ensure_response([
+                        'candidates' => [],
+                        'votes' => [],
+                        'error' => 'Backend unavailable'
+                    ]);
+                }
+
+                $code = wp_remote_retrieve_response_code($response);
+                if ($code !== 200) {
+                    error_log('[YourParty] vote-next-candidates HTTP ' . $code);
+                    return rest_ensure_response([
+                        'candidates' => [],
+                        'votes' => [],
+                        'error' => 'Backend returned ' . $code
+                    ]);
+                }
+
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                
+                return rest_ensure_response($data ?: ['candidates' => [], 'votes' => []]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // MTV-STYLE TRACK VOTING: Submit vote
+    register_rest_route(
+        'yourparty/v1',
+        '/vote-next-track',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                // Rate limiting
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                if (!yourparty_check_rate_limit($ip)) {
+                    return new WP_Error('rate_limit', 'Too many requests', ['status' => 429]);
+                }
+
+                $track_id = sanitize_text_field($request->get_param('track_id'));
+                
+                if (empty($track_id)) {
+                    return new WP_Error('invalid_payload', 'track_id is required', ['status' => 400]);
+                }
+
+                // Proxy to FastAPI backend
+                $api_url = yourparty_api_base_url() . '/vote-next-track';
+                
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode([
+                        'track_id' => $track_id,
+                        'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
+                    ]),
+                    'timeout' => 5,
+                    'sslverify' => false
+                ]);
+
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] vote-next-track failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Vote submission failed', ['status' => 503]);
+                }
+
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
     register_rest_route(
         'yourparty/v1',
         '/schedule',

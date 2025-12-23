@@ -2,6 +2,12 @@
 
 Community-driven radio web application with mood-based playlists.
 
+> **⚠️ NEW STRUCTURE:** This repository has been reorganized into a clean monorepo.
+> - **Backend (FastAPI):** `/apps/api`
+> - **Frontend (WordPress Theme):** `/apps/web`
+> - **Infrastructure:** `/infrastructure` (nginx, docker, systemd)
+> - **Documentation:** `/docs` (planning, ops, network, ssl)
+
 ## Quick Start (Docker)
 
 ```bash
@@ -10,10 +16,12 @@ git clone https://github.com/Wolfeetech/yourparty-tech.git
 cd yourparty-tech
 
 # 2. Configure environment
-cp .env.example .env
-# Edit .env with your credentials
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+# Edit .env files with your credentials
 
 # 3. Start all services
+cd infrastructure/docker
 docker-compose up -d
 
 # 4. Access services
@@ -26,7 +34,7 @@ docker-compose up -d
 ```
 ┌─────────────────┐     ┌─────────────────┐
 │   WordPress     │────▶│   FastAPI       │
-│   (Theme)       │     │   (Backend)     │
+│   (/apps/web)   │     │   (/apps/api)   │
 └────────┬────────┘     └────────┬────────┘
          │                       │
          ▼                       ▼
@@ -54,10 +62,11 @@ docker-compose up -d
 
 ## Configuration
 
-See [DEPLOYMENT.md](yourparty-tech/DEPLOYMENT.md) for:
-- Required credentials
-- Hardcoded IPs to change
-- Post-deployment checklist
+See documentation in `/docs`:
+- **Deployment:** [docs/ops/DEPLOY_INSTRUCTIONS.md](docs/ops/DEPLOY_INSTRUCTIONS.md)
+- **Server Info:** [docs/ops/SERVER_INFO.md](docs/ops/SERVER_INFO.md)
+- **Planning:** [docs/planning/](docs/planning/)
+- **Network/VPN:** [docs/network/](docs/network/)
 
 ## External Dependencies
 

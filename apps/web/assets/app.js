@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿// Toast Notification System
+// Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {
   let container = document.querySelector('.toast-container');
   if (!container) {
@@ -32,9 +31,6 @@ const showToast = (title, message, type = 'success', duration = 4000) => {
     setTimeout(() => toast.remove(), 400);
   }, duration);
 };
-=======
-﻿import MoodModule from './js/modules/MoodModule.js';
->>>>>>> a2889fcc8dfa157dc367032fd81ed9b02a4d99c1
 
 const REST_BASE = (
   window.YourPartyConfig && window.YourPartyConfig.restBase
@@ -818,10 +814,9 @@ document.addEventListener("DOMContentLoaded", () => {
               cumulativeSeconds += duration;
             }
 
-            // Format as "in X:XX"
-            const minutes = Math.floor(cumulativeSeconds / 60);
-            const seconds = cumulativeSeconds % 60;
-            timeLabel = `in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            // Simplified format: only minutes, no "photo finish"
+            const minutes = Math.round(cumulativeSeconds / 60);
+            timeLabel = `in ~${minutes} min`;
           }
 
           queueList.innerHTML += `
