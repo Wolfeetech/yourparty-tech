@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿// Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {
   let container = document.querySelector('.toast-container');
@@ -31,6 +32,9 @@ const showToast = (title, message, type = 'success', duration = 4000) => {
     setTimeout(() => toast.remove(), 400);
   }, duration);
 };
+=======
+﻿import MoodModule from './js/modules/MoodModule.js';
+>>>>>>> a2889fcc8dfa157dc367032fd81ed9b02a4d99c1
 
 const REST_BASE = (
   window.YourPartyConfig && window.YourPartyConfig.restBase
@@ -72,6 +76,13 @@ const buildEndpoint = (slug) => `${REST_BASE}/${slug.replace(/^\//, "")}`;
 document.addEventListener("DOMContentLoaded", () => {
   const navToggle = document.getElementById("nav-toggle");
   const mobileMenu = document.getElementById("mobile-menu");
+
+  // Initialize Mood Module
+  if (window.YourPartyConfig) {
+    window.YourPartyAppInstance = window.YourPartyAppInstance || {};
+    window.YourPartyAppInstance.modules = window.YourPartyAppInstance.modules || {};
+    window.YourPartyAppInstance.modules.mood = new MoodModule(window.YourPartyConfig);
+  }
 
   // Audio Context Variables (Lifted Scope)
   let audioContext, analyser, dataArray, source;
