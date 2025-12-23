@@ -732,32 +732,81 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 /* iPhone X / Mobile Optimization */
 @media(max-width: 480px) {
     .control-dashboard-v2 {
-        padding: 80px 10px 100px;
+        padding: 85px 15px 140px; /* More bottom padding for stacked footer */
     }
     .brand-title { font-size: 18px; }
-    .user-badge { display: none; } /* Save header space */
+    .user-badge { display: none; } /* Clean header */
     
     /* Vibe Dashboard Compact */
-    .vibe-content { padding: 15px; gap: 15px; }
-    .dominant-mood { padding: 15px; }
-    .mood-bars { gap: 4px; }
+    .vibe-content { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 20px; 
+        padding: 15px; 
+    }
     
+    .dominant-mood { padding: 15px; }
+    
+    .vibe-stats {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .vibe-stats .stat { flex: 1; padding: 5px; }
+    .vibe-stats .stat-value { font-size: 16px; }
+
     /* Table: Hide complex columns */
     .cyber-table th:nth-child(4), .cyber-table td:nth-child(4), /* File */
     .cyber-table th:nth-child(5), .cyber-table td:nth-child(5)  /* Trend */
     { display: none; }
     
-    .track-title { font-size: 13px; }
+    .track-title { font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
     .track-artist { font-size: 10px; }
 
-    /* Footer: Prioritize Player */
-    .footer-right { display: none; } /* Hide volume/status on mobile */
-    .footer-center { display: flex; flex: 1; justify-content: center; }
-    .footer-left { flex: 0 0 auto; }
+    /* Footer: Stacked "Mission Control" Layout */
+    .control-footer {
+        flex-direction: column;
+        height: auto;
+        padding: 15px;
+        gap: 15px;
+        background: rgba(10, 10, 10, 0.98); /* Less transparent for readability */
+    }
+
+    /* Footer Row 1: Player Monitor (Full Width) */
+    .footer-left { 
+        width: 100%; 
+        justify-content: center;
+    }
+    .now-playing-monitor { 
+        width: 100%; 
+        max-width: none; 
+        justify-content: space-between;
+    }
+    .monitor-info { width: auto; flex: 1; }
+
+    /* Footer Row 2: Controls & Volume */
+    .footer-center {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    /* Hide Desktop Volume slider to save space, show simple VOL status or hide entirely */
+    .footer-right { display: none; } 
+
+    /* Big Touch Buttons */
+    .footer-btn {
+        flex: 1;
+        padding: 12px 0; /* Taller touch target */
+        font-size: 12px;
+        text-align: center;
+        justify-content: center;
+    }
     
-    /* Adjust Monitor for widths */
-    .now-playing-monitor { width: auto; max-width: 160px; }
-    #monitor-visualizer { width: 30px !important; }
+    /* Queue: Simplified */
+    .queue-item { padding: 10px; }
+    .queue-actions { display: none; } /* No admin actions on mobile queue to save space */
 }
 </style>
 
