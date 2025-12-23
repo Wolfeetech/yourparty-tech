@@ -57,7 +57,7 @@ if (!defined('YOURPARTY_STREAM_URL')) {
     $stream_url_option = get_option('yourparty_stream_url');
     define(
         'YOURPARTY_STREAM_URL',
-        $stream_url_option ?: YOURPARTY_AZURACAST_PUBLIC_URL . '/listen/radio.yourparty/radio.mp3'
+        $stream_url_option ?: 'https://yourparty.tech/radio-stream'
     );
 }
 

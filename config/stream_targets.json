@@ -1,8 +1,5 @@
 {
     "targets": [
-        "http://192.168.178.210/listen/radio.yourparty/radio.mp3",
-        "http://192.168.178.206:8000/stream",
-        "https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3"
-    ],
-    "failover_message": "Stream unavailable - Check configuration in config/stream_targets.json"
+        "http://192.168.178.210/listen/radio.yourparty/radio.mp3"
+    ]
 }

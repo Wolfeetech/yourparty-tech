@@ -62,12 +62,12 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     </div>
 
                     <!-- Mood/Rating Actions -->
-                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 10px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
-                         <button id="dislike-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer; margin-right: 15px;" title="Gefällt mir nicht" aria-label="Dislike this track">
-                            <span style="font-size: 1.2em; vertical-align: middle; pointer-events: none;" aria-hidden="true">👎</span>
+                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 15px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
+                         <button id="like-button" class="btn-glass-small" style="background: rgba(0, 255, 136, 0.1); border-color: var(--neon-green); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Gefällt mir" aria-label="Like this track">
+                            <span style="font-size: 1.2em; vertical-align: middle; pointer-events: none;" aria-hidden="true">❤️</span>
                          </button>
-                         <button id="mood-tag-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Set Vibe & Genre" aria-label="Open Mood Tagging Dialog" onclick="console.log('INLINE CLICK'); if(window.openMoodDialog){window.openMoodDialog();}else{var d=document.getElementById('mood-dialog');if(d){d.style.display='flex';d.classList.add('active');}else{alert('Mood Dialog loading...');}}">
-                            <span style="font-size: 1.2em; vertical-align: middle; margin-right: 5px; pointer-events: none;" aria-hidden="true">🏷️</span> TAG VIBE
+                         <button id="dislike-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Gefällt mir nicht" aria-label="Dislike this track">
+                            <span style="font-size: 1.2em; vertical-align: middle; pointer-events: none;" aria-hidden="true">👎</span>
                          </button>
                     </div>
 
@@ -83,10 +83,13 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
     </button>
                     </div>
 
-                    <!-- Next Track Preview (Marquee) -->
-                    <div class="next-track-preview" aria-live="polite">
-                        <span class="label">NEXT:</span>
-                        <span id="next-track-marquee">--</span>
+                    <!-- Queue / Next Tracks -->
+                    <div class="next-track-queue" aria-live="polite" style="margin-top: 20px; text-align: left; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px;">
+                        <span class="label" style="display:block; margin-bottom: 5px; color: var(--neon-green); font-size: 0.7rem;">COMING UP</span>
+                        <div id="queue-list" style="font-size: 0.85rem; color: #ccc;">
+                            <div class="queue-item skeleton" style="margin-bottom: 4px;">--</div>
+                            <div class="queue-item skeleton" style="opacity: 0.7;">--</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,6 +98,10 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
             <div class="vibe-deck" data-aos="fade-up">
                 <div class="deck-header">
                     <h3>CONTROL THE VIBE</h3>
+                </div>
+                
+                <!-- MTV-Style Voting Widget Container -->
+                <div class="live-voting-widget"></div>
                     <div class="deck-line"></div>
                     <!-- VOTE STATUS INDICATOR -->
                     <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;" aria-live="polite">AUTO MODE</div>
@@ -213,11 +220,13 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    height: 90vh; /* Keep it constrained so scroll indicator fits */
+    justify-content: center; /* Center everything, don't force apart */
+    gap: 30px; /* Natural consistent gap */
+    height: auto; /* Allow content to dictate height, but min-height will handle screen */
+    min-height: 90vh;
     width: 100%;
     max-width: 1200px;
-    padding: 20px 20px 80px 20px; /* More bottom padding for scroll indicator */
+    padding: 100px 20px 40px 20px; /* Top padding for header, bottom for scroll */
 }
 
 /* Branding */
@@ -346,8 +355,26 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     .glass-player { padding: 20px; }
     .player-cover { width: 180px; height: 180px; }
     .track-title { font-size: 1.5rem; }
-    .vibe-buttons { display: grid; grid-template-columns: 1fr 1fr; }
-    .hero-container { padding-bottom: 100px; } 
+    .track-artist { font-size: 0.9rem; color: #ccc; } /* Better Contrast */
+    .vibe-buttons { 
+        display: grid; 
+        grid-template-columns: repeat(2, 1fr); /* Force 2 columns */
+        gap: 8px; /* Tighter gap */
+        padding: 0 10px; /* Ensure internal padding prevents edge touching */
+    }
+    
+    .hero-container { 
+        padding-top: 100px; 
+        padding-bottom: 120px;
+        justify-content: flex-start; /* On mobile, start from top to fit keyboard/scroll */
+        gap: 20px;
+    } 
+    
+    .hero-logo { font-size: 2rem; } /* Prevent overlap */
+    .live-indicator { font-size: 0.7rem; }
+    
+    /* Ensure play button is large enough */
+    .play-fab { width: 70px; height: 70px; font-size: 24px; }
 }
 
 /* === MOOD DIALOG STYLES MOVED TO assets/mood-dialog.css === */

@@ -6,7 +6,7 @@
 **Core Rule**: Always finish tasks completely. Verify functionality before moving on. No half-baked solutions.
 **Headline Note**: *User dislikes "System Sound Precision". Needs replacement.*
 
-## Current State (2025-12-19)
+## Current State (2025-12-21)
 - **Workspace**: Reset/Re-initialized.
 - **Repository**: **MISSING** (User to provide URL).
 - **Environment**: Windows `StudioPC` (Local), Proxmox VE (Remote Host).
@@ -15,21 +15,22 @@
 - **Archive**: `_archive_frontend` (Unused React App).
 
 ## Insight & Audit (Browser)
-- **Status**: ✅ **ONLINE** (Database Connection Restored)
+- **Status**: ✅ **ONLINE** (Database & API Fully Integrated)
 - **Password**: ✅ `wp-config.php` sync with MariaDB (`YpRd!2024#SecureDB`)
-- **Metadata**: ✅ Junk test data (9 records) removed. `enrich_ratings.py` updated.
+- **Metadata**: ✅ Real data from Backend (FastAPI). No mocks.
 - **WebSocket**: ✅ `[Realtime] Connected` (API continues to run)
 - **Vote-Next**: ✅ Funktioniert (Steering-Votes werden gezählt)
 - **Rating-System**: ✅ 5-Sterne-Rating in MongoDB gespeichert
 - **Mood-Tagging**: ✅ Moods werden gespeichert + `top_mood` berechnet
+- **Dislikes**: ✅ Implemented (1-Star Rating = Dislike)
 - **MongoDB**: ✅ Verbindung wiederhergestellt (Container 202)
 - **ID3-Sync**: ✅ Code vorhanden, wird bei Rating/Mood getriggert
-- **Legal Pages**: ✅ Impressum & Datenschutz deployed
+- **Legal Pages**: ✅ Impressum & Datenschutz deployed & Content Verified.
 - **UI/UX**: Premium CSS deployed (Gradienten, subtile Animationen)
 - **New Feature**: **Overscroll Player** (Scroll down -> Fullscreen).
 - **Cleanup**: ✅ Confusing `frontend/` moved to `_archive_frontend`; Root artifacts removed.
 - **Storage**: ✅ Proxmox Thin Pool cleaned (reclaimed ~1.6TB).
-- **Mobile**: ✅ Control Dashboard optimized for iPhone X (375x812).
+- **Mobile**: ✅ Control Dashboard optimized for iPhone X (375x812). Stacked Footer.
 
 ## Tech Stack
 - **Frontend**: HTML5, Vanilla CSS (Premium/Dark Mode), JavaScript (Interactive elements).

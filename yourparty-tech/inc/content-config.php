@@ -21,16 +21,16 @@ function yourparty_content_defaults(): array
 
         // USP
         'usp_title_1' => 'Authentic Quality',
-        'usp_desc_1'  => 'Kein Bullshit. Wir liefern professionelle Eventtechnik und DJing ohne Kompromisse.',
+        'usp_desc_1'  => 'Kein Bullshit. Professionelle Eventtechnik und DJing ohne Kompromisse.',
         'usp_title_2' => 'Pro Audio',
-        'usp_desc_2'  => 'Unsere Systeme sind auf maximalen Druck und Klarheit ausgelegt.',
+        'usp_desc_2'  => 'High-End Systeme für maximalen Druck und absolute Klarheit.',
         'usp_title_3' => 'Live Vibe',
-        'usp_desc_3'  => 'Interaktives Radio - Bestimme den Sound des Abends mit.',
+        'usp_desc_3'  => 'Interaktives Radio – Bestimme den Sound des Abends mit.',
 
         // Radio
         'radio_eyebrow' => '24/7 Stream',
         'radio_title'   => 'Live on Air',
-        'radio_lead'    => 'Deep House, Tech House und elektronische Klassiker. Non-stop gemixt.',
+        'radio_lead'    => 'Deep House, Tech House und elektronische Klassiker. Non-stop im Mix.',
         'radio_history_title' => 'Zuletzt gespielt',
         'radio_cta_request' => 'Wünsch dir was',
 
@@ -39,30 +39,30 @@ function yourparty_content_defaults(): array
         'services_title'   => 'Was wir tun',
         
         'service_1_title' => 'Stage Management',
-        'service_1_desc'  => 'Wir koordinieren den Ablauf hinter den Kulissen, damit auf der Bühne alles glatt läuft.',
+        'service_1_desc'  => 'Koordination hinter den Kulissen. Damit auf der Bühne alles glatt läuft.',
         
-        'service_2_title' => 'Licht & Ton Design',
-        'service_2_desc'  => 'Perfekter Sound und Atmosphäre. Wir setzen dein Event ins richtige Licht.',
+        'service_2_title' => 'FOH & Licht Design',
+        'service_2_desc'  => 'Perfekter Sound, perfekte Atmosphäre. Wir setzen dein Event ins richtige Licht.',
         
-        'service_3_title' => 'Drohnenaufnahmen',
-        'service_3_desc'  => '4K Luftaufnahmen für einzigartige Perspektiven deines Events.',
+        'service_3_title' => '4K Luftaufnahmen',
+        'service_3_desc'  => 'Cinematische Drohnenaufnahmen für einzigartige Perspektiven.',
 
         // About
         'about_eyebrow' => 'Die Mission',
-        'about_title'   => 'Sound als physische Erfahrung',
-        'about_lead'    => 'Wir sind Ingenieure und DJs mit einer Obsession für perfekten Klang.',
-        'about_text'    => 'Was als Leidenschaft für elektronische Musik begann, ist heute eine Manufaktur für professionelle Audiotechnik. Wir glauben, dass Musik mehr ist als Schallwellen – sie ist Energie.',
+        'about_title'   => 'Sound ist Energie.',
+        'about_lead'    => 'Veranstaltungstechniker und DJs mit einer Obsession für Perfektion.',
+        'about_text'    => 'Was als Leidenschaft für elektronische Musik begann, ist heute ein Standard für professionelle Event-Technik. Wir glauben, dass Qualität hörbar ist.',
 
         // Contact
         'contact_eyebrow' => 'Kontakt',
         'contact_title'   => 'Start a Project',
         'contact_lead'    => 'Planst du einen Club, ein Festival oder suchst du das perfekte System?',
-        'contact_email'   => 'engineering@yourparty.tech',
-        'contact_phone'   => '+49 151 12345678', // Placeholder
+        'contact_email'   => 'wolf@yourparty.tech',
+        'contact_phone'   => '', 
 
         // Footer
-        'footer_tagline'  => 'Events mit Charakter & Herz am Bodensee.',
-        'footer_copyright' => '© 2026 YourParty Tech. Alle Rechte vorbehalten.',
+        'footer_tagline'  => 'Wir machen Events legendär.',
+        'footer_copyright' => '© ' . date('Y') . ' YourParty Tech. Authentic Quality.',
     ];
 }
 

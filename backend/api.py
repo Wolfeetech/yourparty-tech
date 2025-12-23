@@ -997,6 +997,144 @@ async def set_steering(request: SteeringRequest):
 class VoteNextRequest(BaseModel):
     vote: str # energetic, chill, etc.
 
+# ========== MTV-STYLE TRACK VOTING ==========
+# Global state for track voting
+class VotingState:
+    def __init__(self):
+        self.candidates = []  # List of 3 track candidates
+        self.votes = {}  # {track_id: vote_count}
+        self.last_refresh = None
+
+voting_state = VotingState()
+
+@app.get("/vote-next-candidates")
+async def get_vote_candidates():
+    """
+    Returns 3 random track candidates for voting.
+    Refreshes every 3 minutes or when called after winner selection.
+    """
+    import random
+    from datetime import datetime, timedelta
+    
+    # Refresh candidates if needed
+    now = datetime.now()
+    should_refresh = (
+        not voting_state.candidates or
+        not voting_state.last_refresh or
+        (now - voting_state.last_refresh) > timedelta(minutes=3)
+    )
+    
+    if should_refresh:
+        logger.info("Refreshing track candidates...")
+        
+        # Get tracks from MongoDB
+        if state.mongo_client:
+            try:
+                # Get all tracks with rating > 3.5
+                all_tracks = state.mongo_client.db.tracks.find(
+                    {"metadata.title": {"$exists": True}},
+                    limit=100
+                ).to_list(length=100)
+                
+                if len(all_tracks) >= 3:
+                    # Select 3 random tracks
+                    candidates = random.sample(all_tracks, 3)
+                    voting_state.candidates = [
+                        {
+                            "id": str(track.get("_id", track.get("song_id", ""))),
+                            "title": track.get("metadata", {}).get("title", "Unknown"),
+                            "artist": track.get("metadata", {}).get("artist", "Unknown"),
+                            "cover_art": track.get("metadata", {}).get("cover_art", ""),
+                            "media_id": track.get("azuracast_media_id", "")
+                        }
+                        for track in candidates
+                    ]
+                    voting_state.votes = {c["id"]: 0 for c in voting_state.candidates}
+                    voting_state.last_refresh = now
+                    logger.info(f"Selected candidates: {[c['title'] for c in voting_state.candidates]}")
+                else:
+                    # Fallback if not enough tracks
+                    voting_state.candidates = []
+            except Exception as e:
+                logger.error(f"Error fetching candidates: {e}")
+                voting_state.candidates = []
+        else:
+            # Mock candidates if MongoDB not connected
+            voting_state.candidates = [
+                {"id": "1", "title": "Track A", "artist": "Artist A", "cover_art": "", "media_id": "1"},
+                {"id": "2", "title": "Track B", "artist": "Artist B", "cover_art": "", "media_id": "2"},
+                {"id": "3", "title": "Track C", "artist": "Artist C", "cover_art": "", "media_id": "3"}
+            ]
+            voting_state.votes = {"1": 0, "2": 0, "3": 0}
+            voting_state.last_refresh = now
+    
+    return {
+        "candidates": voting_state.candidates,
+        "votes": voting_state.votes,
+        "expires_at": (voting_state.last_refresh + timedelta(minutes=3)).isoformat() if voting_state.last_refresh else None
+    }
+
+class TrackVoteRequest(BaseModel):
+    track_id: str
+    user_id: str = "anonymous"
+
+@app.post("/vote-next-track")
+async def vote_for_track(request: TrackVoteRequest):
+    """
+    Submit a vote for one of the candidate tracks.
+    """
+    if request.track_id not in voting_state.votes:
+        raise HTTPException(status_code=400, detail="Invalid track_id")
+    
+    # Increment vote count
+    voting_state.votes[request.track_id] += 1
+    
+    logger.info(f"Vote received for track {request.track_id}. Current votes: {voting_state.votes}")
+    
+    # Broadcast vote update to all clients
+    await manager.broadcast({
+        "type": "vote_update",
+        "data": {
+            "track_id": request.track_id,
+            "votes": voting_state.votes
+        }
+    })
+    
+    return {
+        "success": True,
+        "track_id": request.track_id,
+        "current_votes": voting_state.votes
+    }
+
+@app.get("/vote-next-winner")
+async def get_vote_winner():
+    """
+    Returns the winning track based on votes.
+    Called by n8n workflow to queue the winner.
+    """
+    if not voting_state.votes:
+        raise HTTPException(status_code=404, detail="No active voting session")
+    
+    # Find winner
+    winner_id = max(voting_state.votes, key=voting_state.votes.get)
+    winner_track = next((c for c in voting_state.candidates if c["id"] == winner_id), None)
+    
+    if not winner_track:
+        raise HTTPException(status_code=404, detail="Winner track not found")
+    
+    logger.info(f"Winner: {winner_track['title']} with {voting_state.votes[winner_id]} votes")
+    
+    # Reset voting state for next round
+    voting_state.candidates = []
+    voting_state.votes = {}
+    voting_state.last_refresh = None
+    
+    return {
+        "winner": winner_track,
+        "votes": voting_state.votes.get(winner_id, 0),
+        "media_id": winner_track.get("media_id", "")
+    }
+
 @app.post("/vote-next")
 async def vote_next(request: VoteNextRequest):
     """

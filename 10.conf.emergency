@@ -10,9 +10,9 @@ server {
 
   server_name radio.yourparty.tech;
 
-  # SSL - FIXED: Use yourparty.tech certificate
-  ssl_certificate /etc/letsencrypt/live/npm-1/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/npm-1/privkey.pem;
+  # SSL - EMERGENCY REVERT: Use same cert as yourparty.tech (npm-30)
+  ssl_certificate /etc/letsencrypt/live/npm-30/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/npm-30/privkey.pem;
 
   # HSTS
   add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;

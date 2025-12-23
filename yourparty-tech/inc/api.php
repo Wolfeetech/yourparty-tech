@@ -37,7 +37,7 @@ function yourparty_http_defaults(): array
 {
     $headers = [
         'Accept' => 'application/json',
-        'Host' => 'radio.yourparty.tech', // Ensure correct vhost routing
+        // 'Host' => 'radio.yourparty.tech', // Removed to prevent 400 Bad Request on internal IP
     ];
 
     if (defined('YOURPARTY_AZURACAST_API_KEY') && YOURPARTY_AZURACAST_API_KEY) {
@@ -397,7 +397,7 @@ function yourparty_attach_rating_to_now_playing(array $data): array
 
 function yourparty_rest_get_status(WP_REST_Request $request)
 {
-    $data = yourparty_fetch_azuracast('/api/nowplaying/1');
+    $data = yourparty_fetch_azuracast('/api/nowplaying_static/radio.yourparty.json');
 
     if (is_wp_error($data)) {
         return $data;
@@ -411,7 +411,7 @@ function yourparty_rest_get_status(WP_REST_Request $request)
 function yourparty_rest_get_history(WP_REST_Request $request)
 {
     // Use public endpoint instead of protected station endpoint
-    $data = yourparty_fetch_azuracast('/api/nowplaying/1');
+    $data = yourparty_fetch_azuracast('/api/nowplaying_static/radio.yourparty.json');
 
     if (is_wp_error($data)) {
         return $data;
@@ -717,7 +717,8 @@ add_action('rest_api_init', function () {
         [
             'methods' => WP_REST_Server::READABLE,
             'callback' => function () {
-                $data = yourparty_fetch_azuracast('/api/station/1/schedule');
+                // Use correct station slug
+                $data = yourparty_fetch_azuracast('/api/station/radio.yourparty/schedule');
                 if (is_wp_error($data)) {
                     return $data;
                 }
@@ -733,7 +734,23 @@ add_action('rest_api_init', function () {
         [
             'methods' => WP_REST_Server::READABLE,
             'callback' => function () {
-                $data = yourparty_fetch_azuracast('/api/station/1/requests');
+                $data = yourparty_fetch_azuracast('/api/station/radio.yourparty/requests');
+                if (is_wp_error($data)) {
+                    return $data;
+                }
+                return rest_ensure_response($data);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    register_rest_route(
+        'yourparty/v1',
+        '/queue',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $data = yourparty_fetch_azuracast('/api/station/radio.yourparty/queue'); 
                 if (is_wp_error($data)) {
                     return $data;
                 }

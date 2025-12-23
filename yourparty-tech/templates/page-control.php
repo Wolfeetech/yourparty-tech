@@ -37,7 +37,7 @@ if (!is_user_logged_in()) {
         /* INLINE CRITICAL CSS FOR LOGIN ONLY */
         body { background: #000; color: #fff; margin: 0; font-family: 'Outfit', sans-serif; }
         .control-login-wrapper { display: flex; align-items: center; justify-content: center; height: 100vh; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
-        .glass-panel { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
+        .glass-panel { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
         .neon-text { color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.5); text-align: center; margin-bottom: 5px; font-weight: 800; letter-spacing: -0.02em; }
         .subtitle { text-align: center; color: var(--emerald, #00ff88); font-size: 10px; letter-spacing: 0.2em; margin-bottom: 30px; opacity: 0.8; }
         .cyber-input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 15px; margin-bottom: 15px; border-radius: 8px; font-family: 'Inter', monospace; box-sizing: border-box; transition: all 0.3s ease; }
@@ -70,6 +70,23 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
     $payload = ['mode' => $_POST['steering_mode'], 'target' => $_POST['steering_target'] ?: null];
     wp_remote_post("https://api.yourparty.tech/control/steer", ['body' => json_encode($payload), 'headers' => ['Content-Type' => 'application/json']]);
     wp_redirect(add_query_arg('steering_updated', '1')); exit;
+    wp_redirect(add_query_arg('steering_updated', '1')); exit;
+}
+
+// Handle Queue Removal (Admin)
+if ($is_admin && isset($_POST['remove_queue_item']) && wp_verify_nonce($_POST['_wpnonce'], 'yourparty_control_action')) {
+    if (defined('YOURPARTY_AZURACAST_BASE_URL') && defined('YOURPARTY_AZURACAST_API_KEY')) {
+        $station_id = 1;
+        $queue_id = intval($_POST['queue_item_id']); // AzuraCast unique ID
+        $api_url = rtrim(YOURPARTY_AZURACAST_BASE_URL, '/') . "/api/station/$station_id/queue/$queue_id";
+        
+        // DELETE Request
+        wp_remote_request($api_url, array_merge(yourparty_http_defaults(), [
+            'method' => 'DELETE',
+            'timeout' => 5
+        ]));
+    }
+    wp_redirect(add_query_arg('queue_removed', '1')); exit;
 }
 
 // --- DATA FETCH ---
@@ -99,7 +116,7 @@ $queue_data = json_decode(wp_remote_retrieve_body($queue_response), true);
 if (!is_array($queue_data)) $queue_data = [];
 
 // Fetch Now Playing
-$np_response = wp_remote_get("$azura_base/api/nowplaying/1", array_merge(yourparty_http_defaults(), ['timeout' => 5]));
+$np_response = wp_remote_get("$azura_base/api/nowplaying_static/radio.yourparty.json", array_merge(yourparty_http_defaults(), ['timeout' => 5]));
 $np_data = json_decode(wp_remote_retrieve_body($np_response), true);
 $now_playing = $np_data['now_playing']['song'] ?? null;
 $listeners = $np_data['listeners']['current'] ?? 0;
@@ -278,9 +295,15 @@ get_header();
                     </div>
                     <?php if ($is_admin): ?>
                     <div class="queue-actions">
-                        <button class="queue-btn move-up" title="Move Up">▲</button>
-                        <button class="queue-btn move-down" title="Move Down">▼</button>
-                        <button class="queue-btn remove" title="Remove">✕</button>
+                        <button class="queue-btn move-up" title="Move Up (Coming Soon)" disabled style="opacity:0.3; cursor:not-allowed;">▲</button>
+                        <button class="queue-btn move-down" title="Move Down (Coming Soon)" disabled style="opacity:0.3; cursor:not-allowed;">▼</button>
+                        
+                        <form method="post" style="display:inline;" onsubmit="return confirm('Remove track from queue?');">
+                            <?php wp_nonce_field('yourparty_control_action'); ?>
+                            <input type="hidden" name="remove_queue_item" value="1">
+                            <input type="hidden" name="queue_item_id" value="<?php echo esc_attr($item['id']); ?>">
+                            <button type="submit" class="queue-btn remove" title="Remove Track">✕</button>
+                        </form>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -489,6 +512,7 @@ body { background: var(--bg-dark); }
 .deck-panel {
     background: var(--glass);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 0;
@@ -556,7 +580,7 @@ body { background: var(--bg-dark); }
 .data-table-wrapper { display: none; } 
 .data-table-wrapper.active { display: block; } 
 .mood-btn.active { border-color: var(--emerald); color: var(--emerald); background: rgba(16, 185, 129, 0.1); } 
-.control-footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(10, 10, 10, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 1000; backdrop-filter: blur(10px); } 
+.control-footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(10, 10, 10, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 1000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); } 
 .footer-left, .footer-center, .footer-right { display: flex; align-items: center; gap: 20px; } 
 .footer-btn { background: #222; border: 1px solid #333; color: #fff; padding: 6px 12px; font-family: var(--font-display); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; border-radius: 2px; transition: all 0.2s; } 
 .footer-btn:hover { background: #333; border-color: #555; } 
@@ -732,16 +756,22 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 /* iPhone X / Mobile Optimization */
 @media(max-width: 480px) {
     .control-dashboard-v2 {
-        padding: 85px 15px 140px; /* More bottom padding for stacked footer */
+        padding: 80px 15px 140px; /* Optimized bottom padding */
     }
     .brand-title { font-size: 18px; }
-    .user-badge { display: none; } /* Clean header */
+    .user-badge { display: none; }
     
+    /* Tiles / Panels */
+    .vibe-overview, .queue-panel, .deck-panel {
+        margin-bottom: 15px; /* Consistent smaller gap on mobile */
+    }
+    .dashboard-grid { display: flex; flex-direction: column; gap: 15px; }
+
     /* Vibe Dashboard Compact */
     .vibe-content { 
         display: flex; 
         flex-direction: column; 
-        gap: 20px; 
+        gap: 15px; 
         padding: 15px; 
     }
     
@@ -752,7 +782,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
         justify-content: space-between;
         gap: 10px;
     }
-    .vibe-stats .stat { flex: 1; padding: 5px; }
+    .vibe-stats .stat { flex: 1; padding: 10px 5px; } /* Better touch padding */
     .vibe-stats .stat-value { font-size: 16px; }
 
     /* Table: Hide complex columns */
@@ -760,55 +790,101 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
     .cyber-table th:nth-child(5), .cyber-table td:nth-child(5)  /* Trend */
     { display: none; }
     
-    .track-title { font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+    .track-title { font-size: 13px; max-width: 140px; }
     .track-artist { font-size: 10px; }
 
     /* Footer: Stacked "Mission Control" Layout */
     .control-footer {
         flex-direction: column;
         height: auto;
-        padding: 15px;
+        padding: 15px 20px 25px; /* More bottom padding for Safe Area (Home Indicator) */
         gap: 15px;
-        background: rgba(10, 10, 10, 0.98); /* Less transparent for readability */
+        background: rgba(10, 10, 10, 0.98);
+        border-top: 1px solid rgba(255,255,255,0.15);
     }
 
-    /* Footer Row 1: Player Monitor (Full Width) */
+    /* Footer Row 1: Player Monitor */
     .footer-left { 
         width: 100%; 
         justify-content: center;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 15px;
     }
     .now-playing-monitor { 
         width: 100%; 
         max-width: none; 
         justify-content: space-between;
+        background: transparent;
+        border: none;
+        padding: 0;
     }
-    .monitor-info { width: auto; flex: 1; }
+    .monitor-info { width: auto; flex: 1; text-align: left; }
 
-    /* Footer Row 2: Controls & Volume */
+    /* Footer Row 2: Controls */
     .footer-center {
         display: flex;
         width: 100%;
         justify-content: space-between;
         gap: 10px;
     }
-
-    /* Hide Desktop Volume slider to save space, show simple VOL status or hide entirely */
-    .footer-right { display: none; } 
+    .footer-right { display: none !important; } /* Hard hide volume on mobile */
 
     /* Big Touch Buttons */
     .footer-btn {
         flex: 1;
-        padding: 12px 0; /* Taller touch target */
-        font-size: 12px;
-        text-align: center;
-        justify-content: center;
+        padding: 14px 0;
+        font-size: 11px; /* Slightly smaller text */
+        border-radius: 6px;
+        white-space: nowrap;
     }
     
     /* Queue: Simplified */
     .queue-item { padding: 10px; }
-    .queue-actions { display: none; } /* No admin actions on mobile queue to save space */
+    .queue-actions { display: none; }
+    
+    /* Footer Monitor Fixes */
+    .now-playing-monitor { padding: 5px 0; }
+    #monitor-title { max-width: 180px; } /* Force truncate */
 }
 </style>
+
+<!-- MONITOR AUDIO ENGINE -->
+<audio id="monitor-stream" preload="none">
+    <source src="<?php echo esc_url($stream_url); ?>" type="audio/mpeg">
+</audio>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // === MONITOR BUTTON LOGIC ===
+    const monitorBtn = document.getElementById('mini-play-toggle');
+    const audio = document.getElementById('monitor-stream');
+    const volSlider = document.getElementById('monitor-volume');
+    const icon = monitorBtn.querySelector('.play-state-icon');
+    
+    if(monitorBtn && audio) {
+        monitorBtn.addEventListener('click', function() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    icon.textContent = '⏸';
+                    monitorBtn.classList.add('active');
+                    monitorBtn.style.borderColor = 'var(--emerald)';
+                }).catch(e => console.error("Stream Error:", e));
+            } else {
+                audio.pause();
+                icon.textContent = '▶';
+                monitorBtn.classList.remove('active');
+                monitorBtn.style.borderColor = '';
+            }
+        });
+        
+        // Volume
+        if(volSlider) {
+            volSlider.addEventListener('input', (e) => audio.volume = e.target.value / 100);
+            audio.volume = volSlider.value / 100;
+        }
+    }
+});
+</script>
 
 <?php get_footer(); ?>
 
@@ -889,7 +965,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const monitorStatus = document.querySelector('.status-indicator span');
     
     function updateMonitor() {
-        console.log("Polling Status...");
+        // console.log("Polling Status...");
         fetch(apiStatus, { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
@@ -991,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Fallback: If no listener, alert user (or implement dialog here if missing)
         // Usually YourPartyAppInstance handles this.
-        console.log("Requesting Mood Tag for", id);
+        // console.log("Requesting Mood Tag for", id);
     };
 });
 </script>

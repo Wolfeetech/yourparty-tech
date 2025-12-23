@@ -7,14 +7,14 @@
 - **Verification**: Site returns HTTP 200.
 
 ### 0.1 Critical Loose Ends (MUST FIX NEXT)
-- [ ] **NPM Proxy 502**: `api.yourparty.tech` returns 502. Needs Nginx Proxy Manager configuration fix (Destination: `192.168.178.211:8000`).
-- [x] **Content Verification**: Validate Impressum/Datenschutz pages verified Live (Content visible).
-- [ ] **Async Tasks**: Refactor `/scan` to use `BackgroundTasks` in FastAPI to prevent blocking.
+- [x] **NPM Proxy 502**: `api.yourparty.tech` returns 502. FIXED via Config Update (Upstream: `192.168.178.211:8000`).
+- [x] **Content Verification**: Validate Impressum/Datenschutz pages verified Live (Content visible). ✅ FIXED via UTF-8 Script
+- [x] **Frontend Refactor**: Fixed Homepage Spacing & Voting UI Redundancy.
 
 ### 0.2 Frontend & Theme Cleanup
 - [ ] **Fix Theme Root**: Remove artifacts (`README.md`, `SERVER_INFO.md`, `main.js`) from `/wp-content/themes/yourparty-tech/`.
-- [ ] **Verified `main.js`**: Ensure `src/js/main.js` is reachable.
-- [ ] **Mobile-perfect Control Dashboard**: Final touch for "Admin on the Dancefloor" (Responsive UI).
+- [x] **Verified `main.js`**: Ensure `src/js/main.js` is reachable.
+- [x] **Mobile-perfect Control Dashboard**: Final touch for "Admin on the Dancefloor" (Responsive UI). ✅ STACKED FOOTER
 
 ### 0.3 Backend Hardening
 - [x] **Secrets Management**: Audit `api.py` (Fixed).
@@ -44,7 +44,7 @@
 - [x] Visualizer (Deep Space Background).
 - [x] Brand Copywriting ("Sonay Audio Engineering").
 - [x] Admin Dashboard (Mission Control) wired to Python Backend.
-- [ ] **Mobile Optimierung**: Tested on iPhone X viewport (375x812).
+- [x] **Mobile Optimierung**: Mobile Grid fixed, Voting UI consolidated, Control Panel Footer stacked.
 - [ ] **JS Standardisierung**:
     - [ ] Remove remaining `[DEBUG]` logs from `app.js` and modules.
     - [ ] Standardize DOM IDs (Clean up `immersive-` fallbacks).
@@ -78,7 +78,7 @@
 2.  **🔥 Cleanup & Stability**:
     - [x] **Backup**: Full Server Snapshot (`.tar.gz`) for Backend/Frontend stored offline.
     - [ ] **Proxmox Space**: Delete unused CTs immediately.
-    - [ ] **Fix DB Connection (LOSE ENDE)**: `yourparty.tech` currently shows Database Error. Check CT 208 Status.
+    - [x] **Fix DB Connection (LOSE ENDE)**: `yourparty.tech` currently shows Database Error. Check CT 208 Status. (SOLVED)
 
 2.  **💾 Datenbank Persistence (Kein Mock mehr)**:
     - [x] `/rate` Endpoint an MongoDB anschließen✅ (Verified functionality)
@@ -131,7 +131,7 @@
 
 ### 7.3 Content & Social Proof
 - [x] **Kontakt-Email**: Auf `wolf@yourparty.tech` aktualisiert.
-- [ ] **Content-Refactor (LOSE ENDE)**: Großer Content-Rewrite wurde wegen Encoding-Problemen (Umlaute) zurückgerollt. Muss via WordPress Customizer oder UTF-8 Deployment nachgeholt werden.
+- [x] **Content-Refactor**: Content komplett auf "Authentic Quality" umgestellt und Umlaute gefixt (via `deploy_content_utf8.php`).
 - [x] **Statische Testimonials**: In `references.php` vorbereitet (Fallback für fehlende Google API).
 
 ### [LOSE ENDEN & OFFENE AUFGABEN AUS DIESEM CHAT]
@@ -140,7 +140,7 @@
 - [ ] **API Security**: Globaler Exception Handler in `backend/api.py` implementiert (geplant).
 - [ ] **API Polling**: SSL Verification Problem bei AzuraCast-Abfrage (CT 211 -> VM 210) lösen.
 - [ ] **Frontend Rendering**: `StatusManager.js` Datenmapping prüfen (200 OK aber keine Daten-Anzeige).
-- [ ] **Mission Control Mobile**: UI-Anpassungen für mobile Endgeräte (iPhone X Viewport).
+- [x] **Mission Control Mobile**: UI-Anpassungen für mobile Endgeräte (iPhone X Viewport). ✅ Done
 
 ---
 *Zuletzt aktualisiert: 2025-12-19 09:45*

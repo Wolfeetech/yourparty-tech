@@ -215,12 +215,12 @@ document.addEventListener("DOMContentLoaded", () => {
         analyser.smoothingTimeConstant = 0.88;
         const bufferLength = analyser.frequencyBinCount;
         dataArray = new Uint8Array(bufferLength);
-        console.log('[Visualizer] AudioContext created');
+        // console.log('[Visualizer] AudioContext created');
       }
 
       if (audioContext.state === 'suspended') {
         audioContext.resume();
-        console.log('[Visualizer] AudioContext resumed');
+        // console.log('[Visualizer] AudioContext resumed');
       }
 
       // Connect source (may need reconnection after load())
@@ -230,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
           source.connect(analyser);
           analyser.connect(audioContext.destination);
           sourceConnected = true;
-          console.log('[Visualizer] MediaElementSource connected');
+          // console.log('[Visualizer] MediaElementSource connected');
         } catch (e) {
           // This is expected if already connected
           if (e.name === 'InvalidStateError') {
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const icon = isPaused ? "▶" : "❚❚";
       const label = isPaused ? "Stream starten" : "Stream pausieren";
 
-      console.log('[Player] updateIcon called, paused:', isPaused);
+      // console.log('[Player] updateIcon called, paused:', isPaused);
 
       // Main Player
       if (playToggleIcon) {
@@ -659,56 +659,56 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const renderSchedule = (items = []) => {
-    if (!scheduleList) return;
-    scheduleList.innerHTML = "";
+    // 1. Update Main Schedule Section (Bottom)
+    if (scheduleList) {
+      scheduleList.innerHTML = "";
+      if (!items.length) {
+        const empty = document.createElement("li");
+        empty.className = "schedule-item";
+        empty.innerHTML = "<strong>Keine Einträge</strong><small>Der Programmplan wird geladen.</small>";
+        scheduleList.appendChild(empty);
+      } else {
+        const now = Date.now() / 1000;
+        items.slice(0, 5).forEach((entry) => {
+          const li = document.createElement("li");
+          const startTs = entry.start_timestamp ?? entry.start ?? entry.timestamp;
+          const endTs = entry.end_timestamp ?? entry.end;
+          const isActive = now >= startTs && now < endTs;
+          li.className = `schedule-item ${isActive ? "schedule-item--active" : ""}`;
+          const title = fallback(entry.name ?? entry.title, "Show");
+          const start = formatDateTime(startTs);
+          const end = formatDateTime(endTs);
+          const description = fallback(entry.description, "");
 
-    if (!items.length) {
-      const empty = document.createElement("li");
-      empty.className = "schedule-item";
-      empty.innerHTML =
-        "<strong>Keine Einträge</strong><small>Der Programmplan wird geladen.</small>";
-      scheduleList.appendChild(empty);
-      return;
+          let progressHtml = "";
+          if (isActive && startTs && endTs) {
+            const duration = endTs - startTs;
+            const elapsed = now - startTs;
+            const percent = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+            progressHtml = `<div class="schedule-progress"><div class="schedule-progress-bar" style="width: ${percent}%"></div></div>`;
+          }
+
+          li.innerHTML = `
+                     <div class="schedule-time"><span>${start}</span></div>
+                     <div class="schedule-content">
+                         <strong>${title}</strong>
+                         <small>${end !== "--:--" ? `Bis ${end}` : ""}</small>
+                         ${description ? `<span class="schedule-desc">${description}</span>` : ""}
+                         ${isActive ? '<span class="status-pill status-pill--online">Live</span>' : ""}
+                         ${progressHtml}
+                     </div>`;
+          scheduleList.appendChild(li);
+        });
+      }
     }
 
-    const now = Date.now() / 1000;
-
-    items.slice(0, 5).forEach((entry) => {
-      const li = document.createElement("li");
-      const startTs = entry.start_timestamp ?? entry.start ?? entry.timestamp;
-      const endTs = entry.end_timestamp ?? entry.end;
-
-      const isActive = now >= startTs && now < endTs;
-      li.className = `schedule-item ${isActive ? "schedule-item--active" : ""}`;
-
-      const title = fallback(entry.name ?? entry.title, "Show");
-      const start = formatDateTime(startTs);
-      const end = formatDateTime(endTs);
-      const description = fallback(entry.description, "");
-
-      // Calculate progress if active
-      let progressHtml = "";
-      if (isActive && startTs && endTs) {
-        const duration = endTs - startTs;
-        const elapsed = now - startTs;
-        const percent = Math.min(100, Math.max(0, (elapsed / duration) * 100));
-        progressHtml = `<div class="schedule-progress"><div class="schedule-progress-bar" style="width: ${percent}%"></div></div>`;
-      }
-
-      li.innerHTML = `
-        <div class="schedule-time">
-            <span>${start}</span>
-        </div>
-        <div class="schedule-content">
-            <strong>${title}</strong>
-            <small>${end !== "--:--" ? `Bis ${end}` : ""}</small>
-            ${description ? `<span class="schedule-desc">${description}</span>` : ""}
-            ${isActive ? '<span class="status-pill status-pill--online">Live</span>' : ""}
-            ${progressHtml}
-        </div>
-      `;
-      scheduleList.appendChild(li);
-    });
+    // 2. Update Player Queue (Top - Next 3 Tracks)
+    const queueList = document.getElementById('queue-list');
+    if (queueList) {
+      queueList.innerHTML = "";
+      // Filter for FUTURE tracks only
+      // Queue logic removed (moved to renderQueue)
+    }
   };
 
   const fetchStatus = async () => {
@@ -769,6 +769,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setScheduleSkeleton();
     }
     try {
+      // 1. Fetch Schedule (Shows)
       const response = await fetch(buildEndpoint("schedule"));
       if (!response.ok) throw new Error(`Schedule HTTP ${response.status}`);
       const data = await response.json();
@@ -777,6 +778,71 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Schedule fetch failed:", error);
       renderSchedule([]);
+    }
+  };
+
+  const renderQueue = (items = []) => {
+    const queueList = document.getElementById('queue-list');
+    if (queueList) {
+      queueList.innerHTML = "";
+
+      if (!items.length) {
+        queueList.innerHTML = '<div class="queue-item" style="color:#666;">Warte auf Titel...</div>';
+      } else {
+        // Items usually come from /station/queue as a list
+        let cumulativeSeconds = 0;
+
+        items.slice(0, 3).forEach((entry, index) => {
+          const title = fallback(entry.song?.title ?? entry.title, "Musik");
+          const artist = fallback(entry.song?.artist ?? entry.artist, "");
+
+          // Calculate real time based on song durations
+          let timeLabel = "";
+          if (index === 0) {
+            timeLabel = "Next";
+          } else {
+            // Add duration of previous songs to get cumulative time
+            for (let i = 0; i < index; i++) {
+              const duration = items[i]?.song?.duration ?? items[i]?.duration ?? 180; // Default 3 min if unknown
+              cumulativeSeconds += duration;
+            }
+
+            // Format as "in X:XX"
+            const minutes = Math.floor(cumulativeSeconds / 60);
+            const seconds = cumulativeSeconds % 60;
+            timeLabel = `in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+          }
+
+          queueList.innerHTML += `
+                <div class="queue-item" style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding:4px 0;">
+                    <div style="display:flex; flex-direction:column; max-width:80%;">
+                        <span style="color:#eee; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</span>
+                        ${artist ? `<span style="color:#aaa; font-size:0.8em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${artist}</span>` : ''}
+                    </div>
+                    <span style="color:var(--neon-green); font-size:0.8em; opacity:0.8;">${timeLabel}</span>
+                </div>`;
+        });
+      }
+    }
+  };
+
+  const fetchQueue = async () => {
+    try {
+      // 2. Fetch Queue (Tracks)
+      const response = await fetch(buildEndpoint("queue"));
+      if (!response.ok) throw new Error(`Queue HTTP ${response.status}`);
+      const data = await response.json();
+      // data is expected to be a list for /station/queue, or object with 'playing_next' for /nowplaying
+      let queue = [];
+      if (Array.isArray(data)) {
+        queue = data;
+      } else if (data.playing_next) {
+        queue = Array.isArray(data.playing_next) ? data.playing_next : [data.playing_next];
+      }
+      renderQueue(queue);
+    } catch (error) {
+      console.error("Queue fetch failed:", error);
+      renderQueue([]);
     }
   };
 
@@ -893,6 +959,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Like Button Action (Super-Like = 5 Stars)
+  const likeButton = document.getElementById("like-button");
+  if (likeButton) {
+    likeButton.addEventListener("click", () => {
+      submitRating(5); // Super-Like = 5 stars
+    });
+  }
+
   // Dislike Button Action
   const dislikeButton = document.getElementById("dislike-button");
   if (dislikeButton) {
@@ -910,7 +984,11 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchSchedule();
   setInterval(fetchStatus, 10000);
   setInterval(fetchHistory, 30000);
+  fetchSchedule();
+  fetchQueue();
+
   setInterval(fetchSchedule, 60000);
+  setInterval(fetchQueue, 30000);
   // History Rating Listener (Delegation)
   if (historyList) {
     historyList.addEventListener('click', async (e) => {
