@@ -1,3 +1,6 @@
+// Import MoodModule (ES6)
+import MoodModule from './js/modules/MoodModule.js';
+
 // Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {
   let container = document.querySelector('.toast-container');
@@ -73,11 +76,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const navToggle = document.getElementById("nav-toggle");
   const mobileMenu = document.getElementById("mobile-menu");
 
-  // Initialize Mood Module
+  // Initialize Mood Module (wrapped in try-catch to prevent crashing if mood-dialog.js didn't load)
   if (window.YourPartyConfig) {
     window.YourPartyAppInstance = window.YourPartyAppInstance || {};
     window.YourPartyAppInstance.modules = window.YourPartyAppInstance.modules || {};
-    window.YourPartyAppInstance.modules.mood = new MoodModule(window.YourPartyConfig);
+    try {
+      if (typeof MoodModule !== 'undefined') {
+        window.YourPartyAppInstance.modules.mood = new MoodModule(window.YourPartyConfig);
+      } else {
+        console.warn('[YourParty] MoodModule not defined - mood features will be unavailable');
+      }
+    } catch (e) {
+      console.warn('[YourParty] MoodModule initialization failed:', e);
+    }
   }
 
   // Audio Context Variables (Lifted Scope)
