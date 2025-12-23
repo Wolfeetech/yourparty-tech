@@ -1082,49 +1082,6 @@ add_action('rest_api_init', function () {
 
     // --- CONTROL PANEL PROXY ENDPOINTS ---
 
-<<<<<<< HEAD
-    // PUBLIC: Live Mood Voting Stats (for Live Voting Widget)
-    register_rest_route('yourparty/v1', '/mood-stats', [
-        'methods' => WP_REST_Server::READABLE,
-        'callback' => function () {
-            return yourparty_proxy_request('GET', '/mood-stats');
-        },
-        'permission_callback' => '__return_true',
-    ]);
-
-    // GAMIFICATION: Leaderboard
-    register_rest_route('yourparty/v1', '/leaderboard', [
-        'methods' => WP_REST_Server::READABLE,
-        'callback' => function ($request) {
-            $limit = $request->get_param('limit') ?? 10;
-            return yourparty_proxy_request('GET', '/leaderboard?limit=' . $limit);
-        },
-        'permission_callback' => '__return_true',
-    ]);
-
-    // GAMIFICATION: User Stats
-    register_rest_route('yourparty/v1', '/user-stats/(?P<id>[a-zA-Z0-9-]+)', [
-        'methods' => WP_REST_Server::READABLE,
-        'callback' => function ($request) {
-            $user_id = $request->get_param('id');
-            return yourparty_proxy_request('GET', '/user-stats/' . $user_id);
-        },
-        'permission_callback' => '__return_true',
-    ]);
-
-    // GAMIFICATION: Award Points
-    register_rest_route('yourparty/v1', '/award-points', [
-        'methods' => WP_REST_Server::CREATABLE,
-        'callback' => function ($request) {
-            return yourparty_proxy_request('POST', '/award-points', $request->get_json_params());
-        },
-        'permission_callback' => '__return_true',
-    ]);
-
-    // --- CONTROL PANEL PROXY ENDPOINTS ---
-    
-=======
->>>>>>> a2889fcc8dfa157dc367032fd81ed9b02a4d99c1
     // Ratings
     register_rest_route('yourparty/v1', '/control/ratings', [
         'methods' => WP_REST_Server::READABLE,
