@@ -77,37 +77,23 @@ class AppState:
         self.library: List[Dict[str, Any]] = []
         self.scanner = MusicScanner()
         self.tag_improver = TagImprover()
-        self.organizer = None # Initialized with scan path
+        self.organizer = None 
         self.scan_path = ""
-        # MongoDB client (optional, initialized on first use)
         self.mongo_client = None
-        # Track matcher for rating preservation
         self.track_matcher = None
-        # Library Service (Single Source of Truth)
         self.library_service = None
+        self.azura_client = None # Global AzuraCast Client
         
-        # Playback initialization
         self.now_playing = {
             "title": "Station Online",
             "artist": "YourParty Radio",
             "album": "",
-            "art": "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png", # Fallback logo
+            "art": "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png",
             "id": "init",
             "duration": 0
         }
-        self.steering_status = {"mode": "auto", "target": "neutral"}
-        self.stream_url = "https://radio.yourparty.tech/radio.mp3" # Default mount
-
-class AppState:
-    def __init__(self):
-        self.library = []
-        self.organizer = None
-        self.tag_improver = None
-        self.mongo_client = None
-        self.track_matcher = None
-        self.library_service = None # Single source of truth
-        self.now_playing = {}
         self.steering_status = {"mode": "auto", "target": None, "updated_at": None}
+        self.stream_url = "https://radio.yourparty.tech/radio.mp3"
 
 state = AppState()
 
@@ -483,6 +469,16 @@ async def websocket_endpoint(websocket: WebSocket, station_id: str):
 async def startup_event():
     logger.info("Starting Radio API...")
     
+    # Initialize Global AzuraCast Client
+    azura_url = os.getenv("AZURACAST_URL")
+    azura_key = os.getenv("AZURACAST_API_KEY")
+    if azura_url and azura_key:
+        try:
+            state.azura_client = AzuraCastClient(azura_url, azura_key, 1) # Station ID 1 default
+            logger.info("Global AzuraCast Client initialized.")
+        except Exception as e:
+            logger.error(f"Failed to init AzuraCast client: {e}")
+
     # Log feature flag status
     logger.info(f"Feature Flags: MOOD_VOTES={FEATURE_MOOD_VOTES}, MOOD_SYNC={FEATURE_MOOD_SYNC}, MOOD_AUTODJ={FEATURE_MOOD_AUTODJ}")
     
@@ -490,12 +486,12 @@ async def startup_event():
     logger.info("Launching Public Status Loop...")
     asyncio.create_task(public_status_loop())
 
-    # 2. Initialize Mongo (Can fail/timeout without blocking UI)
+    # 2. Initialize Mongo
     try:
         from mongo_client import MongoDatabaseClient
-        # Construct URI from individual vars if MONGO_URI is missing
         mongo_uri = os.getenv("MONGO_URI")
         if not mongo_uri:
+            # Construct URI
             user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
             pwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "")
             host = os.getenv("MONGO_HOST", "localhost")
@@ -506,31 +502,19 @@ async def startup_event():
                 mongo_uri = f"mongodb://{host}:{port}/"
         
         state.mongo_client = MongoDatabaseClient(mongo_uri)
-        # Note: PyMongo client connects lazily/synchronously usually. No async init needed.
-        # But we can verify connection:
-        # state.mongo_client.client.admin.command('ping') 
-        
-        # Initialize Services dependent on Mongo
         state.track_matcher = TrackMatcher(state.mongo_client)
         state.library_service = get_library_service(state.mongo_client)
         
         logger.info("Connected to MongoDB & Services Initialized.")
     except Exception as e:
-        logger.error(f"Failed to connect to Mongo (Non-critical for Playback): {e}")
+        logger.error(f"Failed to connect to Mongo: {e}")
 
-    # 3. Start Mood Auto-DJ Scheduler (if enabled)
-    if FEATURE_MOOD_AUTODJ and state.mongo_client:
+    # 3. Start Mood Auto-DJ Scheduler
+    if FEATURE_MOOD_AUTODJ and state.mongo_client and state.azura_client:
         try:
             from mood_scheduler import schedule_mood_queue_worker
-            from azuracast_client import AzuraCastClient
-            
-            azura_url = os.getenv("AZURACAST_URL")
-            azura_key = os.getenv("AZURACAST_API_KEY")
-            
-            azura_client = AzuraCastClient(azura_url, azura_key, 1)
-            
             logger.info(f"Starting Mood Auto-DJ (cycle: {MOOD_CYCLE_SECONDS}s)...")
-            asyncio.create_task(schedule_mood_queue_worker(state.mongo_client, azura_client))
+            asyncio.create_task(schedule_mood_queue_worker(state.mongo_client, state.azura_client))
         except Exception as e:
             logger.error(f"Failed to start Mood Auto-DJ: {e}")
 
@@ -540,7 +524,7 @@ async def debug_status():
     return {
         "now_playing": state.now_playing,
         "mongo_connected": state.mongo_client is not None,
-        "loop_running": True # We assume it started if we are here
+        "loop_running": True
     }
 
 @app.get("/status")
@@ -678,8 +662,6 @@ async def public_status_loop():
             
         await asyncio.sleep(2.0) # Faster polling for more responsiveness
 
-# --- MISSING ENDPOINTS IMPLEMENTATION ---
-
 class RatingRequest(BaseModel):
     song_id: str
     rating: int
@@ -749,45 +731,61 @@ VALID_MOODS = [
     "energy", "chill", "groove", "dark", "euphoric",
     "melancholic", "hypnotic", "aggressive", "trippy", "warm",
     "driving", "acid", "soulful", "deep", "funky", 
-    "uplifting", "progressive", "psy", "classic"
+    "uplifting", "progressive", "psy", "classic", "energetic"
 ]
 
 @app.post("/vote-mood")
 async def vote_mood(request: MoodVoteRequest):
     """
-    Handle dual mood voting from frontend.
-    
-    - mood_current: User's perception of current song's mood
-    - mood_next: User's preference for the next song's mood
-    
-    This data is used to:
-    1. Update the song's mood aggregates
-    2. Influence automatic DJ decisions (when FEATURE_MOOD_AUTODJ is enabled)
+    Handle dual mood voting AND Like/Dislike (Skip) logic.
     """
     # Feature flag check
     if not FEATURE_MOOD_VOTES:
         raise HTTPException(status_code=503, detail="Mood voting is currently disabled")
     
-    # Validate moods
-    if request.mood_current and request.mood_current not in VALID_MOODS:
-        raise HTTPException(status_code=400, detail=f"Invalid mood_current: {request.mood_current}")
-    if request.mood_next and request.mood_next not in VALID_MOODS:
-        raise HTTPException(status_code=400, detail=f"Invalid mood_next: {request.mood_next}")
+    # Validate basics
+    if not request.mood_current and not request.mood_next and not request.rating and not request.vote:
+        raise HTTPException(status_code=400, detail="At least one vote type required")
     
-    if not request.mood_current and not request.mood_next and not request.rating:
-        raise HTTPException(status_code=400, detail="At least one of mood_current, mood_next, or rating required")
-    
-    logger.info(f"Mood vote: song={request.song_id}, current={request.mood_current}, next={request.mood_next}")
+    logger.info(f"Vote received for {request.song_id}: mood_cur={request.mood_current}, vote={request.vote}, rating={request.rating}")
     
     result = {
         "success": True,
         "song_id": request.song_id,
-        "mood_current": request.mood_current,
-        "mood_next": request.mood_next
+        "message": "Vote recorded"
     }
-    
+
     if state.mongo_client:
-        # Store mood vote for current song perception
+        # 1. Handle Like/Dislike (Skip Logic)
+        if request.vote:
+            counts = state.mongo_client.submit_vote(request.song_id, request.vote, request.user_id)
+            result["vote_counts"] = counts
+            
+            # SKIP LOGIC: Skips >= Likes + 3
+            if request.vote == "dislike":
+                skips = counts.get("dislike", 0)
+                likes = counts.get("like", 0)
+                if skips >= likes + 3:
+                    logger.warning(f"🚨 SKIP TRIGGERED for {request.song_id} (Skips: {skips}, Likes: {likes})")
+                    if state.azura_client:
+                         state.azura_client.skip_current_song()
+                         result["action_taken"] = "skip"
+
+            # LIKE LOGIC: Likes >= 3 -> Starlight Playlist
+            if request.vote == "like":
+                likes = counts.get("like", 0)
+                if likes >= 3:
+                     logger.info(f"🌟 STARLIGHT TRIGGERED for {request.song_id} (Likes: {likes})")
+                     if state.azura_client:
+                         try:
+                             mid = int(request.song_id) if request.song_id.isdigit() else None
+                             if mid:
+                                 state.azura_client.add_to_playlist(mid, "Starlight")
+                                 result["action_taken"] = "playlist_add"
+                         except Exception as e:
+                             logger.error(f"Playlist add failed: {e}")
+
+        # 2. Store mood vote for current song perception
         if request.mood_current:
             state.mongo_client.submit_mood(
                 song_id=request.song_id,
@@ -795,7 +793,7 @@ async def vote_mood(request: MoodVoteRequest):
                 metadata=get_metadata_context(request.song_id)
             )
         
-        # Store mood_next preference in a separate collection for DJ decisions
+        # 3. Store mood_next preference
         if request.mood_next:
             state.mongo_client.submit_mood_next_vote(
                 song_id=request.song_id,
@@ -803,8 +801,8 @@ async def vote_mood(request: MoodVoteRequest):
                 user_id=request.user_id,
                 metadata=get_metadata_context(request.song_id)
             )
-        
-        # Handle rating if provided
+            
+        # 4. Handle Rating
         if request.rating:
             state.mongo_client.submit_rating(
                 song_id=request.song_id,
@@ -813,30 +811,23 @@ async def vote_mood(request: MoodVoteRequest):
                 metadata=get_metadata_context(request.song_id)
             )
             result["rating"] = request.rating
-        
-        # Get updated aggregates
-        mood_data = state.mongo_client.get_song_moods(request.song_id)
-        result["mood_counts"] = mood_data.get("mood_counts", {})
-        result["dominant_mood"] = mood_data.get("top_mood")
 
-        # GAMIFICATION: Award points if user is identified
+        # 5. Gamification
         if request.user_id and request.user_id != "anonymous":
+            points_awarded = False
             if request.mood_current:
                 state.mongo_client.award_points(request.user_id, "mood_vote", song_id=request.song_id)
-            
-            if request.mood_next:
-                # Bonus for next mood suggestion? Or same?
-                # For now same type "mood_vote"
-                state.mongo_client.award_points(request.user_id, "mood_vote", song_id=request.song_id)
-
+                points_awarded = True
             if request.rating:
                  state.mongo_client.award_points(request.user_id, "rating", song_id=request.song_id)
+                 points_awarded = True
             
-            result["gamification"] = {"points_awarded": True}
-        
+            if points_awarded:
+                result["gamification"] = {"points_awarded": True}
+
     else:
         result["warning"] = "Database not connected - vote not persisted"
-    
+
     return result
 
 @app.get("/mood-stats")

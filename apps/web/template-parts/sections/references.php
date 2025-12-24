@@ -11,7 +11,7 @@ $google_place_id = get_theme_mod('yourparty_google_places_id', '');
 
 // Fetch reviews server-side
 $reviews_data = false;
-if (!empty($google_place_id) && !empty($google_api_key)) {
+if (false && !empty($google_place_id) && !empty($google_api_key)) { // DISABLED: Fix "Loading..." issue
     $cache_key = 'yourparty_google_reviews_' . md5($google_place_id);
     $reviews_data = get_transient($cache_key);
 

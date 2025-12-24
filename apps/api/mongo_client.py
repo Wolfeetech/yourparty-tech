@@ -829,6 +829,58 @@ class MongoDatabaseClient:
             self.client.close()
             logger.info("MongoDB connection closed")
 
+    # ========== LIKE / DISLIKE VOTING ==========
+
+    def submit_vote(self, song_id: str, vote: str, user_id: str = "anonymous") -> Dict[str, int]:
+        """
+        Submit a boolean vote (like/dislike) and return updated counts.
+        """
+        try:
+            if not hasattr(self, 'votes_collection'):
+                self.votes_collection = self.db["votes"]
+                self.votes_collection.create_index("song_id")
+            
+            # Store the individual vote
+            vote_doc = {
+                "song_id": song_id,
+                "vote": vote, # 'like' or 'dislike'
+                "user_id": user_id,
+                "timestamp": datetime.utcnow()
+            }
+            self.votes_collection.insert_one(vote_doc)
+            
+            # Count votes for this song
+            return self.get_vote_counts(song_id)
+            
+        except Exception as e:
+            logger.error(f"Error submitting vote: {e}")
+            return {"likes": 0, "dislikes": 0}
+
+    def get_vote_counts(self, song_id: str) -> Dict[str, int]:
+        """Get total likes and dislikes for a song."""
+        try:
+            if not hasattr(self, 'votes_collection'):
+                self.votes_collection = self.db["votes"]
+
+            pipeline = [
+                {"$match": {"song_id": song_id}},
+                {"$group": {
+                    "_id": "$vote", 
+                    "count": {"$sum": 1}
+                }}
+            ]
+            results = list(self.votes_collection.aggregate(pipeline))
+            
+            counts = {"like": 0, "dislike": 0}
+            for r in results:
+                if r["_id"] in counts:
+                    counts[r["_id"]] = r["count"]
+            
+            return counts
+        except Exception as e:
+            logger.error(f"Error getting vote counts: {e}")
+            return {"like": 0, "dislike": 0}
+
 
 if __name__ == "__main__":
     # Test connection

@@ -388,6 +388,64 @@ class MoodModule {
         }, 200);
     }
 
+    async castVote(voteType) {
+        if (!this.currentSongId) {
+            this.showGlobalFeedback('Waiting for song info...', 'warning');
+            return;
+        }
+
+        // Check specific cooldown (like/dislike)
+        const cooldownKey = `${this.currentSongId}_${voteType}`;
+        if (this.isOnCooldown(cooldownKey)) {
+            this.showGlobalFeedback("You already voted!", "warning");
+            return;
+        }
+
+        const payload = {
+            song_id: this.currentSongId,
+            vote: voteType,
+            source: 'main_player_reaction',
+            timestamp: Date.now()
+        };
+
+        // UI Optimistic Update
+        const btnLike = document.getElementById('like-button');
+        const btnDislike = document.getElementById('dislike-button');
+        if (voteType === 'like' && btnLike) btnLike.classList.add('voting');
+        if (voteType === 'dislike' && btnDislike) btnDislike.classList.add('voting');
+
+        try {
+            await this.sendVote(payload); // Uses /vote-mood
+
+            const msg = voteType === 'like' ? 'Saved to Favorites!' : 'Vote to Skip Recorded';
+            this.showGlobalFeedback(msg, 'success');
+
+            // Mark as voted
+            this.setCooldown(cooldownKey);
+
+            if (voteType === 'like' && btnLike) {
+                btnLike.classList.remove('voting');
+                btnLike.classList.add('voted');
+            }
+            if (voteType === 'dislike' && btnDislike) {
+                btnDislike.classList.remove('voting');
+                btnDislike.classList.add('voted');
+            }
+
+        } catch (e) {
+            console.error('[MoodModule] Vote failed:', e);
+            if (!navigator.onLine) {
+                this.queueVote(payload);
+                this.showGlobalFeedback('Offline. Vote Queued.', 'warning');
+                this.setCooldown(cooldownKey); // Prevent spam even offline
+            } else {
+                this.showGlobalFeedback('Error sending vote.', 'error');
+                if (btnLike) btnLike.classList.remove('voting');
+                if (btnDislike) btnDislike.classList.remove('voting');
+            }
+        }
+    }
+
     async handleSubmit() {
         if (!this.currentSongId) {
             this.showStatus('Error: No active song identified.', 'error');

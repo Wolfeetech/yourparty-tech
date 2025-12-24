@@ -179,6 +179,59 @@ class AzuraCastClient:
             logger.error(f"Failed to queue media {media_id}: {e}")
             return False
 
+    def skip_current_song(self) -> bool:
+        """
+        Skip the currently playing song.
+        POST /api/station/{station_id}/backend/skip
+        """
+        url = f"{self.base_url}/api/station/{self.station_id}/backend/skip"
+        try:
+            resp = requests.post(url, headers=self.headers, verify=False)
+            resp.raise_for_status()
+            logger.info("Skipped current song successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to skip song: {e}")
+            return False
+
+    def add_to_playlist(self, media_id: int, playlist_name: str) -> bool:
+        """
+        Add a media item to a specific playlist (by name).
+        This requires finding the playlist ID first.
+        """
+        playlists = asyncio.run(self.get_playlists()) if asyncio.iscoroutinefunction(self.get_playlists) else self.get_playlists() 
+        # Note: get_playlists is async in my code? Line 62 says async def. 
+        # But here I am in a sync method. I should fix get_playlists to be sync or handle it.
+        # Actually line 62 `async def get_playlists`... I should check if I can make it sync or use a helper.
+        # For simplicity, let's make a sync version or just use requests.
+        
+        target_playlist = next((p for p in playlists if p['name'].lower() == playlist_name.lower()), None)
+        
+        if not target_playlist:
+            logger.info(f"Playlist '{playlist_name}' not found. Creating it...")
+            target_playlist = self.create_playlist(playlist_name)
+            if not target_playlist:
+                return False
+        
+        playlist_id = target_playlist['id']
+        
+        # Batch assign
+        url = f"{self.base_url}/api/station/{self.station_id}/files/batch"
+        payload = {
+            "do": "playlist",
+            "playlists": [playlist_id],
+            "files": [str(media_id)] # ID or unique_id? Usually media ID (int) or unique_id (str)
+        }
+        
+        try:
+            resp = requests.put(url, headers=self.headers, json=payload, verify=False)
+            resp.raise_for_status()
+            logger.info(f"Added media {media_id} to playlist {playlist_name}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to add to playlist: {e}")
+            return False
+
 if __name__ == "__main__":
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

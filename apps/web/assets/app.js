@@ -456,7 +456,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const listeners = data?.listeners?.current ?? 0;
 
     const isOnline = detectOnlineState(data);
-    currentSongId = song.id ?? null;
+    const newSongId = song.id ?? null;
+
+    // Detect Track Change & Reset UI
+    if (currentSongId !== newSongId) {
+      const btnLike = document.getElementById('like-button');
+      const btnDislike = document.getElementById('dislike-button');
+      if (btnLike) btnLike.classList.remove('voted', 'voting');
+      if (btnDislike) btnDislike.classList.remove('voted', 'voting');
+
+      // Update Mood Module
+      if (window.YourPartyAppInstance?.modules?.mood) {
+        window.YourPartyAppInstance.modules.mood.setCurrentSong(newSongId);
+      }
+    }
+
+    currentSongId = newSongId;
 
     // EXPOSE GLOBALLY for mood-dialog.js
     window.currentSongId = currentSongId;
@@ -464,6 +479,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const trackTitle = fallback(song.title, "Titel unbekannt");
     const trackArtist = fallback(song.artist, "Künstler unbekannt");
     const trackAlbum = fallback(song.album, "Album unbekannt");
+    const topMood = song.top_mood || null; // API provides this now
+
+    // RENDER MOOD BADGE
+    const badgeContainer = document.getElementById('vibe-badge-container');
+    if (badgeContainer) {
+      if (topMood) {
+        // Map moods to emojis/colors (simple version, full map in MoodModule)
+        const moodMap = {
+          'energy': '⚡ ENERGY',
+          'chill': '🌴 CHILL',
+          'dark': '🌑 DARK',
+          'groove': '💃 GROOVE',
+          'euphoric': '🤩 EUPHORIC',
+          'energetic': '⚡ ENERGETIC'
+        };
+        const label = moodMap[topMood.toLowerCase()] || topMood.toUpperCase();
+
+        badgeContainer.innerHTML = `
+                <span class="vibe-pill" style="
+                    background: rgba(0,255,136,0.1); 
+                    border: 1px solid var(--neon-green); 
+                    color: var(--neon-green); 
+                    font-size: 0.7rem; 
+                    padding: 4px 12px; 
+                    border-radius: 12px; 
+                    letter-spacing: 0.1em; 
+                    font-weight: 700;
+                    box-shadow: 0 0 10px rgba(0,255,136,0.2);
+                    animation: fadeIn 0.5s ease-out;
+                ">${label}</span>
+            `;
+      } else {
+        badgeContainer.innerHTML = ''; // Clear if no tag
+      }
+    }
+
     let cover = fallback(normaliseUrl(song.art), PLACEHOLDER_COVER);
 
     // EXPOSE TRACK INFO GLOBALLY for mood-dialog.js
@@ -576,28 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : "Noch keine Bewertungen";
     }
 
-    // Display Mood Tags if available
-    const moodTagDisplay = document.getElementById('current-mood-tags');
-    const topMood = song.top_mood;
-    const moods = song.moods || {};
-
-    if (moodTagDisplay) {
-      const moodEmojis = {
-        'energetic': '🔥', 'chill': '😌', 'dark': '🌑', 'euphoric': '✨',
-        'melancholic': '💙', 'groovy': '🎵', 'hypnotic': '🌀',
-        'aggressive': '😤', 'trippy': '🍄', 'warm': '☀️',
-        'uplifting': '🌈', 'deep': '🌊', 'funky': '🕺'
-      };
-
-      if (topMood) {
-        const emoji = moodEmojis[topMood] || '🎵';
-        const moodLabel = topMood.charAt(0).toUpperCase() + topMood.slice(1);
-        const voteCount = moods[topMood] || 0;
-        moodTagDisplay.innerHTML = `<span class="mood-badge">${emoji} ${moodLabel}${voteCount > 1 ? ` (${voteCount})` : ''}</span>`;
-      } else {
-        moodTagDisplay.innerHTML = '<span class="mood-badge mood-empty">+ Tag hinzufügen</span>';
-      }
-    }
+    // Legacy mood display removed to fix scope conflict
 
     // Update Vibe Status Display
     const vibeStatus = document.getElementById('vibe-status');
@@ -1013,11 +1043,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Like Button Action (Super-Like = 5 Stars)
+  // Like Button Action (Calls MoodModule for Vote + Logic)
   const likeButton = document.getElementById("like-button");
   if (likeButton) {
     likeButton.addEventListener("click", () => {
-      submitRating(5); // Super-Like = 5 stars
+      if (window.YourPartyAppInstance?.modules?.mood) {
+        window.YourPartyAppInstance.modules.mood.castVote('like');
+      } else {
+        submitRating(5); // Fallback
+      }
     });
   }
 
@@ -1025,7 +1059,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const dislikeButton = document.getElementById("dislike-button");
   if (dislikeButton) {
     dislikeButton.addEventListener("click", () => {
-      submitRating(1);
+      if (window.YourPartyAppInstance?.modules?.mood) {
+        window.YourPartyAppInstance.modules.mood.castVote('dislike');
+      } else {
+        submitRating(1); // Fallback
+      }
     });
   }
 

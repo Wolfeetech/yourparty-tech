@@ -45,6 +45,9 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
 
                     <!-- Track Info -->
                     <div class="player-info">
+                        <!-- Dynamic Vibe Badge -->
+                        <div id="vibe-badge-container" style="height: 24px; margin-bottom: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;"></div>
+
                         <h2 id="track-title" class="track-title skeleton">Loading Station...</h2> 
                         <p id="track-artist" class="track-artist skeleton">Please wait</p>
                         
@@ -71,6 +74,14 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                             <span class="btn-reaction__icon">👎</span>
                             <span class="btn-reaction__label">SKIP</span>
                          </button>
+                    </div>
+
+                    <!-- Vibe Tag Trigger -->
+                    <div style="margin-top: 1rem; display: flex; justify-content: center;">
+                        <button id="mood-tag-button" class="btn-glass-small" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <span style="font-size: 1.2em; line-height: 1;">✨</span>
+                            <span style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; opacity: 0.8; font-weight: 600;">Vibe</span>
+                        </button>
                     </div>
 
                     <!-- Controls -->
