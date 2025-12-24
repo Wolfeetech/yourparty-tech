@@ -1011,7 +1011,8 @@ voting_state = VotingState()
 async def get_vote_candidates():
     """
     Returns 3 random track candidates for voting.
-    Refreshes every 3 minutes or when called after winner selection.
+    Uses AzuraCast history API to get real tracks.
+    Refreshes every 3 minutes.
     """
     import random
     from datetime import datetime, timedelta
@@ -1025,41 +1026,62 @@ async def get_vote_candidates():
     )
     
     if should_refresh:
-        logger.info("Refreshing track candidates...")
+        logger.info("Refreshing track candidates from AzuraCast history...")
         
-        # Get tracks from MongoDB
-        if state.mongo_client:
+        # Get tracks from AzuraCast history
+        azura_base = os.getenv("AZURACAST_URL")
+        azura_key = os.getenv("AZURACAST_API_KEY", "")
+        
+        if azura_base:
             try:
-                # Get all tracks with rating > 3.5
-                all_tracks = state.mongo_client.db.tracks.find(
-                    {"metadata.title": {"$exists": True}},
-                    limit=100
-                ).to_list(length=100)
-                
-                if len(all_tracks) >= 3:
-                    # Select 3 random tracks
-                    candidates = random.sample(all_tracks, 3)
-                    voting_state.candidates = [
-                        {
-                            "id": str(track.get("_id", track.get("song_id", ""))),
-                            "title": track.get("metadata", {}).get("title", "Unknown"),
-                            "artist": track.get("metadata", {}).get("artist", "Unknown"),
-                            "cover_art": track.get("metadata", {}).get("cover_art", ""),
-                            "media_id": track.get("azuracast_media_id", "")
-                        }
-                        for track in candidates
-                    ]
-                    voting_state.votes = {c["id"]: 0 for c in voting_state.candidates}
-                    voting_state.last_refresh = now
-                    logger.info(f"Selected candidates: {[c['title'] for c in voting_state.candidates]}")
-                else:
-                    # Fallback if not enough tracks
-                    voting_state.candidates = []
+                async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL) as client:
+                    # Fetch history from AzuraCast
+                    headers = {"X-API-Key": azura_key} if azura_key else {}
+                    resp = await client.get(
+                        f"{azura_base}/api/station/1/history",
+                        headers=headers,
+                        timeout=10.0
+                    )
+                    
+                    if resp.status_code == 200:
+                        history = resp.json()
+                        
+                        # Filter unique tracks by title+artist
+                        seen = set()
+                        unique_tracks = []
+                        for item in history:
+                            song = item.get("song", {})
+                            key = f"{song.get('title', '')}-{song.get('artist', '')}"
+                            if key not in seen and song.get("title"):
+                                seen.add(key)
+                                unique_tracks.append({
+                                    "id": str(song.get("id", item.get("sh_id", len(unique_tracks)))),
+                                    "title": song.get("title", "Unknown"),
+                                    "artist": song.get("artist", "Unknown"),
+                                    "cover_art": song.get("art", ""),
+                                    "media_id": str(song.get("id", ""))
+                                })
+                        
+                        if len(unique_tracks) >= 3:
+                            # Select 3 random tracks
+                            candidates = random.sample(unique_tracks, 3)
+                            voting_state.candidates = candidates
+                            voting_state.votes = {c["id"]: 0 for c in candidates}
+                            voting_state.last_refresh = now
+                            logger.info(f"Selected candidates: {[c['title'] for c in candidates]}")
+                        else:
+                            logger.warning(f"Only {len(unique_tracks)} unique tracks in history")
+                            voting_state.candidates = unique_tracks if unique_tracks else []
+                            voting_state.votes = {c["id"]: 0 for c in voting_state.candidates}
+                            voting_state.last_refresh = now
+                    else:
+                        logger.error(f"AzuraCast history fetch failed: {resp.status_code}")
+                        voting_state.candidates = []
             except Exception as e:
-                logger.error(f"Error fetching candidates: {e}")
+                logger.error(f"Error fetching candidates from AzuraCast: {e}")
                 voting_state.candidates = []
         else:
-            # Mock candidates if MongoDB not connected
+            logger.warning("AZURACAST_URL not set, using mock candidates")
             voting_state.candidates = [
                 {"id": "1", "title": "Track A", "artist": "Artist A", "cover_art": "", "media_id": "1"},
                 {"id": "2", "title": "Track B", "artist": "Artist B", "cover_art": "", "media_id": "2"},

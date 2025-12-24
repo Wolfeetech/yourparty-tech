@@ -61,13 +61,15 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                         </div>
                     </div>
 
-                    <!-- Mood/Rating Actions -->
-                    <div class="player-actions" style="margin: 20px 0; display: flex; gap: 15px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
-                         <button id="like-button" class="btn-glass-small" style="background: rgba(0, 255, 136, 0.1); border-color: var(--neon-green); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Gefällt mir" aria-label="Like this track">
-                            <span style="font-size: 1.2em; vertical-align: middle; pointer-events: none;" aria-hidden="true">❤️</span>
+                    <!-- Mood/Rating Actions - LARGER BUTTONS FOR VISIBILITY -->
+                    <div class="player-actions" style="margin: 25px 0; display: flex; gap: 20px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
+                         <button id="like-button" class="btn-reaction btn-reaction--like" title="Gefällt mir" aria-label="Like this track">
+                            <span class="btn-reaction__icon">❤️</span>
+                            <span class="btn-reaction__label">LIKE</span>
                          </button>
-                         <button id="dislike-button" class="btn-glass-small" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); pointer-events: auto !important; position: relative; z-index: 10000; cursor: pointer;" title="Gefällt mir nicht" aria-label="Dislike this track">
-                            <span style="font-size: 1.2em; vertical-align: middle; pointer-events: none;" aria-hidden="true">👎</span>
+                         <button id="dislike-button" class="btn-reaction btn-reaction--dislike" title="Gefällt mir nicht" aria-label="Dislike this track">
+                            <span class="btn-reaction__icon">👎</span>
+                            <span class="btn-reaction__label">SKIP</span>
                          </button>
                     </div>
 
@@ -96,23 +98,47 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
 
             <!-- BOTTOM: VIBE CONTROL DECK -->
             <div class="vibe-deck" data-aos="fade-up">
-                <div class="deck-header">
-                    <h3>CONTROL THE VIBE</h3>
+                <div class="vibe-deck-glass">
+                    <div class="deck-header">
+                        <div class="deck-icon">🎛️</div>
+                        <div class="deck-title-group">
+                            <h3>STEER THE MUSIC</h3>
+                            <p class="deck-subtitle">Your vote influences what plays next</p>
+                        </div>
+                    </div>
+                    
+                    <!-- MTV-Style Voting Widget Container -->
+                    <div class="live-voting-widget"></div>
+                    
+                    <div class="vibe-buttons-grid">
+                        <button class="vibe-btn vibe-btn--energy" data-vote="energetic">
+                            <span class="vibe-btn__icon">🔥</span>
+                            <span class="vibe-btn__label">ENERGY</span>
+                            <span class="vibe-btn__hint">High tempo bangers</span>
+                        </button>
+                        <button class="vibe-btn vibe-btn--chill" data-vote="chill">
+                            <span class="vibe-btn__icon">🌴</span>
+                            <span class="vibe-btn__label">CHILL</span>
+                            <span class="vibe-btn__hint">Smooth & relaxed</span>
+                        </button>
+                        <button class="vibe-btn vibe-btn--groove" data-vote="groovy">
+                            <span class="vibe-btn__icon">🕺</span>
+                            <span class="vibe-btn__label">GROOVE</span>
+                            <span class="vibe-btn__hint">Funky rhythms</span>
+                        </button>
+                        <button class="vibe-btn vibe-btn--dark" data-vote="dark">
+                            <span class="vibe-btn__icon">🌑</span>
+                            <span class="vibe-btn__label">DARK</span>
+                            <span class="vibe-btn__hint">Deep & intense</span>
+                        </button>
+                    </div>
+                    
+                    <div id="vibe-feedback" class="vibe-feedback" aria-live="assertive"></div>
+                    <div id="vibe-status" class="vibe-status" aria-live="polite">
+                        <span class="status-dot"></span>
+                        <span class="status-text">AUTO MODE</span>
+                    </div>
                 </div>
-                
-                <!-- MTV-Style Voting Widget Container -->
-                <div class="live-voting-widget"></div>
-                    <div class="deck-line"></div>
-                    <!-- VOTE STATUS INDICATOR -->
-                    <div id="vibe-status" style="font-size: 0.7rem; color: var(--neon-green); font-weight: bold; white-space: nowrap;" aria-live="polite">AUTO MODE</div>
-                </div>
-                <div class="vibe-buttons">
-                    <button class="vibe-btn" data-vote="energetic" title="More Energy"><span class="emoji">🔥</span> <span class="lbl">ENERGY</span></button>
-                    <button class="vibe-btn" data-vote="chill" title="Chill Out"><span class="emoji">🧊</span> <span class="lbl">CHILL</span></button>
-                    <button class="vibe-btn" data-vote="groovy" title="Groove"><span class="emoji">🕺</span> <span class="lbl">GROOVE</span></button>
-                    <button class="vibe-btn" data-vote="dark" title="Dark Mode"><span class="emoji">🌑</span> <span class="lbl">DARK</span></button>
-                </div>
-                <div id="vibe-feedback" class="vibe-feedback" aria-live="assertive"></div>
             </div>
 
         </div>
@@ -165,12 +191,12 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
 /* Hero Fullscreen */
 .hero-fullscreen {
     position: relative;
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Scroll Indicator */
@@ -293,6 +319,55 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     cursor: pointer; transition: all 0.2s; font-weight: bold; letter-spacing: 0.05em;
 }
 .btn-glass-small:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
+
+/* Reaction Buttons (Like/Dislike) - PROMINENT STYLE */
+.btn-reaction {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 15px 30px;
+    border-radius: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    z-index: 10000;
+}
+.btn-reaction__icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+.btn-reaction__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+}
+.btn-reaction--like {
+    border-color: rgba(0, 255, 136, 0.4);
+    background: rgba(0, 255, 136, 0.1);
+}
+.btn-reaction--like:hover {
+    border-color: var(--neon-green);
+    background: rgba(0, 255, 136, 0.25);
+    transform: scale(1.08);
+    box-shadow: 0 8px 25px rgba(0, 255, 136, 0.3);
+}
+.btn-reaction--like:active {
+    transform: scale(0.95);
+}
+.btn-reaction--dislike:hover {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.15);
+    transform: scale(1.08);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
+}
+.btn-reaction--dislike:active {
+    transform: scale(0.95);
+}
 
 /* Vibe Deck */
 .vibe-deck { width: 100%; max-width: 600px; text-align: center; }
