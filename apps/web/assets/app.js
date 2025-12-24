@@ -599,6 +599,43 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Update Vibe Status Display
+    const vibeStatus = document.getElementById('vibe-status');
+    if (vibeStatus) {
+      if (topMood) {
+        const moodEmojis = {
+          'energetic': '🔥', 'chill': '🌴', 'dark': '🌑', 'groovy': '🕺'
+        };
+        const emoji = moodEmojis[topMood] || '🎵';
+        const moodLabel = topMood.toUpperCase();
+        vibeStatus.innerHTML = `<span class="status-dot"></span><span class="status-text">${emoji} ${moodLabel} VIBE</span>`;
+      } else {
+        vibeStatus.innerHTML = '<span class="status-dot"></span><span class="status-text">AUTO MODE</span>';
+      }
+    }
+
+    // Notify MoodModule of track change
+    if (window.YourPartyAppInstance?.modules?.mood) {
+      window.YourPartyAppInstance.modules.mood.currentSongId = currentSongId;
+      window.YourPartyAppInstance.modules.mood.currentTrack = {
+        id: currentSongId,
+        title: trackTitle,
+        artist: trackArtist
+      };
+    }
+
+    // Reset Like/Dislike buttons for new track
+    const likeBtn = document.getElementById('like-button');
+    const dislikeBtn = document.getElementById('dislike-button');
+    if (likeBtn) {
+      likeBtn.classList.remove('active', 'voted');
+      likeBtn.disabled = false;
+    }
+    if (dislikeBtn) {
+      dislikeBtn.classList.remove('active', 'voted');
+      dislikeBtn.disabled = false;
+    }
+
     if (voteFeedback) {
       voteFeedback.textContent = "";
     }

@@ -239,134 +239,231 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     pointer-events: none;
 }
 
-/* Container */
+/* Container - Professional Spacing System */
 .hero-container {
     position: relative;
     z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center; /* Center everything, don't force apart */
-    gap: 30px; /* Natural consistent gap */
-    height: auto; /* Allow content to dictate height, but min-height will handle screen */
+    justify-content: center;
+    gap: 48px; /* 8px grid: 6 units */
+    height: auto;
     min-height: 90vh;
     width: 100%;
     max-width: 1200px;
-    padding: 100px 20px 40px 20px; /* Top padding for header, bottom for scroll */
+    padding: 80px 24px 80px 24px; /* 8px grid */
 }
 
-/* Branding */
-.hero-branding { text-align: center; margin-bottom: 20px; z-index: 20; position: relative; }
+/* Branding - Refined Typography */
+.hero-branding { 
+    text-align: center; 
+    margin-bottom: 0; 
+    z-index: 20; 
+    position: relative; 
+}
+
 .hero-logo { 
-    font-size: 3rem; font-weight: 800; letter-spacing: -0.05em; margin: 0; color: #fff; text-shadow: 0 0 30px rgba(255,255,255,0.2); 
-    font-family: 'Outfit', sans-serif;
+    font-size: 2.5rem; /* 40px - professional scale */
+    font-weight: 800; 
+    letter-spacing: -0.02em; 
+    margin: 0; 
+    color: #fff; 
+    text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.1;
 }
-.hero-logo .highlight { color: var(--neon-green); }
-.live-indicator { 
-    font-size: 0.8rem; letter-spacing: 0.3em; color: var(--neon-green); font-weight: bold; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.pulse-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; box-shadow: 0 0 10px var(--neon-green); animation: pulse 2s infinite; }
 
-/* Glass Player (Centerpiece) */
-.glass-player-wrapper { width: 100%; max-width: 500px; perspective: 1000px; margin-top: -20px; }
+.hero-logo .highlight { 
+    color: var(--neon-green); 
+}
+
+.live-indicator { 
+    font-size: 0.75rem; /* 12px */
+    letter-spacing: 0.2em; 
+    color: var(--neon-green); 
+    font-weight: 600; 
+    margin-top: 12px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
+}
+
+.pulse-dot { 
+    width: 6px; 
+    height: 6px; 
+    background: var(--neon-green); 
+    border-radius: 50%; 
+    box-shadow: 0 0 8px var(--neon-green); 
+    animation: pulse 2s infinite; 
+}
+
+/* Glass Player - Balanced Proportions */
+.glass-player-wrapper { 
+    width: 100%; 
+    max-width: 380px; /* Reduced from 500px */
+    perspective: 1000px; 
+}
+
 .glass-player {
     background: var(--glass-bg);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid var(--glass-border);
-    border-radius: 30px;
-    padding: 40px;
+    border-radius: 24px; /* Consistent with vibe deck */
+    padding: 32px; /* 8px grid: 4 units */
     text-align: center;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     position: relative;
     transition: transform 0.3s ease;
 }
-/* Album Art */
+
+/* Album Art - Proportional to Player */
 .player-cover {
-    width: 250px; height: 250px; margin: 0 auto 30px; position: relative;
+    width: 200px; /* Reduced from 250px */
+    height: 200px; 
+    margin: 0 auto 24px; /* 8px grid: 3 units */
+    position: relative;
 }
+
 .player-cover img {
-    width: 100%; height: 100%; object-fit: cover; border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    position: relative; z-index: 2;
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+    border-radius: 16px; /* Slightly smaller radius */
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    position: relative; 
+    z-index: 2;
 }
+
 .cover-glow { 
-    position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; 
-    background: var(--neon-green); filter: blur(50px); opacity: 0.4; z-index: 1;
+    position: absolute; 
+    top: 10%; 
+    left: 10%; 
+    width: 80%; 
+    height: 80%; 
+    background: var(--neon-green); 
+    filter: blur(40px); 
+    opacity: 0.3; 
+    z-index: 1;
     animation: glow-breathe 4s infinite alternate;
 }
 
-/* Info */
-.track-title { font-size: 2rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: #fff; }
-.track-artist { font-size: 1.1rem; color: #aaa; margin: 5px 0 20px; font-weight: 500; }
+/* Track Info - Professional Type Scale */
+.track-title { 
+    font-size: 1.5rem; /* 24px */
+    margin: 0 0 8px 0; /* 8px grid: 1 unit */
+    font-weight: 700; 
+    letter-spacing: -0.01em; 
+    line-height: 1.2; 
+    color: #fff; 
+}
 
-/* Controls */
+.track-artist { 
+    font-size: 1rem; /* 16px */
+    color: rgba(255, 255, 255, 0.6); 
+    margin: 0 0 24px 0; /* 8px grid: 3 units */
+    font-weight: 500; 
+}
+
+/* Controls - 8px Grid System */
 .play-fab {
-    width: 80px; height: 80px; border-radius: 50%; border: none;
+    width: 64px; /* 8px grid: 8 units */
+    height: 64px; 
+    border-radius: 50%; 
+    border: none;
     background: linear-gradient(135deg, var(--neon-green), #00ccaa);
-    color: #000; font-size: 30px; cursor: pointer;
-    box-shadow: 0 10px 30px rgba(0,255,136,0.3);
-    transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 20px;
+    color: #000; 
+    font-size: 24px; /* 8px grid: 3 units */
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+    transition: all 0.2s; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    margin: 0 auto 16px; /* 8px grid: 2 units */
     z-index: 100;
     position: relative;
 }
-.play-fab:hover { transform: scale(1.1); box-shadow: 0 0 50px rgba(0,255,136,0.6); }
+
+.play-fab:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 12px 32px rgba(0,255,136,0.4); 
+}
 
 .btn-glass-small {
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-    color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 0.75rem;
-    cursor: pointer; transition: all 0.2s; font-weight: bold; letter-spacing: 0.05em;
+    background: rgba(255,255,255,0.08); 
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; 
+    padding: 8px 16px; /* 8px grid */
+    border-radius: 12px; 
+    font-size: 0.75rem; /* 12px */
+    cursor: pointer; 
+    transition: all 0.2s; 
+    font-weight: 600; 
+    letter-spacing: 0.05em;
 }
-.btn-glass-small:hover { background: rgba(255,255,255,0.2); border-color: #fff; }
 
-/* Reaction Buttons (Like/Dislike) - PROMINENT STYLE */
+.btn-glass-small:hover { 
+    background: rgba(255,255,255,0.15); 
+    border-color: rgba(255,255,255,0.3); 
+}
+
+/* Reaction Buttons - Refined */
 .btn-reaction {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 15px 30px;
-    border-radius: 16px;
-    border: 2px solid rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.08);
+    padding: 12px 24px; /* 8px grid */
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
     cursor: pointer;
     transition: all 0.25s ease;
     position: relative;
     z-index: 10000;
 }
+
 .btn-reaction__icon {
-    font-size: 2rem;
+    font-size: 1.75rem; /* 28px - slightly smaller */
     line-height: 1;
 }
+
 .btn-reaction__label {
-    font-size: 0.7rem;
+    font-size: 0.625rem; /* 10px */
     font-weight: 700;
     letter-spacing: 0.15em;
     color: rgba(255,255,255,0.7);
     text-transform: uppercase;
 }
+
 .btn-reaction--like {
-    border-color: rgba(0, 255, 136, 0.4);
-    background: rgba(0, 255, 136, 0.1);
+    border-color: rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.08);
 }
+
 .btn-reaction--like:hover {
     border-color: var(--neon-green);
-    background: rgba(0, 255, 136, 0.25);
-    transform: scale(1.08);
-    box-shadow: 0 8px 25px rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 255, 136, 0.25);
 }
+
 .btn-reaction--like:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
 }
+
 .btn-reaction--dislike:hover {
     border-color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.15);
-    transform: scale(1.08);
-    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
+    background: rgba(255, 107, 107, 0.12);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.2);
 }
+
 .btn-reaction--dislike:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
 }
 
 /* Vibe Deck - Premium Glassmorphism */
@@ -611,11 +708,87 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     letter-spacing: 0.1em;
 }
 
-/* Rating Stars */
-.rating-strip { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
-.rating-stars button { background: none; border: none; color: #444; font-size: 24px; cursor: pointer; transition: color 0.1s; padding: 0 2px; }
-.rating-stars button:hover, .rating-stars button.active { color: #ffbb00; }
-.rating-score { font-size: 1.2rem; font-weight: bold; color: #fff; }
+/* Rating Stars - Balanced Size */
+.rating-strip { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 12px; /* 8px grid: 1.5 units */
+    margin-bottom: 16px; /* 8px grid: 2 units */
+}
+
+.rating-stars button { 
+    background: none; 
+    border: none; 
+    color: #444; 
+    font-size: 20px; /* Reduced from 24px */
+    cursor: pointer; 
+    transition: color 0.15s; 
+    padding: 0 2px; 
+}
+
+.rating-stars button:hover, 
+.rating-stars button.active { 
+    color: #ffbb00; 
+}
+
+.rating-score { 
+    font-size: 1rem; /* 16px */
+    font-weight: 600; 
+    color: #fff; 
+}
+
+/* Next Track Queue - Refined */
+.next-track-queue {
+    margin-top: 16px; /* 8px grid: 2 units */
+    text-align: left; 
+    padding: 12px; /* 8px grid: 1.5 units */
+    background: rgba(0,0,0,0.2); 
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.next-track-queue .label {
+    display: block; 
+    margin-bottom: 8px; /* 8px grid: 1 unit */
+    color: var(--neon-green); 
+    font-size: 0.625rem; /* 10px */
+    font-weight: 700;
+    letter-spacing: 0.15em;
+}
+
+.next-track-queue #queue-list {
+    font-size: 0.875rem; /* 14px */
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.queue-item {
+    margin-bottom: 4px;
+}
+
+/* Next Track Preview */
+.next-track-preview {
+    margin-top: 12px; /* 8px grid: 1.5 units */
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.875rem; /* 14px */
+    color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.next-track-preview .label {
+    color: var(--neon-green);
+    font-weight: 600;
+    font-size: 0.625rem; /* 10px */
+    letter-spacing: 0.1em;
+}
 
 /* Content Below Styling */
 .content-below {
@@ -625,9 +798,13 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     background: linear-gradient(to bottom, #000 0%, #0a0a0a 100%);
     padding-top: 50px;
 }
-.section-spacer { padding: 40px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-/* Mobile */
+.section-spacer { 
+    padding: 40px 20px; 
+    border-bottom: 1px solid rgba(255,255,255,0.05); 
+}
+
+/* Mobile Responsive */
 @media(max-width: 600px) {
     .glass-player { padding: 20px; }
     .player-cover { width: 180px; height: 180px; }

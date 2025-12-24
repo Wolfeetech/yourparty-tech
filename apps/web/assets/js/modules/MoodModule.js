@@ -164,12 +164,21 @@ class MoodModule {
     }
 
     showGlobalFeedback(msg, type) {
-        // Fallback feedback if no specific element exists
+        // Show in vibe-feedback element
         const fb = document.getElementById('vibe-feedback');
         if (fb) {
             fb.textContent = msg;
             fb.className = `vibe-feedback ${type}`;
-            setTimeout(() => fb.textContent = '', 4000);
+            setTimeout(() => {
+                fb.textContent = '';
+                fb.className = 'vibe-feedback';
+            }, 4000);
+        }
+
+        // Also show toast notification for better visibility
+        if (typeof showToast === 'function') {
+            const title = type === 'success' ? '✓ Vote Recorded' : '⚠ Notice';
+            showToast(title, msg, type, 3000);
         } else {
             console.log(`[Feedback] ${msg}`);
         }
