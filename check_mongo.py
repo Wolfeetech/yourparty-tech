@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import datetime
 
 # Hardcoded for verification script to avoid env var mess
-MONGO_URI = "mongodb://root:example@192.168.178.202:27017/"
+MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin"
 
 print("--- CHECKING MONGODB ---\n")
 try:
@@ -22,6 +22,17 @@ try:
         print(f"User:      {latest_mood.get('user_id')}")
     else:
         print("\n❌ NO VOTES FOUND in 'mood_votes'.")
+
+    # Check Tracks (Voting Candidates)
+    print("\nQuerying 'tracks' collection (for Voting Candidates)...")
+    track_count = db.tracks.count_documents({})
+    print(f"Total Tracks: {track_count}")
+    
+    if track_count > 0:
+        sample = db.tracks.find_one()
+        print(f"Sample Track: {sample.get('title')} - {sample.get('artist')}")
+    else:
+        print("❌ NO TRACKS FOUND! Run /library/sync endpoint.")
 
 except Exception as e:
     print(f"\n❌ ERROR: {e}")

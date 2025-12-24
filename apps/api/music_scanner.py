@@ -12,7 +12,7 @@ from mutagen.oggvorbis import OggVorbis
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SUPPORTED_EXTENSIONS = {'.mp3', '.flac', '.m4a', '.ogg', '.wav'}
+SUPPORTED_EXTENSIONS = {'.mp3', '.flac', '.m4a', '.ogg', '.wav', '.aac', '.wma', '.aiff'}
 
 class MusicScanner:
     def __init__(self):

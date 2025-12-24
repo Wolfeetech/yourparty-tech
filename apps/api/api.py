@@ -24,8 +24,8 @@ from music_scanner import MusicScanner
 from tag_improver import TagImprover
 from genre_organizer import GenreOrganizer
 from azuracast_client import AzuraCastClient
-from mongo_client import MongoDatabaseClient
-from track_matcher import TrackMatcher
+from mongo_client import MongoClient
+from library_manager import LibraryManager
 from track_matcher import TrackMatcher
 from library_service import get_library_service
 from tag_writer import write_metadata_to_file # NEW: Direct ID3 Writing
@@ -455,7 +455,7 @@ async def websocket_endpoint(websocket: WebSocket, station_id: str):
         while True:
             # Wait for any message (ping/pong)
             data = await websocket.receive_text()
-            # We could handle incoming 'vibe' votes here too
+            # We could handle incoming 'vibe' votes here
             
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -792,6 +792,10 @@ async def vote_mood(request: MoodVoteRequest):
                 mood=request.mood_current,
                 metadata=get_metadata_context(request.song_id)
             )
+            
+            # Trigger Auto-Curation
+            if state.library_manager:
+                 state.library_manager.check_promotion(request.song_id)
         
         # 3. Store mood_next preference
         if request.mood_next:
