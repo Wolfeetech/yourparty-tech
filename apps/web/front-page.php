@@ -369,20 +369,222 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     transform: scale(0.95);
 }
 
-/* Vibe Deck */
-.vibe-deck { width: 100%; max-width: 600px; text-align: center; }
-.deck-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-.deck-header h3 { font-size: 0.8rem; color: #666; letter-spacing: 0.2em; margin: 0; white-space: nowrap; }
-.deck-line { width: 100%; height: 1px; background: rgba(255,255,255,0.1); }
-.vibe-buttons { display: flex; justify-content: space-between; gap: 10px; }
-.vibe-btn {
-    flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-    color: #fff; padding: 15px 0; border-radius: 12px; cursor: pointer; transition: all 0.2s;
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
+/* Vibe Deck - Premium Glassmorphism */
+.vibe-deck { 
+    width: 100%; 
+    max-width: 700px; 
+    margin-top: 20px;
 }
-.vibe-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); border-color: #fff; }
-.vibe-btn .emoji { font-size: 1.5rem; }
-.vibe-btn .lbl { font-size: 0.6rem; font-weight: bold; letter-spacing: 0.1em; opacity: 0.7; }
+
+.vibe-deck-glass {
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.deck-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.deck-icon {
+    font-size: 2rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.3));
+}
+
+.deck-title-group {
+    flex: 1;
+}
+
+.deck-header h3 { 
+    font-size: 1.1rem; 
+    color: #fff; 
+    letter-spacing: 0.15em; 
+    margin: 0 0 5px 0;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.deck-subtitle {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    font-weight: 400;
+}
+
+.vibe-buttons-grid { 
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.vibe-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 20px 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.vibe-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.vibe-btn:hover::before {
+    opacity: 1;
+}
+
+.vibe-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.vibe-btn:active {
+    transform: translateY(-2px);
+}
+
+.vibe-btn__icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.vibe-btn__label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.vibe-btn__hint {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
+    text-align: center;
+}
+
+/* Individual Button Themes */
+.vibe-btn--energy:hover {
+    border-color: #ff6b35;
+    background: rgba(255, 107, 53, 0.15);
+    box-shadow: 0 12px 30px rgba(255, 107, 53, 0.3);
+}
+
+.vibe-btn--chill:hover {
+    border-color: #4ecdc4;
+    background: rgba(78, 205, 196, 0.15);
+    box-shadow: 0 12px 30px rgba(78, 205, 196, 0.3);
+}
+
+.vibe-btn--groove:hover {
+    border-color: #ff6bff;
+    background: rgba(255, 107, 255, 0.15);
+    box-shadow: 0 12px 30px rgba(255, 107, 255, 0.3);
+}
+
+.vibe-btn--dark:hover {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.15);
+    box-shadow: 0 12px 30px rgba(155, 89, 182, 0.3);
+}
+
+.vibe-btn.selected {
+    border-width: 2px;
+}
+
+.vibe-btn--energy.selected {
+    border-color: #ff6b35;
+    background: rgba(255, 107, 53, 0.2);
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+}
+
+.vibe-btn--chill.selected {
+    border-color: #4ecdc4;
+    background: rgba(78, 205, 196, 0.2);
+    box-shadow: 0 0 20px rgba(78, 205, 196, 0.4);
+}
+
+.vibe-btn--groove.selected {
+    border-color: #ff6bff;
+    background: rgba(255, 107, 255, 0.2);
+    box-shadow: 0 0 20px rgba(255, 107, 255, 0.4);
+}
+
+.vibe-btn--dark.selected {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.2);
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+}
+
+.vibe-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    color: var(--neon-green);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 10px;
+    background: rgba(0, 255, 136, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--neon-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.vibe-feedback {
+    text-align: center;
+    font-size: 0.8rem;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.vibe-feedback.success {
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--neon-green);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.vibe-feedback.warning {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
 
 @keyframes glow-breathe { 0% { opacity: 0.3; transform: scale(0.9); } 100% { opacity: 0.6; transform: scale(1.1); } }
 
@@ -430,25 +632,51 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     .glass-player { padding: 20px; }
     .player-cover { width: 180px; height: 180px; }
     .track-title { font-size: 1.5rem; }
-    .track-artist { font-size: 0.9rem; color: #ccc; } /* Better Contrast */
-    .vibe-buttons { 
-        display: grid; 
-        grid-template-columns: repeat(2, 1fr); /* Force 2 columns */
-        gap: 8px; /* Tighter gap */
-        padding: 0 10px; /* Ensure internal padding prevents edge touching */
+    .track-artist { font-size: 0.9rem; color: #ccc; }
+    
+    .vibe-deck-glass {
+        padding: 20px;
+    }
+    
+    .deck-header h3 {
+        font-size: 0.9rem;
+    }
+    
+    .deck-subtitle {
+        font-size: 0.65rem;
+    }
+    
+    .vibe-buttons-grid { 
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .vibe-btn {
+        padding: 16px 12px;
+    }
+    
+    .vibe-btn__icon {
+        font-size: 2rem;
+    }
+    
+    .vibe-btn__label {
+        font-size: 0.75rem;
+    }
+    
+    .vibe-btn__hint {
+        font-size: 0.6rem;
     }
     
     .hero-container { 
         padding-top: 100px; 
         padding-bottom: 120px;
-        justify-content: flex-start; /* On mobile, start from top to fit keyboard/scroll */
+        justify-content: flex-start;
         gap: 20px;
     } 
     
-    .hero-logo { font-size: 2rem; } /* Prevent overlap */
+    .hero-logo { font-size: 2rem; }
     .live-indicator { font-size: 0.7rem; }
     
-    /* Ensure play button is large enough */
     .play-fab { width: 70px; height: 70px; font-size: 24px; }
 }
 
