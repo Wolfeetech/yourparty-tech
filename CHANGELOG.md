@@ -1,5 +1,23 @@
 # Changelog
 
+## [v1.0.9] - 2025-12-26
+### Added
+- **Vote Next Vibe (MTV Style)**: Users can vote for the next track's mood (energy/chill/groove/dark).
+  - Visual trend feedback shows which mood is "winning" in real-time.
+  - Pulsing animation highlights the trending button.
+- **Auto-DJ Integration**: Backend scheduler (`mood_scheduler.py`) now reads from `mood_next_votes` and selects tracks accordingly.
+- **Unified Database**: All collections now in single `yourparty` MongoDB database.
+
+### Fixed
+- **Database Fragmentation**: Resolved split between `radio_ratings` and `yourparty` databases.
+- **Missing Imports**: Fixed `get_library_service` function in `library_service.py`.
+- **PHP Syntax Error**: Removed duplicate `);` in `inc/api.php` that caused site outage.
+- **API Startup**: Added `Depends` import to `api.py` for FastAPI dependency injection.
+
+### Infrastructure
+- Storage baseline captured: local-lvm at 85.02%.
+- All 12 containers verified healthy.
+
 ## [v1.0.8] - 2025-12-18
 ### Fixed
 - **Critical**: WordPress Core repariert (`class-wp-html-doctype-info.php` fehlte).
