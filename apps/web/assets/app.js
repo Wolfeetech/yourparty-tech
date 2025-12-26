@@ -1413,6 +1413,57 @@ document.addEventListener("DOMContentLoaded", () => {
   let inlineWaveformHistory = [];
 
 
+  // Vibe / Mood Next Voting Logic
+  const vibeButtons = document.querySelectorAll('.vibe-btn');
+  vibeButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const btnEl = e.currentTarget;
+      const vote = btnEl.dataset.vote;
+
+      // Visual Feedback
+      vibeButtons.forEach(b => b.classList.remove('selected'));
+      btnEl.classList.add('selected');
+
+      const config = window.YourPartyConfig || {};
+      const songId = window.currentSongId; // From updateStatus
+
+      if (!songId) {
+        console.warn('Cannot vote: No current song ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${config.wpRestBase}/vote-next-mood`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': config.nonce
+          },
+          body: JSON.stringify({
+            song_id: songId,
+            mood_next: vote
+          })
+        });
+
+        const data = await response.json();
+
+        // Show feedback in UI (vibe-feedback)
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = `Voted for ${vote.toUpperCase()} next!`;
+          feedbackEl.className = 'vibe-feedback success';
+          setTimeout(() => {
+            feedbackEl.textContent = '';
+            feedbackEl.className = 'vibe-feedback';
+          }, 3000);
+        }
+
+      } catch (err) {
+        console.error("Vibe vote failed", err);
+      }
+    });
+  });
+
   // Mode Switcher Logic
   document.querySelectorAll('.vis-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {

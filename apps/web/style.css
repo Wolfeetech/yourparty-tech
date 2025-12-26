@@ -22,14 +22,14 @@ Text Domain: yourparty-tech
   --beige: #F4EFEA;
   
   /* Background & Text */
-  --bg-dark: #0a0a0a;
-  --bg-panel: #111111;
-  --bg-card: #1a1a1a;
+  --bg-dark: #000000;
+  --bg-panel: #050505;
+  --bg-card: #0a0a0a;
   --text: #ffffff;
-  --text-muted: #888888;
-  --text-subtle: #555555;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.15);
+  --text-muted: #999999;
+  --text-subtle: #666666;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-light: rgba(255, 255, 255, 0.2);
   
   /* Typography */
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

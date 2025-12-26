@@ -800,6 +800,48 @@ add_action('rest_api_init', function () {
         ]
     );
 
+    // VOTE NEXT MOOD PROXY
+    register_rest_route(
+        'yourparty/v1',
+        '/vote-next-mood',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $song_id = sanitize_text_field($request->get_param('song_id'));
+                $mood_next = sanitize_text_field($request->get_param('mood_next'));
+
+                if (empty($song_id) || empty($mood_next)) {
+                    return new WP_Error('invalid_payload', 'song_id and mood_next required', ['status' => 400]);
+                }
+
+                // Proxy to FastAPI backend
+                $api_url = yourparty_api_base_url() . '/vote-next-mood';
+                
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode([
+                        'song_id' => $song_id,
+                        'mood_next' => $mood_next
+                    ]),
+                    'timeout' => 5,
+                    'sslverify' => false
+                ]);
+
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] vote-next-mood failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Vote submission failed', ['status' => 503]);
+                }
+
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+    );
+
     register_rest_route(
         'yourparty/v1',
         '/schedule',
@@ -858,7 +900,7 @@ add_action('rest_api_init', function () {
                 // Forward to Python Backend
                 $api_url = yourparty_api_base_url() . '/library/all';
                 $response = wp_remote_get($api_url, [
-                    'timeout' => 15, // Library might look big
+                    'timeout' => 30, // Library might look big
                     'sslverify' => false
                 ]);
 

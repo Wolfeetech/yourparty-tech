@@ -8,11 +8,11 @@ MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:270
 print("--- CHECKING MONGODB ---\n")
 try:
     client = MongoClient(MONGO_URI)
-    db = client.yourparty
+    db = client.radio_ratings
     
     # Check Mood Votes
-    print("Querying 'mood_votes' collection...")
-    latest_mood = db.mood_votes.find_one(sort=[('_id', -1)])
+    print("Querying 'moods' collection...")
+    latest_mood = db.moods.find_one(sort=[('_id', -1)])
     
     if latest_mood:
         print(f"\n✅ LATEST VOTE FOUND:")
@@ -21,18 +21,28 @@ try:
         print(f"Mood:      {latest_mood.get('mood')}")
         print(f"User:      {latest_mood.get('user_id')}")
     else:
-        print("\n❌ NO VOTES FOUND in 'mood_votes'.")
+        print("\n❌ NO VOTES FOUND in 'moods'.")
 
     # Check Tracks (Voting Candidates)
-    print("\nQuerying 'tracks' collection (for Voting Candidates)...")
+    print("\nQuerying 'tracks' collection...")
     track_count = db.tracks.count_documents({})
     print(f"Total Tracks: {track_count}")
     
     if track_count > 0:
         sample = db.tracks.find_one()
-        print(f"Sample Track: {sample.get('title')} - {sample.get('artist')}")
+        print(f"Sample Track (path): {sample.get('file_path')}")
+        print(f"Sample Track (meta): {sample.get('metadata')}")
+
+    # Check Song Metadata (User's new source)
+    print("\nQuerying 'song_metadata' collection...")
+    meta_count = db.song_metadata.count_documents({})
+    print(f"Total Metadata Docs: {meta_count}")
+
+    if meta_count > 0:
+        sample_meta = db.song_metadata.find_one()
+        print(f"Sample Metadata: {sample_meta}")
     else:
-        print("❌ NO TRACKS FOUND! Run /library/sync endpoint.")
+        print("❌ 'song_metadata' is EMPTY! User's code queries this.")
 
 except Exception as e:
     print(f"\n❌ ERROR: {e}")

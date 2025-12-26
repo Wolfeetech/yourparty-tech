@@ -166,6 +166,36 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting rating: {e}")
             return {"success": False, "error": str(e)}
 
+    def submit_vote(self, song_id: str, vote: str, user_id: str = "anonymous") -> Dict[str, int]:
+        """
+        Submit a boolean vote (like/dislike) and return updated counts.
+        """
+        try:
+            if not hasattr(self, 'votes_collection'):
+                self.votes_collection = self.db["votes"]
+                self.votes_collection.create_index("song_id")
+
+            vote_doc = {
+                "song_id": song_id,
+                "vote": vote, # 'like' or 'dislike'
+                "user_id": user_id,
+                "timestamp": datetime.utcnow()
+            }
+            self.votes_collection.insert_one(vote_doc)
+            
+            # Aggregate counts
+            pipeline = [
+                {"$match": {"song_id": song_id}},
+                {"$group": {"_id": "$vote", "count": {"$sum": 1}}}
+            ]
+            results = list(self.votes_collection.aggregate(pipeline))
+            counts = {r["_id"]: r["count"] for r in results}
+            
+            return counts
+        except Exception as e:
+            logger.error(f"Error submitting vote: {e}")
+            return {}
+
     def submit_mood(self, song_id: str, mood: str = None, genre: str = None, user_id: str = "anonymous", **kwargs) -> Dict[str, Any]:
         """
         Submit a new mood or genre tag for a track.
@@ -241,6 +271,19 @@ class MongoDatabaseClient:
             return doc.get("metadata") if doc else None
         except Exception:
             return None
+
+    def get_random_tracks(self, limit: int = 3) -> List[Dict[str, Any]]:
+        """Get random tracks with metadata from song_metadata collection."""
+        try:
+             # Sample random tracks that have metadata
+             pipeline = [
+                 {"$match": {"metadata.title": {"$exists": True}}},
+                 {"$sample": {"size": limit}}
+             ]
+             return list(self.db["song_metadata"].aggregate(pipeline))
+        except Exception as e:
+            logger.error(f"Error getting random tracks: {e}")
+            return []
 
     def get_song_moods(self, song_id: str) -> Dict[str, Any]:
         """Get mood tags for a specific song with counts."""
@@ -795,7 +838,27 @@ class MongoDatabaseClient:
             logger.error(f"Error getting user stats: {e}")
             return {"user_id": user_id, "total_points": 0, "streak_days": 0, "rank": None}
     
-    def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_random_tracks(self, limit: int = 3) -> List[Dict[str, Any]]:
+        """
+        Get random tracks from the library.
+        Used for voting candidates when AzuraCast history isn't sufficient.
+        """
+        try:
+            pipeline = [
+                {"$sample": {"size": limit}}
+            ]
+            
+            tracks = list(self.tracks_collection.aggregate(pipeline))
+            
+            # Clean up ObjectId
+            for t in tracks:
+                if '_id' in t:
+                    t['_id'] = str(t['_id'])
+                    
+            return tracks
+        except Exception as e:
+            logger.error(f"Error fetching random tracks: {e}")
+            return []
         """
         Get the top users by total points.
         

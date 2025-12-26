@@ -264,6 +264,7 @@ class LibraryService:
         finally:
             self.sync_in_progress = False
 
+
     def _sync_worker(self, directory: str) -> Dict[str, Any]:
         """Synchronous worker for directory sync."""
         stats = {
@@ -277,23 +278,11 @@ class LibraryService:
         try:
             logger.info(f"Starting directory sync: {directory}")
             
-            # Scan directory (Heavy I/O)
-            files = self.scanner.scan_directory(directory)
-            stats["scanned"] = len(files)
-            
-            # Process each file
-            for file_info in files:
-                # We need to run add_or_update_track synchronously here since we are in a thread
-                # But add_or_update_track is async.
-                # Assuming add_or_update_track uses synchronous Mongo/Fingerprint calls inside,
-                # we should probably have a synchronous version or use asyncio.run (bad inside thread).
+            # Use Generator to save memory
+            for file_info in self.scanner.scan_directory(directory):
+                stats["scanned"] += 1
                 
-                # REFACTOR: We'll implement the logic synchronously here or call a sync helper.
-                # Since add_or_update_track is currently defined as async but does sync work,
-                # we can strip the 'async' or make a sync version.
-                
-                # For now, let's call a sync version of add_or_update_track logic directly/inline
-                # to ensure thread safety and simplicity.
+                # Check for cancellation? (Not implemented yet)
                 
                 result = self._add_or_update_track_sync(
                     file_info['path'],
@@ -319,6 +308,8 @@ class LibraryService:
         except Exception as e:
             logger.error(f"Worker error: {e}")
             raise e
+            
+
 
     def _add_or_update_track_sync(self, file_path: str, metadata: Dict[str, Any], force_update: bool = False) -> Dict[str, str]:
         """Synchronous version of add_or_update_track for thread usage."""

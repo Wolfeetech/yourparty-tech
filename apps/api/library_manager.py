@@ -47,10 +47,10 @@ class LibraryManager:
             mood_data = self.mongo.get_song_moods(song_id)
             # Structure expected: {'top_mood': 'energy', 'moods': {'energy': 5, 'chill': 1}}
             
-            if not mood_data or 'moods' not in mood_data:
+            if not mood_data or 'mood_counts' not in mood_data:
                 return
 
-            vote_counts = mood_data['moods']
+            vote_counts = mood_data['mood_counts']
             
             for mood, count in vote_counts.items():
                 if count >= THRESHOLD_VOTES:
@@ -74,10 +74,19 @@ class LibraryManager:
         # But `add_to_playlist` implementation in azuracast_client uses valid API.
         
         # Converting song_id (str) to int for AzuraCast
+        # Converting song_id (str) to int for AzuraCast?
+        # AzuraCast Batch API accepts unique_id (string) or media_id (int).
+        # We try passing the ID as is (likely a unique_id hash).
+        
         try:
-            media_id = int(song_id)
+            # Check if it looks like an int, try to convert, else pass string
+            media_id = song_id
+            if str(song_id).isdigit():
+                media_id = int(song_id)
+            
+            # Pass to client (which handles payload)
             success = self.azura.add_to_playlist(media_id, target_playlist)
             if success:
                  logger.info(f"🚀 PROMOTED {media_id} to '{target_playlist}'!")
-        except ValueError:
-            logger.error(f"Invalid Song ID for promotion: {song_id}")
+        except Exception as e:
+            logger.error(f"Error promoting song {song_id}: {e}")

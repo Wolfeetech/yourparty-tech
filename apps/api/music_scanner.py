@@ -18,17 +18,18 @@ class MusicScanner:
     def __init__(self):
         pass
 
-    def scan_directory(self, path: str) -> List[Dict[str, Any]]:
+    def scan_directory(self, path: str):
         """
-        Recursively scans a directory for music files and extracts metadata.
+        Recursively scans a directory for music files and yields metadata.
+        NOW A GENERATOR to prevent OOM on large libraries.
         """
-        music_files = []
         path = Path(path)
 
         if not path.exists():
             logger.error(f"Directory not found: {path}")
-            return []
+            return
 
+        count = 0
         for root, dirs, files in os.walk(path):
             # Modify dirs in-place to skip system/hidden folders
             dirs[:] = [d for d in dirs if not d.startswith('.') and not d.startswith('$') and d != 'System Volume Information']
@@ -36,15 +37,20 @@ class MusicScanner:
             for file in files:
                 file_path = Path(root) / file
                 if file_path.suffix.lower() in SUPPORTED_EXTENSIONS:
-                    metadata = self._extract_metadata(file_path)
-                    music_files.append({
-                        "path": str(file_path),
-                        "filename": file,
-                        "metadata": metadata
-                    })
+                    try:
+                        metadata = self._extract_metadata(file_path)
+                        yield {
+                            "path": str(file_path),
+                            "filename": file,
+                            "metadata": metadata
+                        }
+                        count += 1
+                        if count % 100 == 0:
+                            logger.info(f"Scanned {count} files so far...")
+                    except Exception as e:
+                        logger.error(f"Error yielding file {file}: {e}")
         
-        logger.info(f"Found {len(music_files)} music files in {path}")
-        return music_files
+        logger.info(f"Scan complete. Processed {count} files.")
 
     def _extract_metadata(self, file_path: Path) -> Dict[str, str]:
         """

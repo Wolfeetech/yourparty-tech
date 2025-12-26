@@ -894,9 +894,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const wpNonce='<?php echo wp_create_nonce('wp_rest'); ?>';
     
     // API Endpoints
-    const apiLib = '/wp-json/yourparty/v1/library';
-    const apiStatus = '/wp-json/yourparty/v1/status';
+    // API Endpoints
     const apiGeneric = '<?php echo esc_url(rest_url('yourparty/v1')); ?>';
+    const apiLib = apiGeneric + '/library';
+    const apiStatus = apiGeneric + '/status';
 
     // --- LIBRARY TABLE ---
     function updateLibrary() {

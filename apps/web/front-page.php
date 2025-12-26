@@ -182,7 +182,13 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
 
         <div class="container section-spacer">
              <!-- CONTACT -->
-             <?php get_template_part('template-parts/sections/contact'); ?>
+             <?php 
+             $requests_url = apply_filters(
+                 'yourparty_requests_url',
+                 yourparty_public_url('/public/' . YOURPARTY_STATION_SLUG . '/embed-requests')
+             );
+             get_template_part('template-parts/sections/contact', null, ['requests_url' => $requests_url]); 
+             ?>
         </div>
     </div>
 

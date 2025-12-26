@@ -42,6 +42,87 @@
     // ========== UI RENDERING ==========
     function renderTrackVotingUI() {
         state.widgetEl.innerHTML = `
+            <style>
+                .live-voting__track-cards {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 15px;
+                    margin: 15px 0;
+                }
+                .track-card {
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 12px;
+                    padding: 10px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    text-align: center;
+                    border: 2px solid transparent;
+                }
+                .track-card:hover {
+                    background: rgba(255,255,255,0.1);
+                    transform: translateY(-2px);
+                }
+                .track-card--voted {
+                    border-color: #00ff88;
+                    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+                }
+                .track-card__cover {
+                    position: relative;
+                    width: 100%;
+                    aspect-ratio: 1;
+                    overflow: hidden;
+                    border-radius: 8px;
+                    margin-bottom: 8px;
+                    background: #000;
+                }
+                .track-card__cover img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                .track-card__title {
+                    font-weight: bold;
+                    font-size: 0.9rem;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    color: #fff;
+                }
+                .track-card__artist {
+                    font-size: 0.8rem;
+                    color: #aaa;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .vote-count {
+                    display: block;
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    color: #00ff88;
+                    margin-top: 5px;
+                }
+                .vote-label {
+                    font-size: 0.7rem;
+                    text-transform: uppercase;
+                    opacity: 0.7;
+                }
+                @media (max-width: 600px) {
+                    .live-voting__track-cards {
+                        grid-template-columns: 1fr; /* Stack on mobile */
+                    }
+                    .track-card {
+                        display: flex; /* Row layout on mobile list */
+                        align-items: center;
+                        text-align: left;
+                        gap: 15px;
+                    }
+                    .track-card__cover {
+                        width: 60px;
+                        margin-bottom: 0;
+                    }
+                }
+            </style>
             <div class="live-voting__header">
                 <h3 class="live-voting__title">VOTE FOR NEXT TRACK</h3>
                 <span class="live-voting__status">LIVE</span>
@@ -72,7 +153,7 @@
             return `
                 <div class="track-card ${isVoted ? 'track-card--voted' : ''}" data-track-id="${track.id}">
                     <div class="track-card__cover">
-                        <img src="${coverArt}" alt="${track.title}" loading="lazy" />
+                        <img src="${coverArt}" alt="${track.title}" loading="lazy" onerror="handleImageError(this)" />
                         ${isVoted ? '<div class="track-card__voted-badge">✓ VOTED</div>' : ''}
                     </div>
                     <div class="track-card__info">
@@ -218,6 +299,25 @@
     }
 
     // ========== UTILITIES ==========
+    function generateGradient(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const c1 = `hsl(${hash % 360}, 70%, 50%)`;
+        const c2 = `hsl(${(hash + 40) % 360}, 70%, 30%)`;
+        return `linear-gradient(135deg, ${c1}, ${c2})`;
+    }
+
+    window.handleImageError = function (img) {
+        const card = img.closest('.track-card');
+        const title = card.querySelector('.track-card__title').innerText;
+        const gradient = generateGradient(title);
+
+        const wrapper = img.parentElement;
+        wrapper.innerHTML = `<div style="width:100%; height:100%; background: ${gradient}; display:flex; align-items:center; justify-content:center; font-size:2rem; color:white; font-weight:bold;">${title.charAt(0)}</div>`;
+    }
+
     function showToast(message, type = 'info') {
         // Use existing toast system if available
         if (window.showToast) {
