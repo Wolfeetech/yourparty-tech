@@ -1,8 +1,8 @@
 import logging
+import os
 from typing import Dict, Any, Optional, List
 from pymongo import MongoClient
 from datetime import datetime, timedelta
-from apps.api.secrets import MONGO_URI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,20 +21,29 @@ class MongoDatabaseClient:
     """
     Client for MongoDB integration - handles ratings, metadata, and sync with library.
     """
-    def __init__(self, connection_string: str = MONGO_URI, database_name: str = "radio_ratings"):
+    def __init__(self, connection_string: str = None, database_name: str = None):
         """
         Initialize MongoDB client.
         
         Args:
-            connection_string: MongoDB connection string (default: localhost)
-            database_name: Database name for ratings storage
+            connection_string: MongoDB connection string (default: env MONGO_URI)
+            database_name: Override database name (default: extracted from URI or 'yourparty')
         """
         try:
             self.client = MongoClient(connection_string)
-            self.db = self.client[database_name]
+            
+            # Extract database from URI if not explicitly provided
+            if database_name:
+                self.db = self.client[database_name]
+            else:
+                # Try to get default database from URI
+                self.db = self.client.get_default_database(default="yourparty")
+            
             self.ratings_collection = self.db["rating_events"]
             self.tracks_collection = self.db["tracks"]
             self.sync_log_collection = self.db["sync_log"]
+            self.moods_collection = self.db["moods"]
+            self.mood_next_votes_collection = self.db["mood_next_votes"]
             
             # Create indexes for performance (Best Effort)
             try:
@@ -346,7 +355,14 @@ class MongoDatabaseClient:
             self.mood_next_votes_collection.insert_one(vote_doc)
             logger.info(f"Mood next vote stored: {mood_next}")
             
-            return {"success": True, "mood_next": mood_next}
+            # Recalculate dominant mood for immediate feedback
+            dominant = self.get_dominant_next_mood(time_window_minutes=30)
+            
+            return {
+                "success": True, 
+                "mood_next": mood_next, 
+                "dominant_next": dominant
+            }
         except Exception as e:
             logger.error(f"Error submitting mood_next vote: {e}")
             return {"success": False, "error": str(e)}

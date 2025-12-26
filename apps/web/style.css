@@ -2210,3 +2210,17 @@ body.visualizer-active {
     font-size: 14px;
 }
 
+
+/* Trending Vibe Animation */
+.vibe-btn.trending {
+    border-color: #ff0055 !important;
+    color: #ff0055 !important;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.6);
+    animation: vibePulse 1.5s infinite;
+}
+
+@keyframes vibePulse {
+    0% { box-shadow: 0 0 5px rgba(255, 0, 85, 0.4); transform: scale(1); }
+    50% { box-shadow: 0 0 20px rgba(255, 0, 85, 1); transform: scale(1.05); }
+    100% { box-shadow: 0 0 5px rgba(255, 0, 85, 0.4); transform: scale(1); }
+}

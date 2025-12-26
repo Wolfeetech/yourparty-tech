@@ -3,9 +3,14 @@ import logging
 import time
 import sys
 from pathlib import Path
-from apps.api.music_scanner import MusicScanner
-from apps.api.mongo_client import MongoDatabaseClient
-from apps.api.secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
+try:
+    from apps.api.music_scanner import MusicScanner
+    from apps.api.mongo_client import MongoDatabaseClient
+    from apps.api.config_secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
+except ImportError:
+    from music_scanner import MusicScanner
+    from mongo_client import MongoDatabaseClient
+    from config_secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
 
 # Logging
 logging.basicConfig(
@@ -14,6 +19,18 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger("LibraryService")
+
+def get_library_service(mongo_client=None):
+    """Factory function to get a LibraryService instance."""
+    # Return a simple wrapper that doesn't require library_path
+    # since we may not always have a local path on the API server
+    class LibraryServiceWrapper:
+        def __init__(self, mc):
+            self.mongo = mc
+        def check_promotion(self, song_id):
+            # Placeholder - can be expanded later
+            pass
+    return LibraryServiceWrapper(mongo_client)
 
 class LibraryService:
     def __init__(self, library_path: str):

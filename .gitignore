@@ -34,3 +34,14 @@ npm_database.sqlite
 # OS files
 Thumbs.db
 .DS_Store
+
+# Local config/inventory files
+fstab_source.txt
+picard_config.txt
+pve_inventory.txt
+sync_log.txt
+scheduler.log
+migration.log
+
+# Backups (don't commit to repo)
+backups/
