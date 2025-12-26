@@ -291,52 +291,61 @@ async def get_fallback_track(mongo_client) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def mood_queue_worker_iteration(mongo_client, azura_client) -> bool:
+async def mood_queue_worker_iteration(mongo_client, azura_client, steering_callback=None) -> bool:
     """
-    Single iteration of the mood queue worker with Playtime Mode support.
-    
-    Selects tracks based on current mode:
-    - DISCOVERY: Untagged tracks for tagging
-    - REFINEMENT: Tagged tracks for rating verification
-    - LIVE_VOTE: Community vote-driven selection
-    - AUTO: System decides based on conditions
-    
-    Returns:
-        True if a track was successfully queued
+    Single iteration with Manual Override support.
     """
     global current_mode
     
     try:
-        # 1. Determine current playtime mode
-        current_mode = get_current_playtime_mode()
-        logger.info(f"=== Playtime Mode: {current_mode.value.upper()} ===")
+        # 0. Check Manual Override first
+        manual_target = None
+        if steering_callback:
+            steering = steering_callback()
+            if steering and steering.get('mode') == 'manual':
+                manual_target = steering.get('target')
+
+        if manual_target:
+            logger.info(f"=== MANUAL STEERING ACTIVE: {manual_target.upper()} ===")
+            current_mode = PlaytimeMode.AUTO # Treat as auto but forced target
+            track = await select_next_track_by_mood(mongo_client, manual_target)
+            
+            if not track:
+                logger.warning(f"Manual steering for '{manual_target}' found no tracks - falling back")
+                # Fall through to standard logic
+
+        # If no manual target or manual selection failed, verify standard mode
+        if not manual_target or not track:
+            # 1. Determine current playtime mode
+            current_mode = get_current_playtime_mode()
+            logger.info(f"=== Playtime Mode: {current_mode.value.upper()} ===")
         
-        # Update Prometheus gauge
-        mode_map = {PlaytimeMode.AUTO: 0, PlaytimeMode.DISCOVERY: 1, 
-                    PlaytimeMode.REFINEMENT: 2, PlaytimeMode.LIVE_VOTE: 3}
-        CURRENT_MODE_GAUGE.set(mode_map.get(current_mode, 0))
-        
-        track = None
-        
-        # 2. Select track based on mode
-        if current_mode == PlaytimeMode.DISCOVERY:
-            track = await select_discovery_track(mongo_client)
-        elif current_mode == PlaytimeMode.REFINEMENT:
-            track = await select_refinement_track(mongo_client)
-        elif current_mode == PlaytimeMode.LIVE_VOTE:
-            track = await select_live_vote_track(mongo_client, azura_client)
-        else:  # AUTO mode
-            # Check if we have enough tagged tracks
-            dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=10)
-            if dominant_mood:
-                track = await select_next_track_by_mood(mongo_client, dominant_mood)
-            else:
-                # Mix discovery and refinement
-                import random
-                if random.random() < 0.3:  # 30% discovery, 70% refinement
-                    track = await select_discovery_track(mongo_client)
+            # Update Prometheus gauge
+            mode_map = {PlaytimeMode.AUTO: 0, PlaytimeMode.DISCOVERY: 1, 
+                        PlaytimeMode.REFINEMENT: 2, PlaytimeMode.LIVE_VOTE: 3}
+            CURRENT_MODE_GAUGE.set(mode_map.get(current_mode, 0))
+            
+            track = None
+            
+            # 2. Select track based on mode
+            if current_mode == PlaytimeMode.DISCOVERY:
+                track = await select_discovery_track(mongo_client)
+            elif current_mode == PlaytimeMode.REFINEMENT:
+                track = await select_refinement_track(mongo_client)
+            elif current_mode == PlaytimeMode.LIVE_VOTE:
+                track = await select_live_vote_track(mongo_client, azura_client)
+            else:  # AUTO mode
+                # Check if we have enough tagged tracks
+                dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=10)
+                if dominant_mood:
+                    track = await select_next_track_by_mood(mongo_client, dominant_mood)
                 else:
-                    track = await select_refinement_track(mongo_client)
+                    # Mix discovery and refinement
+                    import random
+                    if random.random() < 0.3:  # 30% discovery, 70% refinement
+                        track = await select_discovery_track(mongo_client)
+                    else:
+                        track = await select_refinement_track(mongo_client)
         
         # 3. Fallback if no mode-specific track found
         if not track:
@@ -357,11 +366,9 @@ async def mood_queue_worker_iteration(mongo_client, azura_client) -> bool:
         return False
 
 
-async def schedule_mood_queue_worker(mongo_client, azura_client):
+async def schedule_mood_queue_worker(mongo_client, azura_client, steering_callback=None):
     """
     Background task that runs the mood queue worker on a cycle.
-    
-    This should be started as a background task from the main API.
     """
     logger.info(f"Mood Queue Worker starting (cycle: {MOOD_CYCLE_SECONDS}s, enabled: {FEATURE_MOOD_AUTODJ})")
     
@@ -371,8 +378,8 @@ async def schedule_mood_queue_worker(mongo_client, azura_client):
     
     while True:
         try:
-            logger.info("Running mood queue iteration...")
-            await mood_queue_worker_iteration(mongo_client, azura_client)
+            # logger.info("Running mood queue iteration...")
+            await mood_queue_worker_iteration(mongo_client, azura_client, steering_callback)
             
         except Exception as e:
             logger.error(f"Mood queue worker error: {e}")

@@ -518,7 +518,12 @@ async def startup_event():
         try:
             from mood_scheduler import schedule_mood_queue_worker
             logger.info(f"Starting Mood Auto-DJ (cycle: {MOOD_CYCLE_SECONDS}s)...")
-            asyncio.create_task(schedule_mood_queue_worker(state.mongo_client, state.azura_client))
+            # Pass callback to get dynamic steering status
+            asyncio.create_task(schedule_mood_queue_worker(
+                state.mongo_client, 
+                state.azura_client,
+                steering_callback=lambda: state.steering_status
+            ))
         except Exception as e:
             logger.error(f"Failed to start Mood Auto-DJ: {e}")
 
