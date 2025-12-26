@@ -93,10 +93,39 @@ class MusicScanner:
                     metadata['genre'] = str(tags.get('genre', [''])[0])
                     metadata['year'] = str(tags.get('date', [''])[0])
 
+            # Final Fallback: Filename Parsing
+            if not metadata['title'] or not metadata['artist']:
+                filename_meta = self._parse_filename(file_path)
+                if not metadata['title']:
+                    metadata['title'] = filename_meta.get('title', file_path.stem)
+                if not metadata['artist']:
+                    metadata['artist'] = filename_meta.get('artist', 'Unknown Artist')
+
         except Exception as e:
             logger.warning(f"Error reading metadata from {file_path}: {e}")
+            # Ensure minimal metadata from filename even on error
+            filename_meta = self._parse_filename(file_path)
+            metadata['title'] = filename_meta.get('title', file_path.stem)
+            metadata['artist'] = filename_meta.get('artist', 'Unknown Artist')
 
         return metadata
+
+    def _parse_filename(self, file_path: Path) -> Dict[str, str]:
+        """Fallback: Try to parse Artist - Title from filename."""
+        filename = file_path.stem # No extension
+        # Common patterns: "Artist - Title", "01 Artist - Title"
+        
+        # Remove leading numbers/track numbers if present (simple heuristic)
+        # e.g. "01. " or "01 "
+        clean_name = filename
+        import re
+        clean_name = re.sub(r'^\d+[\s.-]+', '', clean_name)
+        
+        parts = clean_name.split(' - ', 1)
+        if len(parts) == 2:
+            return {"artist": parts[0].strip(), "title": parts[1].strip()}
+        
+        return {"title": clean_name}
 
     def _extract_mp3_tags(self, audio, metadata):
         # EasyID3 is easier for standard tags

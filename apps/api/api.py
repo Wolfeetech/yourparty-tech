@@ -1222,6 +1222,18 @@ async def vote_next(request: VoteNextRequest):
         "type": "steering",
         "data": state.steering_status
     })
+
+    # TRIGGER AUTO-DJ IMMEDIATELY
+    try:
+        from mood_scheduler import mood_queue_worker_iteration
+        asyncio.create_task(mood_queue_worker_iteration(
+            state.mongo_client, 
+            state.azura_client,
+            steering_callback=lambda: state.steering_status
+        ))
+        logger.info(f"Triggered immediate Auto-DJ for {request.vote}")
+    except Exception as e:
+        logger.error(f"Failed to trigger immediate Auto-DJ: {e}")
     
     return {"status": "accepted", "vote": request.vote, "trend": request.vote.upper(), "prediction": {"title": f"Upcoming {request.vote.capitalize()} Track"}}
 
