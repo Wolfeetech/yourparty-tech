@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from pymongo import MongoClient
 from datetime import datetime, timedelta
+from apps.api.secrets import MONGO_URI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class MongoDatabaseClient:
     """
     Client for MongoDB integration - handles ratings, metadata, and sync with library.
     """
-    def __init__(self, connection_string: str = "mongodb://localhost:27017/", database_name: str = "radio_ratings"):
+    def __init__(self, connection_string: str = MONGO_URI, database_name: str = "radio_ratings"):
         """
         Initialize MongoDB client.
         

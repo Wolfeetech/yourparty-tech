@@ -1425,10 +1425,16 @@ document.addEventListener("DOMContentLoaded", () => {
       btnEl.classList.add('selected');
 
       const config = window.YourPartyConfig || {};
-      const songId = window.currentSongId; // From updateStatus
+      // Robust ID retrieval
+      const songId = window.currentSongId || (window.YourPartyAppInstance?.modules?.mood?.currentSongId);
 
       if (!songId) {
         console.warn('Cannot vote: No current song ID');
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = "Kein aktiver Song!";
+          feedbackEl.className = 'vibe-feedback error';
+        }
         return;
       }
 
@@ -1445,11 +1451,15 @@ document.addEventListener("DOMContentLoaded", () => {
           })
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
         // Show feedback in UI (vibe-feedback)
         const feedbackEl = document.getElementById('vibe-feedback');
-        if (feedbackEl) {
+        if (feedbackEl && vote) {
           feedbackEl.textContent = `Voted for ${vote.toUpperCase()} next!`;
           feedbackEl.className = 'vibe-feedback success';
           setTimeout(() => {
@@ -1460,6 +1470,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       } catch (err) {
         console.error("Vibe vote failed", err);
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = "Fehler beim Voten.";
+          feedbackEl.className = 'vibe-feedback error';
+        }
       }
     });
   });

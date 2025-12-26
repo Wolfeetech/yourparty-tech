@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import datetime
 
 # Hardcoded for verification script to avoid env var mess
-MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin"
+from apps.api.secrets import MONGO_URI
 
 print("--- CHECKING MONGODB ---\n")
 try:

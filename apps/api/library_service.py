@@ -1,411 +1,120 @@
-"""
-Central Library Service - Single Source of Truth
-
-This is the core of the music library management system.
-MongoDB is the primary source, filesystem is just storage.
-"""
 
 import logging
-import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+import time
+import sys
 from pathlib import Path
-import hashlib
+from apps.api.music_scanner import MusicScanner
+from apps.api.mongo_client import MongoDatabaseClient
+from apps.api.secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
 
-from mongo_client import MongoDatabaseClient
-from music_scanner import MusicScanner
-from tag_improver import TagImprover
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("LibraryService")
 
 class LibraryService:
-    """
-    Central Library Service - Manages the entire music library.
-    
-    Responsibilities:
-    - Single source of truth (MongoDB)
-    - Background filesystem sync
-    - Duplicate detection & merging
-    - Metadata enrichment
-    """
-    
-    def __init__(self, mongo_client: MongoDatabaseClient):
-        self.mongo = mongo_client
+    def __init__(self, library_path: str):
+        self.library_path = library_path
         self.scanner = MusicScanner()
-        self.tag_improver = TagImprover()
-        self.sync_in_progress = False
-    
-    async def get_all_tracks(self) -> List[Dict[str, Any]]:
-        """
-        Get all tracks from database (primary source).
-        This is what the UI should display immediately.
-        
-        Returns:
-            List of all tracks with metadata and ratings
-        """
         try:
-            tracks = list(self.mongo.tracks_collection.find())
+             self.mongo = MongoDatabaseClient(MONGO_URI)
+        except Exception:
+             self.mongo = None
+             logger.error("Failed to connect to Mongo")
+
+    def run_ingestion(self):
+        """
+        Scans the library path and upserts tracks into MongoDB.
+        """
+        if not self.mongo:
+            logger.error("Cannot run ingestion: No DB connection.")
+            return
+
+        logger.info(f"🎤 Starting Library Ingestion from {self.library_path}")
+        
+        count_new = 0
+        count_updated = 0
+        
+        # Scan
+        for track_data in self.scanner.scan_directory(self.library_path):
+            file_path = track_data['path']
+            metadata = track_data['metadata']
             
-            # Enrich with ratings
-            for track in tracks:
-                if 'song_id' in track:
-                    rating = self.mongo.get_track_rating(song_id=track['song_id'])
-                    track['rating'] = rating
+            # Upsert to Mongo
+            try:
+                # We use file_path as unique key (or could use hash)
+                # Note: Windows paths might differ if mounted differently.
+                # Ideally store relative path from library root?
+                # For now using absolute path from scanner (which sees Z:\...)
                 
-                # Convert ObjectId to string for JSON
-                track['_id'] = str(track['_id'])
-            
-            logger.info(f"Loaded {len(tracks)} tracks from database")
-            return tracks
-            
-        except Exception as e:
-            logger.error(f"Error loading tracks: {e}")
-            return []
-    
-    def generate_acoustic_fingerprint(self, file_path: str) -> Optional[str]:
-        """
-        Generate acoustic fingerprint using fpcalc (Chromaprint).
-        This is the BEST way to detect duplicates.
-        
-        Args:
-            file_path: Path to audio file
-            
-        Returns:
-            Acoustic fingerprint hash or None
-        """
-        try:
-            import acoustid
-            duration, fingerprint = acoustid.fingerprint_file(file_path)
-            # Use hash of fingerprint for storage
-            return hashlib.sha256(fingerprint.encode()).hexdigest()
-        except Exception as e:
-            logger.warning(f"Could not generate fingerprint for {file_path}: {e}")
-            return None
-    
-    def generate_metadata_fingerprint(self, metadata: Dict[str, Any]) -> str:
-        """
-        Generate metadata-based fingerprint (fallback).
-        
-        Args:
-            metadata: Track metadata
-            
-        Returns:
-            MD5 hash of artist+title+album
-        """
-        data = f"{metadata.get('artist', '')}|{metadata.get('title', '')}|{metadata.get('album', '')}"
-        return hashlib.md5(data.lower().encode()).hexdigest()
-    
-    def find_duplicate(self, file_path: str, metadata: Dict[str, Any], acoustic_fp: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        Find duplicate track in database using multiple strategies.
-        
-        Priority:
-        1. Acoustic fingerprint (best)
-        2. Metadata fingerprint
-        3. Artist + Title match
-        
-        Args:
-            file_path: File path
-            metadata: Track metadata
-            acoustic_fp: Optional acoustic fingerprint
-            
-        Returns:
-            Duplicate track or None
-        """
-        # 1. Acoustic fingerprint (most reliable)
-        if acoustic_fp:
-            dup = self.mongo.tracks_collection.find_one({"acoustic_fingerprint": acoustic_fp})
-            if dup:
-                logger.info(f"Found duplicate by acoustic fingerprint: {metadata.get('title')}")
-                return dup
-        
-        # 2. Metadata fingerprint
-        meta_fp = self.generate_metadata_fingerprint(metadata)
-        dup = self.mongo.tracks_collection.find_one({"metadata_fingerprint": meta_fp})
-        if dup:
-            logger.info(f"Found duplicate by metadata fingerprint: {metadata.get('title')}")
-            return dup
-        
-        # 3. Artist + Title (fuzzy)
-        if metadata.get('title') and metadata.get('artist'):
-            dup = self.mongo.tracks_collection.find_one({
-                "metadata.title": metadata['title'],
-                "metadata.artist": metadata['artist']
-            })
-            if dup:
-                logger.info(f"Found potential duplicate by title+artist: {metadata.get('title')}")
-                return dup
-        
-        return None
-    
-    def merge_metadata(self, existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Merge metadata from two sources - keep the best quality.
-        
-        Priority:
-        1. MusicBrainz data (most reliable)
-        2. Existing data if better
-        3. New data if better
-        
-        Args:
-            existing: Existing metadata
-            new: New metadata
-            
-        Returns:
-            Merged metadata
-        """
-        merged = existing.copy()
-        
-        # For each field, keep the one with more information
-        for key in ['title', 'artist', 'album', 'year', 'genre']:
-            existing_val = existing.get(key, '')
-            new_val = new.get(key, '')
-            
-            # Prefer non-empty, longer, more detailed
-            if not existing_val or (new_val and len(str(new_val)) > len(str(existing_val))):
-                merged[key] = new_val
-        
-        # Special: Genre - merge multiple
-        if existing.get('genre') and new.get('genre'):
-            existing_genres = set(str(existing['genre']).split(', '))
-            new_genres = set(str(new['genre']).split(', '))
-            merged['genre'] = ', '.join(sorted(existing_genres | new_genres))
-        
-        return merged
-    
-    async def add_or_update_track(self, file_path: str, metadata: Dict[str, Any], force_update: bool = False) -> Dict[str, str]:
-        """
-        Add new track or update existing (with deduplication).
-        
-        Args:
-            file_path: Path to audio file
-            metadata: Track metadata
-            force_update: Force metadata update even if exists
-            
-        Returns:
-            Result dict with action taken
-        """
-        try:
-            # Check if file exists
-            if not Path(file_path).exists():
-                return {"action": "error", "reason": "file_not_found"}
-            
-            # Generate fingerprints
-            acoustic_fp = self.generate_acoustic_fingerprint(file_path)
-            metadata_fp = self.generate_metadata_fingerprint(metadata)
-            
-            # Find duplicate
-            existing = self.find_duplicate(file_path, metadata, acoustic_fp)
-            
-            if existing:
-                # Duplicate found - merge metadata
-                merged_metadata = self.merge_metadata(existing.get('metadata', {}), metadata)
+                # Check exist
+                existing = self.mongo.tracks_collection.find_one({"file_path": file_path})
                 
-                # Update in database
-                self.mongo.tracks_collection.update_one(
-                    {"_id": existing["_id"]},
-                    {"$set": {
-                        "metadata": merged_metadata,
-                        "metadata_fingerprint": metadata_fp,
-                        "acoustic_fingerprint": acoustic_fp,
-                        "last_updated": datetime.utcnow(),
-                        "file_locations": list(set(existing.get("file_locations", []) + [file_path]))
-                    }}
-                )
-                
-                return {
-                    "action": "merged",
-                    "track_id": str(existing["_id"]),
-                    "title": merged_metadata.get("title")
-                }
-            else:
-                # New track - add to database
-                track_doc = {
+                doc = {
                     "file_path": file_path,
-                    "file_locations": [file_path],
+                    "filename": track_data['filename'],
                     "metadata": metadata,
-                    "metadata_fingerprint": metadata_fp,
-                    "acoustic_fingerprint": acoustic_fp,
-                    "added": datetime.utcnow(),
-                    "last_updated": datetime.utcnow()
+                    "last_scanned": time.time()
                 }
                 
-                result = self.mongo.tracks_collection.insert_one(track_doc)
-                
-                return {
-                    "action": "added",
-                    "track_id": str(result.inserted_id),
-                    "title": metadata.get("title")
-                }
-                
-        except Exception as e:
-            logger.error(f"Error adding/updating track {file_path}: {e}")
-            return {"action": "error", "reason": str(e)}
-    
-    async def sync_directory(self, directory: str, background: bool = False) -> Dict[str, Any]:
-        """
-        Sync a directory with the database.
-        Runs in a separate thread to avoid blocking the event loop with heavy I/O and CPU.
-        """
-        if self.sync_in_progress and not background:
-            return {"error": "Sync already in progress"}
-        
-        self.sync_in_progress = True
-        
-        try:
-            loop = asyncio.get_event_loop()
-            stats = await loop.run_in_executor(None, self._sync_worker, directory)
-            return stats
-            
-        except Exception as e:
-            logger.error(f"Sync error: {e}")
-            return {"error": str(e)}
-        finally:
-            self.sync_in_progress = False
+                if not existing:
+                    # New Track
+                    # Generate a simple song_id if not present? 
+                    # Usually Mongo generates _id. We might want a string song_id.
+                    # Let's let Mongo handle _id, and map string(id) to song_id if needed?
+                    # Mongo Client uses song_id often.
+                    # Lets create a string song_id if generic.
+                    pass
+                else:
+                    # Preserve existing song_id if present
+                    doc['song_id'] = existing.get('song_id')
 
-
-    def _sync_worker(self, directory: str) -> Dict[str, Any]:
-        """Synchronous worker for directory sync."""
-        stats = {
-            "scanned": 0,
-            "added": 0,
-            "merged": 0,
-            "updated": 0,
-            "errors": 0
-        }
-        
-        try:
-            logger.info(f"Starting directory sync: {directory}")
-            
-            # Use Generator to save memory
-            for file_info in self.scanner.scan_directory(directory):
-                stats["scanned"] += 1
-                
-                # Check for cancellation? (Not implemented yet)
-                
-                result = self._add_or_update_track_sync(
-                    file_info['path'],
-                    file_info['metadata']
+                result = self.mongo.tracks_collection.update_one(
+                    {"file_path": file_path},
+                    {"$set": doc},
+                    upsert=True
                 )
                 
-                if result["action"] == "added":
-                    stats["added"] += 1
-                elif result["action"] == "merged":
-                    stats["merged"] += 1
-                elif result["action"] == "error":
-                    stats["errors"] += 1
-            
-            # Log sync operation
-            self.mongo.log_sync_operation("directory_sync", {
-                "directory": directory,
-                "stats": stats
-            })
-            
-            logger.info(f"Sync complete: {stats}")
-            return stats
-            
-        except Exception as e:
-            logger.error(f"Worker error: {e}")
-            raise e
-            
+                if result.upserted_id:
+                    count_new += 1
+                    # Set song_id to string of ObjectId for easier use
+                    self.mongo.tracks_collection.update_one(
+                        {"_id": result.upserted_id},
+                        {"$set": {"song_id": str(result.upserted_id)}}
+                    )
+                else:
+                    count_updated += 1
+                    # Ensure song_id exists if missing
+                    if not existing.get('song_id'):
+                         self.mongo.tracks_collection.update_one(
+                            {"file_path": file_path},
+                            {"$set": {"song_id": str(existing['_id'])}}
+                        )
 
+            except Exception as e:
+                logger.error(f"Failed to ingest {file_path}: {e}")
+        
+        logger.info(f"✅ Ingestion Complete. New: {count_new}, Updated: {count_updated}")
 
-    def _add_or_update_track_sync(self, file_path: str, metadata: Dict[str, Any], force_update: bool = False) -> Dict[str, str]:
-        """Synchronous version of add_or_update_track for thread usage."""
-        try:
-            # Check if file exists
-            if not Path(file_path).exists():
-                return {"action": "error", "reason": "file_not_found"}
-            
-            # Generate fingerprints (Heavy CPU)
-            acoustic_fp = self.generate_acoustic_fingerprint(file_path)
-            metadata_fp = self.generate_metadata_fingerprint(metadata)
-            
-            # Find duplicate (Blocking DB)
-            existing = self.find_duplicate(file_path, metadata, acoustic_fp)
-            
-            if existing:
-                # Duplicate found - merge metadata
-                merged_metadata = self.merge_metadata(existing.get('metadata', {}), metadata)
-                
-                # Update in database
-                self.mongo.tracks_collection.update_one(
-                    {"_id": existing["_id"]},
-                    {"$set": {
-                        "metadata": merged_metadata,
-                        "metadata_fingerprint": metadata_fp,
-                        "acoustic_fingerprint": acoustic_fp,
-                        "last_updated": datetime.utcnow(),
-                        "file_locations": list(set(existing.get("file_locations", []) + [file_path]))
-                    }}
-                )
-                
-                return {
-                    "action": "merged",
-                    "track_id": str(existing["_id"]),
-                    "title": merged_metadata.get("title")
-                }
-            else:
-                # New track - add to database
-                track_doc = {
-                    "file_path": file_path,
-                    "file_locations": [file_path],
-                    "metadata": metadata,
-                    "metadata_fingerprint": metadata_fp,
-                    "acoustic_fingerprint": acoustic_fp,
-                    "added": datetime.utcnow(),
-                    "last_updated": datetime.utcnow()
-                }
-                
-                result = self.mongo.tracks_collection.insert_one(track_doc)
-                
-                return {
-                    "action": "added",
-                    "track_id": str(result.inserted_id),
-                    "title": metadata.get("title")
-                }
-                
-        except Exception as e:
-            logger.error(f"Error adding/updating track {file_path}: {e}")
-            return {"action": "error", "reason": str(e)}
+if __name__ == "__main__":
+    import subprocess
     
-    async def cleanup_missing_files(self) -> int:
-        """
-        Remove tracks from database where all file locations are missing.
-        
-        Returns:
-            Number of tracks removed
-        """
-        removed = 0
-        
-        try:
-            tracks = list(self.mongo.tracks_collection.find())
-            
-            for track in tracks:
-                file_locations = track.get("file_locations", [track.get("file_path")])
-                
-                # Check if ANY location still exists
-                any_exists = any(Path(loc).exists() for loc in file_locations if loc)
-                
-                if not any_exists:
-                    # No files found - remove from DB
-                    self.mongo.tracks_collection.delete_one({"_id": track["_id"]})
-                    removed += 1
-                    logger.info(f"Removed missing track: {track.get('metadata', {}).get('title')}")
-            
-            return removed
-            
-        except Exception as e:
-            logger.error(f"Cleanup error: {e}")
-            return 0
-
-# Global instance
-_library_service = None
-
-def get_library_service(mongo_client: MongoDatabaseClient) -> LibraryService:
-    """Get or create global library service instance."""
-    global _library_service
-    if _library_service is None:
-        _library_service = LibraryService(mongo_client)
-    return _library_service
+    # Ensure Drive Mount
+    drive_letter = "Z:"
+    unc_path = f"\\\\{SMB_SERVER}\\{SMB_SHARE}"
+    
+    # Check if mounted
+    if not Path(drive_letter).exists():
+        print(f"🔌 Mounting {unc_path}...")
+        cmd = f'net use {drive_letter} "{unc_path}" /USER:{SMB_USERNAME} "{SMB_PASSWORD}"'
+        subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if not Path(drive_letter).exists():
+            print("❌ Failed to mount.")
+            sys.exit(1)
+    
+    # Run Service
+    service = LibraryService(f"{drive_letter}\\radio_library")
+    service.run_ingestion()

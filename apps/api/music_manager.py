@@ -6,13 +6,13 @@ import mutagen
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, TXXX, COMM, TIT2, TPE1, TALB
 from pymongo import MongoClient
+from secrets import MONGO_URI, SMB_USERNAME, SMB_PASSWORD, SMB_SERVER, SMB_SHARE
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
-MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin"
 DB_NAME = "radio_ratings"
 
 class MusicManager:
@@ -51,30 +51,20 @@ class MusicManager:
             # We look up in Mongo by filename
             filename = file_path.name
             
-            # TODO: Improve matching logic
-            # Try exact match on 'filename' field in tracks
-            track_doc = self.tracks_col.find_one({"filename": filename})
+            # Match strategy: Filename match on 'file_path' end
+            # This handles /var/radio/music/song.mp3 vs Z:\song.mp3
+            import re
+            track_doc = self.tracks_col.find_one({"file_path": {"$regex": re.escape(filename) + "$"}})
+            
+            if not track_doc:
+                # Fallback: Try exact 'filename' field
+                track_doc = self.tracks_col.find_one({"filename": filename})
             
             if not track_doc:
                 return # No data for this track
 
             # 2. Aggregating Moods/Votes
             song_id = track_doc.get('song_id') or str(track_doc.get('_id'))
-            
-            # Fetch derived moods (if we have a summary collection, use that, else aggregate)
-            # For this MVP, let's look for 'song_metadata' entries
-            metadata_doc = self.meta_col.find_one({"song_id": song_id})
-            
-            start_rating = 0
-            mood_tags = []
-            
-            if metadata_doc:
-               # Example structure needed
-               pass
-
-            # If no metadata doc, check raw polls? 
-            # User said "votes aus dem online stream". This is likely in 'moods' collection.
-            # We need to aggregate.
             
             # Simple Aggregation
             mood_votes = self.moods_col.aggregate([
@@ -84,39 +74,86 @@ class MusicManager:
             
             top_moods = []
             for m in mood_votes:
-                if m['count'] > 0: # Threshold?
+                if m['count'] > 0: 
                     top_moods.append(f"{m['_id']}:{m['count']}")
             
             if not top_moods:
-                return # Nothing to write
+                # Check explicit metadata rating/mood if votes are empty?
+                 pass
 
             mood_str = ", ".join(top_moods)
-            
+            if not mood_str:
+                 return
+
             # 3. Write to Tags
-            audio = mutagen.File(file_path)
-            
-            if file_path.suffix.lower() == '.mp3':
-                # Write to TXXX frame for custom data, or COMMENT
-                if audio.tags is None:
+            try:
+                audio = mutagen.File(file_path)
+                if not audio.tags:
                     audio.add_tags()
+
+                is_updated = False
                 
-                # Using TXXX:MOOD
-                audio.tags.add(TXXX(encoding=3, desc='MOOD', text=[mood_str]))
-                # Also write to Comment for visibility in basic players
-                audio.tags.add(COMM(encoding=3, lang='eng', desc='YourPartyMoods', text=[mood_str]))
+                # MP3 (ID3)
+                if file_path.suffix.lower() == '.mp3':
+                    # TXXX:MOOD
+                    audio.tags.add(TXXX(encoding=3, desc='MOOD', text=[mood_str]))
+                    audio.tags.add(COMM(encoding=3, lang='eng', desc='YourPartyMoods', text=[mood_str]))
+                    # Rating? POPM
+                    is_updated = True
+                    
+                # FLAC (Vorbis)
+                elif file_path.suffix.lower() == '.flac':
+                    audio.tags['MOOD'] = mood_str
+                    audio.tags['RATING'] = mood_str # Or calculate integer
+                    is_updated = True
                 
-                if not dry_run:
-                    audio.save()
-                    logger.info(f"Updated {filename} -> Moods: {mood_str}")
-                else:
-                    logger.info(f"[DRY] Would update {filename} -> Moods: {mood_str}")
+                # M4A (MP4)
+                elif file_path.suffix.lower() == '.m4a':
+                    audio.tags['----:com.apple.iTunes:MOOD'] = mood_str.encode('utf-8')
+                    is_updated = True
+
+                if is_updated:
+                    if not dry_run:
+                        audio.save()
+                        logger.info(f"Updated {filename} -> Moods: {mood_str}")
+                    else:
+                        logger.info(f"[DRY] Would update {filename} -> Moods: {mood_str}")
+            except Exception as e:
+                logger.error(f"Error saving tags for {filename}: {e}")
 
         except Exception as e:
             logger.error(f"Failed to process {file_path}: {e}")
 
 if __name__ == "__main__":
-    # Default to a test path or mapped drive
-    # We need the user to tell us the path, or we guess 'Z:'
-    path = "Z:\\" 
-    manager = MusicManager(path)
-    manager.sync_metadata(dry_run=True)
+    import subprocess
+    import sys
+    
+    # 1. Mount Drive
+    drive_letter = "Z:"
+    unc_path = f"\\\\{SMB_SERVER}\\{SMB_SHARE}"
+    
+    print(f"🔌 Mounting {unc_path} to {drive_letter}...")
+    
+    # Clean up first
+    subprocess.run(f"net use {drive_letter} /delete /y", shell=True, stderr=subprocess.DEVNULL)
+    
+    # Mount
+    cmd = f'net use {drive_letter} "{unc_path}" /USER:{SMB_USERNAME} "{SMB_PASSWORD}"'
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        print(f"❌ Failed to mount drive: {result.stderr}")
+        print("Please check credentials in apps/api/secrets.py")
+        sys.exit(1)
+        
+    print("✅ Drive mounted successfully.")
+
+    # 2. Run Sync
+    try:
+        path = f"{drive_letter}\\radio_library" 
+        manager = MusicManager(path)
+        # Default to dry_run=False since we want to fix it now
+        manager.sync_metadata(dry_run=False)
+    finally:
+        # Optional: Unmount? user might want to keep it.
+        pass
