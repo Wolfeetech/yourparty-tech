@@ -19,8 +19,9 @@
 ## 🔧 API Development Rules
 
 ### Single Source of Truth
-- **Production API file**: `apps/api/api.py`
-- **All routes go here** - do not create separate `main.py`
+- **Entry Point**: `apps/api/api.py` (App config, Middleware, Route mounting)
+- **Routers**: `apps/api/routers/` (Domain-specific endpoints)
+- **Models**: `apps/api/models/` (Pydantic schemas)
 - **MongoDB Client**: `apps/api/mongo_client.py`
 
 ### Endpoint Naming Convention

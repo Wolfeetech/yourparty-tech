@@ -26,7 +26,9 @@ description: Quick reference for yourparty.tech architecture, endpoints, and com
 
 | Purpose | Path |
 |---------|------|
-| Backend API (PRODUCTION) | `apps/api/api.py` |
+| Backend Entry Point | `apps/api/api.py` |
+| API Routers | `apps/api/routers/` |
+| API Models | `apps/api/models/schemas.py` |
 | Backend MongoDB Client | `apps/api/mongo_client.py` |
 | WordPress API Proxy | `apps/web/inc/api.php` |
 | Frontend JavaScript | `apps/web/assets/app.js` |
