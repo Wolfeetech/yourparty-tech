@@ -1,16 +1,29 @@
-
 import requests
 import json
 import logging
 import sys
+import os
+import urllib3
 from typing import Dict, List, Optional
+from dotenv import load_dotenv
 
-from apps.api.config_secrets import (
-    MONGO_URI, 
-    AZURACAST_API_URL, 
-    AZURACAST_API_KEY, 
-    AZURACAST_STATION_ID
-)
+# Load env - prefer script location, fallback to default
+load_dotenv('/opt/radio-api/.env')
+load_dotenv()
+
+# Configuration
+MONGO_URI = os.getenv("MONGO_URI")
+# Fallback to local IP if not set
+AZURACAST_API_URL = os.getenv("AZURACAST_URL", "https://192.168.178.210/api").rstrip('/')
+if AZURACAST_API_URL.startswith('http:'):
+    AZURACAST_API_URL = AZURACAST_API_URL.replace('http:', 'https:')
+
+if not AZURACAST_API_URL.endswith('/api'):
+    AZURACAST_API_URL += '/api'
+
+AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
+AZURACAST_STATION_ID = os.getenv("AZURACAST_STATION_ID", 1)
+
 from apps.api.mongo_client import MongoDatabaseClient
 
 # Logging Setup
@@ -20,6 +33,9 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
+
+# Suppress SSL Warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Constants
 MOOD_PLAYLIST_PREFIX = "Mo:"

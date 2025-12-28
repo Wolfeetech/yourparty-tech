@@ -92,7 +92,22 @@ class AzuraCastClient:
     async def get_station_media(self) -> List[Dict]:
         """Get all media files for the station."""
         url = f"{self.base_url}/api/station/{self.station_id}/files"
-        res = await self._get(url)
+        logger.info(f"Fetching media from {url} (using requests)")
+        try:
+            # Fallback to sync requests because httpx is acting up on this env
+            import requests
+            resp = requests.get(url, headers=self.headers, verify=False, timeout=30)
+            resp.raise_for_status()
+            res = resp.json()
+        except Exception as e:
+            logger.error(f"Requests GET failed: {e}")
+            res = []
+            
+        logger.info(f"Media Response Type: {type(res)}")
+        if isinstance(res, list):
+             logger.info(f"Media Count: {len(res)}")
+        else:
+             logger.info(f"Media Response Content (First 100): {str(res)[:100]}")
         return res if isinstance(res, list) else []
 
     async def get_now_playing(self):

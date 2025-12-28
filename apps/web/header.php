@@ -75,6 +75,7 @@
                     <a href="<?php echo esc_url($link_prefix . '#references'); ?>">Social Proof</a>
                     <a href="<?php echo esc_url($link_prefix . '#about'); ?>">About</a>
                     <a href="<?php echo esc_url($link_prefix . '#kontakt'); ?>">Kontakt</a>
+                    <a href="#" id="open-shoutout-btn" class="util-link">👋 Say Hi</a>
                 </nav>
                 <button class="nav-toggle" id="nav-toggle"
                     aria-label="<?php esc_attr_e('Navigation oeffnen', 'yourparty-tech'); ?>" aria-expanded="false">

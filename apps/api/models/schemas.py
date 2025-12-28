@@ -71,3 +71,9 @@ class VoteNextRequest(BaseModel):
 class SteeringRequest(BaseModel):
     mode: str = "auto"  # 'auto', 'manual', 'off'
     target: Optional[str] = None
+
+class ShoutoutRequest(BaseModel):
+    message: str
+    sender: str = "Anonymous"
+    user_id: str = "anonymous"
+

@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import (
     RatingRequest, MoodRequest, MoodVoteRequest,
     MoodNextVoteRequest, TrackVoteRequest, VoteNextRequest,
-    SteeringRequest
+    SteeringRequest, ShoutoutRequest
 )
 from state import state
 from tag_writer import write_metadata_to_file
@@ -353,3 +353,47 @@ async def set_steering(request: Request, steering_request: SteeringRequest, curr
     from datetime import datetime
     state.steering_status["updated_at"] = datetime.now().isoformat()
     return state.steering_status
+
+@router.post("/shoutout")
+@limiter.limit("5/minute")
+async def send_shoutout(request: Request, shoutout: ShoutoutRequest):
+    """
+    Send a shoutout/message to the studio.
+    Stored in MongoDB for the DJ to see.
+    """
+    if not state.mongo_client:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    
+    try:
+        # Basic validation
+        msg = shoutout.message.strip()
+        if not msg or len(msg) > 280:
+            raise HTTPException(status_code=400, detail="Invalid message length")
+
+        state.mongo_client.db.shoutouts.insert_one({
+            "message": msg,
+            "sender": shoutout.sender,
+            "user_id": shoutout.user_id,
+            "timestamp": datetime.utcnow(),
+            "read": False
+        })
+        return {"status": "sent"}
+    except Exception as e:
+        logger.error(f"Shoutout error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send shoutout")
+
+@router.get("/shoutouts")
+async def get_shoutouts(limit: int = 50, current_user: User = Depends(get_current_active_user)):
+    """
+    Get recent shoutouts (Admin only).
+    """
+    if not state.mongo_client:
+        return []
+    
+    cursor = state.mongo_client.db.shoutouts.find().sort("timestamp", -1).limit(limit)
+    results = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        results.append(doc)
+    
+    return results

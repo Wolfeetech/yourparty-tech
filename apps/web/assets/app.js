@@ -1,5 +1,6 @@
 // Import MoodModule (ES6)
 import MoodModule from './js/modules/MoodModule.js';
+import ShoutoutModule from './js/modules/ShoutoutModule.js';
 
 // Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {

@@ -4,6 +4,11 @@ import asyncio
 import os
 import uvicorn
 import sys
+from dotenv import load_dotenv
+
+# Robust Environment Loading
+load_dotenv('/opt/radio-api/.env')
+load_dotenv()
 
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -48,6 +53,21 @@ def sync_library():
             print(f"Error during sync: {e}")
 
     asyncio.run(_sync())
+
+@cli.command()
+def sync_playlists():
+    """Sync Mood Playlists in AzuraCast"""
+    print("Starting Playlist Sync...")
+    # Import here to avoid dependency issues if not running this command
+    sys.path.append('/opt/radio-api') # Ensure path is correct
+    try:
+        from sync_playlists import sync_playlists as run_sync
+        run_sync()
+        print("Playlist Sync Complete.")
+    except ImportError as e:
+        print(f"Error importing sync_playlists: {e}")
+    except Exception as e:
+        print(f"Error executing sync: {e}")
 
 @cli.command()
 def run_api():

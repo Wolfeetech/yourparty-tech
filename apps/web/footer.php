@@ -105,6 +105,22 @@
         });
     });
 </script>
+</script>
+
+<div id="shoutout-dialog" class="shoutout-dialog" aria-hidden="true">
+    <div class="shoutout-content">
+        <button id="close-shoutout-btn" class="close-btn">&times;</button>
+        <h3><?php esc_html_e('Send Shoutout', 'yourparty-tech'); ?></h3>
+        <p class="shoutout-desc"><?php esc_html_e('Schick eine Nachricht direkt ins Studio!', 'yourparty-tech'); ?></p>
+        <form id="shoutout-form">
+            <input type="text" name="sender" placeholder="<?php esc_attr_e('Dein Name (Optional)', 'yourparty-tech'); ?>" maxlength="30">
+            <textarea name="message" placeholder="<?php esc_attr_e('Deine Nachricht...', 'yourparty-tech'); ?>" required maxlength="280"></textarea>
+            <button type="submit" class="button-primary"><?php esc_html_e('Absenden', 'yourparty-tech'); ?></button>
+            <div id="shoutout-feedback" class="shoutout-feedback" style="display:none;"></div>
+        </form>
+    </div>
+</div>
+
 <?php wp_footer(); ?>
 </body>
 

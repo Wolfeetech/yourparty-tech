@@ -23,8 +23,8 @@ async def enrich_metadata():
     # 1. Connect to DB
     # Env vars should be loaded by the container environment
     db = MongoDatabaseClient(
-        connection_string=os.getenv("MONGO_URI", "mongodb://localhost:27017/"),
-        database_name=os.getenv("MONGO_DB", "radio_ratings")
+        connection_string=os.getenv("MONGO_URI"),
+        database_name=os.getenv("MONGO_DB", "yourparty") # Unified DB Name
     )
 
     # 2. Connect to AzuraCast
