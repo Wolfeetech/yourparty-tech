@@ -234,6 +234,7 @@ add_action('wp_enqueue_scripts', function () {
         'publicSchedule' => esc_url_raw($schedule_url),
         'publicRequests' => esc_url_raw($requests_url),
         'stationSlug' => YOURPARTY_STATION_SLUG,
+        'azuracastIp' => '192.168.178.210',
         'nonce' => $nonce
     ];
 

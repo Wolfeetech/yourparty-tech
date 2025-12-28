@@ -62,7 +62,8 @@ const normaliseUrl = (value) => {
   if (!value || !PUBLIC_URL) return value;
   try {
     const candidate = new URL(value, PUBLIC_URL.href);
-    const isInternalIp = candidate.hostname === "192.168.178.210";
+    const AZURACAST_IP = (window.YourPartyConfig && window.YourPartyConfig.azuracastIp) || "192.168.178.210";
+    const isInternalIp = candidate.hostname === AZURACAST_IP;
     const isRadioHost = candidate.hostname === PUBLIC_URL.hostname;
     if (isInternalIp || isRadioHost) {
       candidate.protocol = PUBLIC_URL.protocol;

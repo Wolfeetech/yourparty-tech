@@ -103,9 +103,26 @@ async def main():
             })
             
         if not mongo_track:
-             # Try simpler path match
-             # No direct path match because paths differ (Z: vs /var/azuracast/...)
-             pass
+             # Try simpler path match by normalizing both sides
+             # Local: Z:\radio_library\Rock\Artist\Song.mp3 -> Rock/Artist/Song.mp3
+             # Azura: Rock/Artist/Song.mp3
+             
+             try:
+                # We need to scan mongo tracks if we can't efficiently query by path suffix
+                # For efficiency, let's try a regex match on the relative path if available
+                if ac_path:
+                    # ac_path is usually relative `Artist/Album/Song.mp3`
+                    # db file_path is absolute `Z:\radio_library\Artist\Album\Song.mp3`
+                    
+                    # Escape purely for regex safety (though persistent path chars are usually safe)
+                    import re
+                    escaped_suffix = re.escape(ac_path.replace('/', '\\')) # Windows style suffix
+                    
+                    mongo_track = mongo.tracks_collection.find_one({
+                        "file_path": {"$regex": escaped_suffix + "$", "$options": "i"}
+                    })
+             except Exception as match_err:
+                logger.warning(f"Path match error for {ac_path}: {match_err}")
              
         if mongo_track:
             matches += 1
