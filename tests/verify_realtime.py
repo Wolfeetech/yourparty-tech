@@ -41,6 +41,9 @@ async def test_realtime_steer():
                     headers={"Authorization": f"Bearer {token}"}
                 )
                 logging.info(f"API Response: {resp.status_code}")
+                if resp.status_code != 200:
+                    logging.error(f"❌ API FAILED: {resp.text}")
+                    return
                 assert resp.status_code == 200
 
             # 3. Wait for 'steer' broadcast

@@ -12,7 +12,6 @@ from state import state
 from tag_writer import write_metadata_to_file
 from auth import get_current_active_user, User
 from fastapi import Depends
-from routers import realtime
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -152,6 +151,7 @@ async def vote_mood(request: Request, mood_request: MoodVoteRequest):
             state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
             
     # Broadcast 'Pulse' to refresh dashboards
+    from routers import realtime
     await realtime.manager.broadcast({"type": "pulse", "target": "moods"})
             
     return result
@@ -362,22 +362,29 @@ async def get_steering(station_id: int = 1):
 @router.post("/control/steer")
 @limiter.limit("20/minute")
 async def set_steering(request: Request, steering_request: SteeringRequest, current_user: User = Depends(get_current_active_user)):
-    sid = steering_request.station_id
-    if sid not in state.steering_status:
-        state.steering_status[sid] = {"mode": "auto", "target": None, "updated_at": None}
+    try:
+        sid = steering_request.station_id
+        if sid not in state.steering_status:
+            state.steering_status[sid] = {"mode": "auto", "target": None, "updated_at": None}
+            
+        state.steering_status[sid]["mode"] = steering_request.mode
+        state.steering_status[sid]["target"] = steering_request.target
+        from datetime import datetime
+        state.steering_status[sid]["updated_at"] = datetime.now().isoformat()
         
-    state.steering_status[sid]["mode"] = steering_request.mode
-    state.steering_status[sid]["target"] = steering_request.target
-    from datetime import datetime
-    state.steering_status[sid]["updated_at"] = datetime.now().isoformat()
-    
-    # Broadcast Steering Update
-    await realtime.manager.broadcast({
-        "type": "steer", 
-        "data": state.steering_status[sid]
-    }, station_id=str(sid))
-    
-    return state.steering_status[sid]
+        # Broadcast Steering Update
+        from routers import realtime
+        await realtime.manager.broadcast({
+            "type": "steer", 
+            "data": state.steering_status[sid]
+        }, station_id=str(sid))
+        
+        return state.steering_status[sid]
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        logger.error(f"STEER ERROR: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Steer Error: {str(e)}\n{error_msg}")
 
 @router.post("/shoutout")
 @limiter.limit("5/minute")

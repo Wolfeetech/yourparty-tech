@@ -1,9 +1,15 @@
 import subprocess
 import os
 
-source = 'apps/api/routers/interactive.py'
+import sys
+
+if len(sys.argv) < 3:
+    print("Usage: python pusher.py <source> <dest_path_on_host>")
+    exit(1)
+
+source = sys.argv[1]
 dest_host = 'root@192.168.178.25'
-dest_path = '/tmp/interactive.py'
+dest_path = sys.argv[2]
 
 if not os.path.exists(source):
     print(f"Source {source} not found!")
