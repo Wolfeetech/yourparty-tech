@@ -1,0 +1,14 @@
+[Unit]
+Description=YourParty Radio Library Organizer & Sync
+After=network.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /app/scripts/reorganize_server.py
+WorkingDirectory=/app
+User=root
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/app/.env
+
+[Install]
+WantedBy=multi-user.target

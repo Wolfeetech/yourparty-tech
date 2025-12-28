@@ -2,7 +2,13 @@
 import os
 import shutil
 import logging
+import sys
 from pathlib import Path
+
+# Fix import path (add project root to sys.path)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(PROJECT_ROOT, "apps", "api"))
+
 from genre_organizer import GenreOrganizer
 from music_scanner import MusicScanner
 
@@ -72,13 +78,7 @@ if __name__ == "__main__":
     if not os.path.exists("M:\\"):
         logger.error("Drive M: is not mounted! Cannot run reorganization.")
     else:
-        # Check if root has loose files and warn?
-        # User said "Active Implementation", so let's move loose files from root M:\ to M:\Inbox first?
-        # That's risky if we move system folders.
-        # Let's just create the folder structure first.
         ensure_dirs()
-        print("Folder structure created: Inbox, Library, Archive.")
-        print("Please move your unsorted files into M:\\Inbox to start sorting.")
-        # Alternatively, run on current root if user explicitly wants clean up of EVERYTHING.
-        # Given "current NAS folder to search.. chaos", they imply the root is the mess.
-        pass
+        print("Folder structure verified: Inbox, Library, Archive.")
+        print("Starting reorganization...")
+        reorganize_inbox()

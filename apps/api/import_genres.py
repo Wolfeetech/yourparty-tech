@@ -105,6 +105,20 @@ def main():
 
             if track_doc:
                 song_id = track_doc.get("song_id")
+                
+                # HEALING: Sync AzuraCast ID if missing/mismatched
+                current_ac_id = track_doc.get("azuracast_id")
+                if str(current_ac_id) != str(ac_id):
+                    try:
+                        db.tracks.update_one(
+                            {"_id": track_doc["_id"]},
+                            {"$set": {"azuracast_id": ac_id}}
+                        )
+                        if debug_limit > 0:
+                            print(f"DEBUG: Linked AC_ID {ac_id} to Song {song_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to link ID: {e}")
+
                 # Insert Mood
                 # Avoid duplicates
                 existing = db.moods.find_one({"song_id": song_id, "mood": mood})

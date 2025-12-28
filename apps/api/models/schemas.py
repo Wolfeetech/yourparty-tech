@@ -42,8 +42,10 @@ class MoodRequest(BaseModel):
     song_id: str
     mood: Optional[str] = None
     genre: Optional[str] = None
+    keyword: Optional[str] = None
     title: Optional[str] = None
     artist: Optional[str] = None
+    station_id: int = 1
 
 class MoodVoteRequest(BaseModel):
     """Request model for dual mood voting (current + next)."""
@@ -53,27 +55,33 @@ class MoodVoteRequest(BaseModel):
     rating: Optional[int] = None        # 1-5 star rating
     vote: Optional[str] = None          # like/dislike
     user_id: str = "anonymous"
+    station_id: int = 1
 
 class MoodNextVoteRequest(BaseModel):
     """Specific request for voting on the NEXT mood only."""
     song_id: str
     mood_next: str
+    station_id: int = 1
 
 class TrackVoteRequest(BaseModel):
     """Request for specific track voting (MTV style)."""
     track_id: str
     user_id: str = "anonymous"
+    station_id: int = 1
 
 class VoteNextRequest(BaseModel):
     """Simple vote request."""
     vote: str
+    station_id: int = 1
 
 class SteeringRequest(BaseModel):
     mode: str = "auto"  # 'auto', 'manual', 'off'
     target: Optional[str] = None
+    station_id: int = 1
 
 class ShoutoutRequest(BaseModel):
     message: str
     sender: str = "Anonymous"
     user_id: str = "anonymous"
+    station_id: int = 1
 

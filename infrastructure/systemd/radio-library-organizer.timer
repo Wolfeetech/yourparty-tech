@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Radio Library Organizer every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Unit=radio-library-organizer.service
+
+[Install]
+WantedBy=timers.target
