@@ -31,6 +31,18 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                 <div class="live-indicator">
                     <span class="pulse-dot"></span> ON AIR
                 </div>
+                
+                <!-- STATION SWITCHER -->
+                <div class="station-switcher" role="tablist" aria-label="Select Radio Station">
+                    <button class="station-btn active" data-station="1" role="tab" aria-selected="true" aria-controls="player-panel">
+                        <span class="station-btn__icon">📻</span>
+                        <span class="station-btn__label">Radio</span>
+                    </button>
+                    <button class="station-btn" data-station="2" role="tab" aria-selected="false" aria-controls="player-panel">
+                        <span class="station-btn__icon">💿</span>
+                        <span class="station-btn__label">Mixtapes</span>
+                    </button>
+                </div>
             </div>
 
             <!-- CENTER: THE GLASS PLAYER -->
@@ -872,6 +884,69 @@ body { background: #000; margin: 0; overflow-x: hidden; font-family: 'Inter', sa
     .live-indicator { font-size: 0.7rem; }
     
     .play-fab { width: 70px; height: 70px; font-size: 24px; }
+}
+
+/* ===== STATION SWITCHER ===== */
+.station-switcher {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.station-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.station-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.station-btn.active {
+    background: rgba(0, 255, 136, 0.15);
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.2);
+}
+
+.station-btn__icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.station-btn__label {
+    text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+    .station-switcher {
+        margin-top: 12px;
+    }
+    
+    .station-btn {
+        padding: 6px 12px;
+        font-size: 0.65rem;
+    }
+    
+    .station-btn__icon {
+        font-size: 0.9rem;
+    }
 }
 
 /* === MOOD DIALOG STYLES MOVED TO assets/mood-dialog.css === */

@@ -149,6 +149,32 @@ export default class StreamController {
     onPlaying() { this.dispatchEvent('stream:playing'); }
     onError(e) { this.dispatchEvent('stream:error', { error: e }); }
 
+    /**
+     * Dynamically change the stream URL (for station switching)
+     */
+    async setStreamUrl(url) {
+        if (!url || !this.audioElement) return;
+
+        const wasPlaying = this.isPlaying;
+
+        // Pause current stream
+        if (wasPlaying) {
+            this.performPause();
+        }
+
+        // Update source
+        this.audioElement.src = url;
+        this.streamUrl = url;
+
+        // Resume if was playing
+        if (wasPlaying) {
+            await new Promise(r => setTimeout(r, 100)); // Small delay for source change
+            this.queueAction('play');
+        }
+
+        console.log('[StreamController] Stream URL updated:', url);
+    }
+
     dispatchEvent(name, detail = {}) {
         window.dispatchEvent(new CustomEvent(name, { detail }));
     }

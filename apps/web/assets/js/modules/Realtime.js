@@ -93,4 +93,21 @@ export default class RealtimeModule {
             }));
         }
     }
+
+    /**
+     * Switch to a different station's WebSocket room
+     */
+    switchStation(newSlug) {
+        console.log(`[Realtime] Switching to station: ${newSlug}`);
+        this.config.stationSlug = newSlug;
+
+        // Close existing connection
+        if (this.socket) {
+            this.socket.close();
+        }
+
+        // Reset reconnect counter and connect to new room
+        this.reconnectAttempts = 0;
+        setTimeout(() => this.connect(), 100);
+    }
 }

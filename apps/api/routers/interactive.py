@@ -238,7 +238,9 @@ async def get_vote_candidates():
         expiration_time = now + timedelta(minutes=2)
         expires_at = expiration_time.isoformat()
         
-        # Update State
+        # Update State (ensure key exists)
+        if station_id not in state.voting_session:
+            state.voting_session[station_id] = {"candidates": [], "expires_at": None}
         state.voting_session[station_id]["candidates"] = final_candidates
         state.voting_session[station_id]["expires_at"] = expires_at
         
