@@ -570,7 +570,7 @@ class MongoDatabaseClient:
         """Get the song_id with the most votes in the window."""
         try:
             if not hasattr(self, 'next_track_votes_collection'):
-                return None
+                self.next_track_votes_collection = self.db["next_track_votes"]
             
             cutoff = datetime.utcnow() - timedelta(minutes=time_window_minutes)
             pipeline = [

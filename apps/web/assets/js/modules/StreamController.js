@@ -1,178 +1,265 @@
 /**
  * YourParty Stream Controller
- * Handles audio playback with live sync
+ * Handles audio playback with "Dual Deck" crossfading for seamless transitions
  */
 
 export default class StreamController {
     constructor(config = {}) {
         this.config = config;
-        this.audioElement = null;
-        this.audioContext = null;
-        this.analyser = null;
-        this.isPlaying = false;
-        this.streamUrl = config.streamUrl || '';
 
-        // Playback State
-        this.isLocked = false;
-        this.playQueue = Promise.resolve();
+        // Dual Deck System
+        this.deckA = null;
+        this.deckB = null;
+        this.activeDeck = 'A'; // 'A' or 'B'
+
+        // Audio Context Graph
+        this.audioContext = null;
+        this.masterGain = null;
+        this.analyser = null;
+        this.gainA = null;
+        this.gainB = null;
+        this.sourceA = null;
+        this.sourceB = null;
+
+        this.isPlaying = false;
+        this.currentUrl = config.streamUrl || '';
+
+        // Constants
+        this.CROSSFADE_DURATION = 2.5; // seconds
 
         this.SELECTORS = {
-            audio: '#radio-audio',
-            playBtn: '#play-toggle, .radio-card__play',
-            miniPlayBtn: '#mini-play-toggle',
-            visualizer: '#inline-visualizer'
+            audioA: '#radio-audio-a',
+            audioB: '#radio-audio-b',
+            playBtn: '#play-toggle, .radio-card__play, #mini-play-toggle'
         };
 
         this.init();
     }
 
     init() {
-        this.audioElement = document.querySelector(this.SELECTORS.audio);
+        // Initialize Decks
+        this.deckA = this._createDeck('radio-audio-a');
+        this.deckB = this._createDeck('radio-audio-b');
 
-        if (!this.audioElement) {
-            // Create hidden audio element for Dashboard
-            this.audioElement = document.createElement('audio');
-            this.audioElement.id = 'radio-audio';
-            this.audioElement.style.display = 'none';
-            document.body.appendChild(this.audioElement);
+        // Check if legacy element exists and adopt it
+        const legacy = document.getElementById('radio-audio');
+        if (legacy) {
+            legacy.id = 'radio-audio-legacy'; // Rename to avoid conflict
+            legacy.pause();
+            legacy.src = '';
         }
 
-        // Enable CORS for Visualizer
-        this.audioElement.crossOrigin = "anonymous";
+        // Enable CORS
+        this.deckA.crossOrigin = "anonymous";
+        this.deckB.crossOrigin = "anonymous";
 
-        this.bindEvents();
-        this.setupMediaSession();
+        // Bind Events
+        this.bindDeckEvents(this.deckA);
+        this.bindDeckEvents(this.deckB);
 
-        // Reveal Player UI
+        // UI Setup
         const miniPlayer = document.getElementById('mini-player');
-        if (miniPlayer) {
-            miniPlayer.style.display = 'flex';
+        if (miniPlayer) miniPlayer.style.display = 'flex';
+
+        // Initial URL setup
+        if (this.currentUrl) {
+            this.deckA.src = this.currentUrl;
         }
 
-        // console.log('[StreamController] Initialized (ES6)');
+        console.log('[StreamController] "Dual Deck" Engine Initialized');
     }
 
-    bindEvents() {
-        // Main play button - Delegation or direct?
-        // Relying on PlayerControls for UI triggers might be better, but let's keep direct binding for now to ensure compatibility
-        // Actually, PlayerControls calls this.togglePlay() via global or module instance.
-        // Let's expose a method.
-
-        // Audio events
-        this.audioElement.addEventListener('play', () => this.onPlay());
-        this.audioElement.addEventListener('pause', () => this.onPause());
-        this.audioElement.addEventListener('error', (e) => this.onError(e));
-        this.audioElement.addEventListener('playing', () => this.onPlaying());
-    }
-
-    togglePlay() {
-        if (!this.audioElement || this.isLocked) return;
-
-        this.isLocked = true;
-        setTimeout(() => this.isLocked = false, 300);
-
-        if (this.audioElement.paused) {
-            this.queueAction('play');
-        } else {
-            this.queueAction('pause');
+    _createDeck(id) {
+        let el = document.getElementById(id);
+        if (!el) {
+            el = document.createElement('audio');
+            el.id = id;
+            el.style.display = 'none';
+            el.preload = 'none';
+            document.body.appendChild(el);
         }
-    }
-
-    queueAction(action) {
-        this.playQueue = this.playQueue.then(async () => {
-            try {
-                if (action === 'play') {
-                    await this.performPlay();
-                } else {
-                    this.performPause();
-                }
-            } catch (err) {
-                console.error(`[StreamController] Action ${action} failed:`, err);
-            }
-        });
-    }
-
-    async performPlay() {
-        this.initAudioContext();
-        try {
-            await this.audioElement.play();
-            this.isPlaying = true;
-            this.dispatchEvent('stream:play');
-        } catch (error) {
-            console.warn('[StreamController] Play failed:', error);
-            this.isPlaying = false;
-            if (error.name !== 'AbortError') {
-                this.dispatchEvent('stream:error', { error });
-            }
-        }
-    }
-
-    performPause() {
-        this.audioElement.pause();
-        this.isPlaying = false;
-        this.dispatchEvent('stream:pause');
+        return el;
     }
 
     initAudioContext() {
         if (this.audioContext) return;
+
         try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContext();
+
+            // Create Nodes
+            this.masterGain = this.audioContext.createGain();
+            this.gainA = this.audioContext.createGain();
+            this.gainB = this.audioContext.createGain();
             this.analyser = this.audioContext.createAnalyser();
+
+            // Config Analyser
             this.analyser.fftSize = 256;
-            const source = this.audioContext.createMediaElementSource(this.audioElement);
-            source.connect(this.analyser);
+            this.analyser.smoothingTimeConstant = 0.8;
+
+            // Connect Graph
+            // Source -> Gain -> Master -> Analyser -> Destination
+            this.masterGain.connect(this.analyser);
             this.analyser.connect(this.audioContext.destination);
-            this.dispatchEvent('stream:audioContextReady', { analyser: this.analyser });
-        } catch (error) {
-            console.warn('[StreamController] AudioContext error:', error);
+
+            this.gainA.connect(this.masterGain);
+            this.gainB.connect(this.masterGain);
+
+            // Connect Decks (delayed to avoid "autostart" issues)
+            this._connectDeck(this.deckA, this.gainA, 'sourceA');
+            this._connectDeck(this.deckB, this.gainB, 'sourceB');
+
+            // Initial Gains
+            this.gainA.gain.value = 1.0;
+            this.gainB.gain.value = 0.0;
+
+            console.log('[StreamController] Audio Graph Connected');
+        } catch (e) {
+            console.error('[StreamController] AudioContext init failed:', e);
         }
     }
 
-    setupMediaSession() {
-        if (!('mediaSession' in navigator)) return;
-        navigator.mediaSession.setActionHandler('play', () => this.queueAction('play'));
-        navigator.mediaSession.setActionHandler('pause', () => this.queueAction('pause'));
+    _connectDeck(audioEl, gainNode, sourceProp) {
+        try {
+            if (this[sourceProp]) return; // Already connected
+            const source = this.audioContext.createMediaElementSource(audioEl);
+            source.connect(gainNode);
+            this[sourceProp] = source;
+        } catch (e) {
+            console.warn(`[StreamController] Failed to connect ${sourceProp}:`, e);
+            // Handling for "MediaElementAudioSourceNode" already connected error
+        }
     }
 
-    updateMetadata(track) {
-        if (!('mediaSession' in navigator)) return;
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: track.title || 'Unknown Track',
-            artist: track.artist || 'Unknown Artist',
-            album: track.album || 'YourParty Radio',
-            artwork: track.art ? [{ src: track.art, sizes: '512x512', type: 'image/jpeg' }] : []
+    bindDeckEvents(audioEl) {
+        audioEl.addEventListener('playing', () => {
+            if (this._getActiveDeck() === audioEl) {
+                this.isPlaying = true;
+                this.dispatchEvent('stream:playing');
+            }
+        });
+        audioEl.addEventListener('pause', () => {
+            // Only dispatch pause if WE initiated it on active deck
+            // Ignore pauses from crossfading/background decks
+        });
+        audioEl.addEventListener('error', (e) => {
+            if (this._getActiveDeck() === audioEl) {
+                this.dispatchEvent('stream:error', { error: e });
+            }
         });
     }
 
-    onPlay() { this.dispatchEvent('stream:playing'); }
-    onPause() { this.dispatchEvent('stream:paused'); }
-    onPlaying() { this.dispatchEvent('stream:playing'); }
-    onError(e) { this.dispatchEvent('stream:error', { error: e }); }
+    /* Controls */
+
+    async togglePlay() {
+        this.initAudioContext();
+
+        // Resume context if suspended (browser policy)
+        if (this.audioContext?.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+
+        const active = this._getActiveDeck();
+
+        if (this.isPlaying || !active.paused) {
+            this.pause();
+        } else {
+            await this.play();
+        }
+    }
+
+    async play() {
+        this.initAudioContext();
+        await this.audioContext?.resume();
+
+        try {
+            const active = this._getActiveDeck();
+            await active.play();
+            this.isPlaying = true;
+            this.dispatchEvent('stream:playing');
+        } catch (e) {
+            console.error('[StreamController] Play failed:', e);
+            this.dispatchEvent('stream:error', { error: e });
+        }
+    }
+
+    pause() {
+        const active = this._getActiveDeck();
+        active.pause();
+        this.isPlaying = false;
+        this.dispatchEvent('stream:paused');
+    }
 
     /**
-     * Dynamically change the stream URL (for station switching)
+     * Crossfade to a new URL
      */
+    async crossfadeTo(newUrl) {
+        if (newUrl === this.currentUrl) return;
+        this.currentUrl = newUrl;
+
+        console.log(`[StreamController] Crossfading to ${newUrl}`);
+        this.initAudioContext();
+        await this.audioContext?.resume();
+
+        // Identify decks
+        const currentDeck = this.activeDeck === 'A' ? this.deckA : this.deckB;
+        const nextDeck = this.activeDeck === 'A' ? this.deckB : this.deckA;
+        const currentGain = this.activeDeck === 'A' ? this.gainA : this.gainB;
+        const nextGain = this.activeDeck === 'A' ? this.gainB : this.gainA;
+
+        // Prepare Next Deck
+        nextDeck.src = newUrl;
+        nextDeck.load(); // Ensure buffering starts
+
+        // Start Next Deck (Muted via Gain)
+        // Ensure gain is 0 before playing
+        nextGain.gain.cancelScheduledValues(this.audioContext.currentTime);
+        nextGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+        try {
+            await nextDeck.play();
+        } catch (e) {
+            console.error("Autoplay prevented on crossfade deck", e);
+            // If autoplay fails, we can't crossfade properly. Hard cut fallback.
+            currentDeck.pause();
+            setTimeout(() => nextDeck.play(), 100);
+        }
+
+        // Perform Crossfade
+        const now = this.audioContext.currentTime;
+        const fadeTime = this.CROSSFADE_DURATION;
+
+        // Current -> Fade Out
+        currentGain.gain.cancelScheduledValues(now);
+        currentGain.gain.setValueAtTime(currentGain.gain.value, now);
+        currentGain.gain.linearRampToValueAtTime(0, now + fadeTime);
+
+        // Next -> Fade In
+        nextGain.gain.cancelScheduledValues(now);
+        nextGain.gain.setValueAtTime(0, now);
+        nextGain.gain.linearRampToValueAtTime(1, now + fadeTime);
+
+        // Update State
+        this.activeDeck = this.activeDeck === 'A' ? 'B' : 'A';
+        this.isPlaying = true; // Ensure state is playing
+
+        // Cleanup Old Deck after fade
+        setTimeout(() => {
+            currentDeck.pause();
+            currentDeck.src = ''; // Release resource
+            // Ensure gain is strictly 0
+            currentGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+        }, (fadeTime + 0.5) * 1000);
+    }
+
+    // Legacy Adapter for compatibility
     async setStreamUrl(url) {
-        if (!url || !this.audioElement) return;
+        await this.crossfadeTo(url);
+    }
 
-        const wasPlaying = this.isPlaying;
-
-        // Pause current stream
-        if (wasPlaying) {
-            this.performPause();
-        }
-
-        // Update source
-        this.audioElement.src = url;
-        this.streamUrl = url;
-
-        // Resume if was playing
-        if (wasPlaying) {
-            await new Promise(r => setTimeout(r, 100)); // Small delay for source change
-            this.queueAction('play');
-        }
-
-        console.log('[StreamController] Stream URL updated:', url);
+    _getActiveDeck() {
+        return this.activeDeck === 'A' ? this.deckA : this.deckB;
     }
 
     dispatchEvent(name, detail = {}) {

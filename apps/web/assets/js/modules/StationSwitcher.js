@@ -101,8 +101,11 @@ export default class StationSwitcher {
         console.log(`[StationSwitcher] Switching to ${newStation.name}`);
         this.isTransitioning = true;
 
+        // Immediate UI update for loading state
+        this.updateUI(stationId); // Pass target station ID
+
         try {
-            // 1. Update stream URL
+            // 1. Update stream URL (Crossfade)
             if (this.streamController?.setStreamUrl) {
                 await this.streamController.setStreamUrl(newStation.stream);
             }
@@ -119,10 +122,7 @@ export default class StationSwitcher {
             this.currentStation = stationId;
             this.saveStation(stationId);
 
-            // 5. Update UI
-            this.updateUI();
-
-            // 6. Dispatch event for other modules
+            // 5. Dispatch event for other modules
             window.dispatchEvent(new CustomEvent('stationChange', {
                 detail: { station: newStation }
             }));
@@ -133,6 +133,8 @@ export default class StationSwitcher {
             console.error('[StationSwitcher] Switch failed:', error);
         } finally {
             this.isTransitioning = false;
+            // Final UI update
+            this.updateUI();
         }
     }
 
@@ -174,21 +176,46 @@ export default class StationSwitcher {
 
     /**
      * Update UI to reflect current station
+     * @param {number} targetStationId - The station we are switching TO (optional)
      */
-    updateUI() {
+    updateUI(targetStationId = null) {
         const current = this.getCurrentStation();
 
         // Update button states
         document.querySelectorAll('[data-station]').forEach(btn => {
             const id = parseInt(btn.dataset.station, 10);
-            btn.classList.toggle('active', id === this.currentStation);
-            btn.setAttribute('aria-pressed', id === this.currentStation ? 'true' : 'false');
+            const isCurrent = id === this.currentStation;
+            const isTarget = targetStationId && id === targetStationId;
+
+            // Active state (Current OR Target during transition)
+            const isActive = isCurrent || isTarget;
+
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+
+            // Loading state
+            if (this.isTransitioning && isTarget) {
+                btn.classList.add('loading');
+                // Ensure spinner exists if not already
+                if (!btn.querySelector('.spinner')) {
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner';
+                    spinner.innerHTML = '↻'; // Simple loading indicator
+                    btn.appendChild(spinner);
+                }
+            } else {
+                btn.classList.remove('loading');
+                const spinner = btn.querySelector('.spinner');
+                if (spinner) spinner.remove();
+            }
         });
 
         // Update station name display
         const nameEl = document.querySelector('.station-name');
         if (nameEl) {
-            nameEl.textContent = current.shortName;
+            // Show target name immediately if switching
+            const displayStation = targetStationId ? this.getStation(targetStationId) : current;
+            nameEl.textContent = displayStation.shortName;
         }
 
         // Update document title

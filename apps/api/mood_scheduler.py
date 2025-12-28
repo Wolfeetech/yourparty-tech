@@ -179,10 +179,15 @@ async def select_live_vote_track(mongo_client, azura_client, station_id: int = 1
         
         if top_track_id:
              logger.info(f"[LIVE_VOTE] [STATION {station_id}] Winner by Track Vote: {top_track_id}")
-             track = mongo_client.tracks_collection.find_one({"song_id": top_track_id, "station_id": station_id})
+             # Tracks are global, so we search by song_id only, preferring one with an AzuraCast ID
+             track = mongo_client.tracks_collection.find_one({
+                 "song_id": top_track_id,
+                 "azuracast_id": {"$exists": True, "$ne": None}
+             })
              if track:
                  return {
                     "song_id": top_track_id, 
+                    "azuracast_id": track.get("azuracast_id"),
                     "file_path": track.get("file_path"),
                     "metadata": track.get("metadata", {})
                  }
@@ -232,7 +237,10 @@ async def queue_track_in_azuracast(azura_client, track: Dict[str, Any], station_
     """
     try:
         # Try media_id first (numeric), fallback to song_id (hash string)
-        media_id = track.get("media_id") or track.get("song_id")
+        media_id = track.get("azuracast_id") or track.get("media_id") or track.get("song_id")
+        
+        logger.info(f"DEBUG: Queueing -> Found IDs: azuracast_id={track.get('azuracast_id')}, song_id={track.get('song_id')}, Selected={media_id}")
+        
         if not media_id:
             logger.warning("Track has no media_id or song_id")
             return False
@@ -241,6 +249,7 @@ async def queue_track_in_azuracast(azura_client, track: Dict[str, Any], station_
         await asyncio.sleep(0.5)
         
         # AzuraCast queue_track accepts both numeric ID and unique_id (hash)
+        # Remove int() cast - song_id is a hash string
         success = await azura_client.queue_track(media_id, station_id=station_id)
         
         if success:

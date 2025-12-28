@@ -1,7 +1,9 @@
 // Import MoodModule (ES6)
 import MoodModule from './js/modules/MoodModule.js';
 import ShoutoutModule from './js/modules/ShoutoutModule.js';
+import ShoutoutModule from './js/modules/ShoutoutModule.js';
 import StationSwitcher from './js/modules/StationSwitcher.js';
+import StreamController from './js/modules/StreamController.js';
 
 // Toast Notification System
 const showToast = (title, message, type = 'success', duration = 4000) => {
@@ -234,43 +236,23 @@ document.addEventListener("DOMContentLoaded", () => {
     let sourceConnected = false;
 
     const initAudioContext = () => {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.88;
+      // Delegate to StreamController via event listener
+      if (analyser) {
         const bufferLength = analyser.frequencyBinCount;
         dataArray = new Uint8Array(bufferLength);
-        // console.log('[Visualizer] AudioContext created');
-      }
-
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
-        // console.log('[Visualizer] AudioContext resumed');
-      }
-
-      // Connect source (may need reconnection after load())
-      if (!sourceConnected) {
-        try {
-          source = audioContext.createMediaElementSource(audioPlayer);
-          source.connect(analyser);
-          analyser.connect(audioContext.destination);
-          sourceConnected = true;
-          // console.log('[Visualizer] MediaElementSource connected');
-        } catch (e) {
-          // This is expected if already connected
-          if (e.name === 'InvalidStateError') {
-            sourceConnected = true; // Already connected
-            console.log('[Visualizer] MediaElementSource was already connected');
-          } else {
-            console.warn('[Visualizer] Connection error:', e);
-          }
-        }
       }
     };
 
+    // Listen for StreamController providing the analyser
+    window.addEventListener('stream:audioContextReady', (e) => {
+      analyser = e.detail.analyser;
+      audioContext = streamController.audioContext;
+      initAudioContext();
+      console.log('[Visualizer] Connected to StreamController');
+    });
+
     const updateIcon = () => {
-      const isPaused = audioPlayer.paused;
+      const isPaused = !streamController.isPlaying;
       const icon = isPaused ? "▶" : "❚❚";
       const label = isPaused ? "Stream starten" : "Stream pausieren";
 
@@ -304,14 +286,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const togglePlay = async () => {
       try {
         initAudioContext();
-        if (audioPlayer.paused) {
-          // For live streams, just play without reload to preserve MediaElementSource
-          // Only reload if stream has been paused for a long time (stale connection)
-          await audioPlayer.play();
-          // Fetch latest status immediately after resume
-          fetchStatus();
-        } else {
-          audioPlayer.pause();
+        if (streamController) {
+          streamController.togglePlay();
         }
         updateIcon();
         const mediaContainer = document.querySelector('.radio-card__media');
@@ -329,8 +305,18 @@ document.addEventListener("DOMContentLoaded", () => {
       navigator.mediaSession.setActionHandler('pause', togglePlay);
     }
 
-    audioPlayer.addEventListener("play", updateIcon);
-    audioPlayer.addEventListener("pause", updateIcon);
+    window.addEventListener("stream:playing", () => {
+      updateIcon();
+      const mediaContainer = document.querySelector('.radio-card__media');
+      if (mediaContainer) mediaContainer.classList.add('playing');
+      fetchStatus(); // Refresh status on play
+    });
+
+    window.addEventListener("stream:paused", () => {
+      updateIcon();
+      const mediaContainer = document.querySelector('.radio-card__media');
+      if (mediaContainer) mediaContainer.classList.remove('playing');
+    });
   }
 
   const titleElement = document.getElementById("track-title");
@@ -805,24 +791,16 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Initialize Station Switcher
+  // Initialize StreamController (Dual Deck)
+  const streamController = new StreamController({
+    streamUrl: STREAM_URL
+  });
+
+  // Initialize Station Switcher
   let stationSwitcher;
   if (typeof StationSwitcher !== 'undefined') {
     stationSwitcher = new StationSwitcher({
-      streamController: {
-        setStreamUrl: async (url) => {
-          if (audioPlayer) {
-            const wasPlaying = !audioPlayer.paused;
-            // Update source element if exists, else audio src
-            const sourceEl = audioPlayer.querySelector("source");
-            if (sourceEl) sourceEl.src = url;
-            audioPlayer.src = url;
-
-            if (wasPlaying) {
-              try { await audioPlayer.play(); } catch (e) { console.error(e); }
-            }
-          }
-        }
-      },
+      streamController: streamController,
       realtimeModule: {
         switchStation: (slug) => {
           // Polling mode: Trigger immediate refresh

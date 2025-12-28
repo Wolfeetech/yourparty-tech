@@ -160,6 +160,21 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    // Control Panel Dashboard JS
+    if (get_query_var('yourparty_control')) {
+        $cp_ver = file_exists(get_template_directory() . '/assets/js/ControlPanel.js')
+            ? filemtime(get_template_directory() . '/assets/js/ControlPanel.js')
+            : YOURPARTY_VERSION;
+
+        wp_enqueue_script(
+            'yourparty-control-panel',
+            get_template_directory_uri() . '/assets/js/ControlPanel.js',
+            [], 
+            $cp_ver,
+            true
+        );
+    }
+
     // ES6 Module support
     add_filter('script_loader_tag', function ($tag, $handle, $src) {
         if ('yourparty-app-bundle' === $handle) {

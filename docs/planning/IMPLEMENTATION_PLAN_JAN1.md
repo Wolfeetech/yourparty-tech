@@ -45,6 +45,22 @@
 2.  **CONTROL DASHBOARD**
     *   [ ] Make it mobile-perfect for the "Admin on the Dancefloor".
 
+## 🛡️ PHASE 4: INFRASTRUCTURE HARDENING (PROFESSIONALIZATION)
+**Goal**: Move from "Fragile Home Lab" to "Production Grade Infrastructure".
+
+1.  **STORAGE ARCHITECTURE (Circular Dependency Fix)**
+    *   [ ] **Current**: PVE Host mounts NFS from AzuraCast VM (210). ❌ *Risk: Host freezes if VM dies.*
+    *   [ ] **Target**: PVE Host exports `/mnt/storage` (NFSv4), AzuraCast VM mounts it. ✅ *Stable.*
+    *   [ ] **Action**: Create "Bind Mount" or Host-level NFS share plan.
+
+2.  **DISASTER RECOVERY (Backups)**
+    *   [ ] **Gap**: Critical systems (HA, AzuraCast, Proxy) have NO backups.
+    *   [ ] **Action**: Add IDs `103`, `210`, `211`, `360` to daily `vzdump` schedule.
+
+3.  **NETWORK PROFESSIONALIZATION**
+    *   [ ] **Static IPs**: Remove hardcoded IPs from code, move to DNS/Env Vars or strict Sticky Static implementations.
+    *   [ ] **NPM hardening**: Move from manual DB edits to "Configuration as Code" or at least `docker-compose` with persistent volume management.
+
 ## 🚀 LIVE DEVELOPMENTS (ADDED SCOPE)
 1.  **MULTI-CHANNEL CAPABILITY**
     *   [x] **Backend**: `station_id` support added to `AzuraCastClient`.

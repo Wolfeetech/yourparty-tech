@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from datetime import datetime
 import sys
 import os
 
@@ -22,23 +23,65 @@ logger = logging.getLogger("ProofOfConcept")
 STATION_ID = 1
 
 async def prove_voting_loop():
-    logger.info("🧪 STARTING VOTING SYSTEM PROOF OF CONCEPT...")
+    logger.info("🧪 STARTING VOTING SYSTEM PROOF OF CONCEPT (LIVE API)...")
     
     # 1. Connect Dependencies
     client = MongoClient(MONGO_URI)
-    db = client["yourparty"]
+    db = client["yourparty"] # Matches mongo_client.py default
     tracks = db["tracks"]
-    votes = db["mood_next_votes"] # Assuming this is where votes go
+    votes = db["next_track_votes"] # Correct collection for specific track votes
     
     azura = AzuraCastClient(AZURACAST_API_URL, AZURACAST_API_KEY, STATION_ID)
     
-    # 2. Select a Random Track to Vote For
-    # Find a track that definitely has an AzuraCast ID
-    test_track = tracks.find_one({"azuracast_id": {"$ne": None}})
+    # 2. Select a Valid Track from AzuraCast (Source of Truth)
+    logger.info("📡 Fetching Now Playing from AzuraCast to find valid ID...")
+    try:
+        np_response = await azura._get(f"{azura.base_url}/api/nowplaying/{STATION_ID}")
+    except Exception as e:
+        logger.error(f"Failed to fetch now_playing: {e}")
+        return
+
+    valid_media = None
+    if np_response:
+         # Try history first (don't want to vote for current playing)
+         for entry in np_response.get('song_history', []):
+             if entry.get('song', {}).get('id'):
+                 valid_media = entry['song']
+                 break
+         
+         # Fallback to current song
+         if not valid_media and np_response.get('now_playing', {}).get('song', {}).get('id'):
+             valid_media = np_response['now_playing']['song']
+
+    if not valid_media:
+        logger.error("❌ No valid media info found in Now Playing!")
+        return
+
+    real_azura_id = valid_media['id'] # This should be the string hash or int ID
+    real_title = valid_media.get('title', 'Unknown')
+    unique_id = valid_media.get('unique_id') or str(real_azura_id) # The hash
+    
+    logger.info(f"✅ Found valid AzuraCast Media: {real_title} (ID: {real_azura_id}, Unique: {unique_id})")
+
+    # Find this track in MongoDB
+    # Note: AzuraCast 'id' is the unique_id (hash) usually in recent versions, or numeric 'id'
+    # We check both
+    test_track = tracks.find_one({"azuracast_id": real_azura_id})
+    if not test_track:
+         test_track = tracks.find_one({"song_id": unique_id})
     
     if not test_track:
-        logger.error("❌ No valid tracks found in DB to test with!")
-        return
+        logger.warning(f"⚠️ Track {real_azura_id} not in MongoDB. Updating it for test...")
+        # Create a temp track doc for the test
+        test_track = {
+            "song_id": unique_id,
+            "azuracast_id": real_azura_id,
+            "metadata": {"title": real_title},
+            "file_path": f"test/path_{unique_id}.mp3",
+            "relative_path": f"test/path_{unique_id}.mp3" # Ensure unique index compliance
+        }
+        # Upsert by song_id
+        tracks.replace_one({"song_id": unique_id}, test_track, upsert=True)
 
     track_title = test_track['metadata']['title']
     azura_id = test_track['azuracast_id']
@@ -49,20 +92,23 @@ async def prove_voting_loop():
     # 3. Simulate User Vote
     logger.info(f"🗳️ Simulating User Vote for '{track_title}'...")
     
-    # Clean previous votes for this track to verify freshness
-    votes.delete_many({"song_id": song_id})
+    # Clean previous votes to ensure we win
+    votes.delete_many({"station_id": STATION_ID})
     
     # Insert new vote
     votes.insert_one({
-        "song_id": song_id,
+        "candidate_song_id": song_id,
         "station_id": STATION_ID,
         "user_ip": "127.0.0.1",
-        "timestamp": time.time(), 
-        "mood": "energetic" 
+        "timestamp": datetime.utcnow()
     })
     logger.info("✅ Vote Cast! (Inserted into MongoDB)")
     
-    # 4. Trigger Scheduler Logic (Simulated)
+    # DEBUG: Dump the votes
+    all_votes = list(votes.find({"station_id": STATION_ID}))
+    logger.info(f"DEBUG: Current Votes in DB: {all_votes}")
+
+    # 4. Trigger Scheduler Logic
     logger.info("🤖 Triggering Mood Scheduler Logic...")
     from apps.api.mood_scheduler import select_live_vote_track, queue_track_in_azuracast
     
@@ -78,12 +124,18 @@ async def prove_voting_loop():
 
     winner_title = selected_winner['metadata'].get('title', 'Unknown')
     logger.info(f"🏆 Scheduler Selected Winner: {winner_title}")
+
+    # Normalize IDs for comparison
+    sched_id = str(selected_winner['song_id'])
+    vote_id = str(song_id)
+
+    logger.info(f"DEBUG: Comparing IDs -> Scheduler: {sched_id} ({type(selected_winner['song_id'])}) vs Vote: {vote_id} ({type(song_id)})")
     
-    if selected_winner['song_id'] != song_id:
+    if sched_id != vote_id:
         logger.error("❌ Mismatch! Scheduler selected a different track than voted.")
         return
 
-    # 5. Push to AzuraCast Queue
+    # 5. Push to AzuraCast Queue (Real API)
     logger.info("🚀 Pushing to AzuraCast Queue...")
     success = await queue_track_in_azuracast(azura, selected_winner, STATION_ID)
     
@@ -94,19 +146,24 @@ async def prove_voting_loop():
         await asyncio.sleep(2) # Wait for AzuraCast to process
         logger.info("👀 Verifying AzuraCast Queue...")
         
-        queue_data = await azura._get(f"{azura.base_url}/api/station/{STATION_ID}/queue")
-        
-        is_in_queue = False
-        for item in queue_data:
-             if str(item['song']['id']) == str(azura_id):
-                 is_in_queue = True
-                 break
-        
-        if is_in_queue:
-            logger.info(f"🎉 SUCCESS! '{track_title}' is visible in AzuraCast Queue!")
-            logger.info("PROOF OF CONCEPT: PASSED ✅")
-        else:
-            logger.warning("⚠️ Request sent, but track not yet visible in Queue (AutoDJ delay?). Check Control Panel.")
+        try:
+            queue_data = await azura._get(f"{azura.base_url}/api/station/{STATION_ID}/queue")
+            
+            is_in_queue = False
+            if queue_data:
+                for item in queue_data:
+                    # Check song ID match (nested)
+                    if str(item.get('song', {}).get('id')) == str(azura_id):
+                        is_in_queue = True
+                        break
+            
+            if is_in_queue:
+                logger.info(f"🎉 SUCCESS! '{track_title}' is visible in AzuraCast Queue!")
+                logger.info("PROOF OF CONCEPT: PASSED ✅")
+            else:
+                logger.warning("⚠️ Request sent, but track not yet visible in Queue (AutoDJ delay?). Check Control Panel.")
+        except Exception as e:
+             logger.error(f"Failed to verify queue: {e}")
             
     else:
         logger.error("❌ Failed to push to AzuraCast.")
