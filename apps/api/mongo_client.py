@@ -78,18 +78,38 @@ class MongoDatabaseClient:
         Converts absolute Windows/Linux paths to a relative path from the library root.
         E.g., 'Z:\\radio_library\\Rock\\Artist\\Song.mp3' -> 'Rock/Artist/Song.mp3'
         """
-        # Common library roots (Z: is primary, M: is legacy)
+        library_subdir = os.getenv("LIBRARY_SUBDIR", "yourparty_Libary")
+        library_root_win = os.getenv("LIBRARY_ROOT_WIN", rf"Z:\{library_subdir}")
+        library_root_linux = os.getenv(
+            "LIBRARY_ROOT_LINUX",
+            f"/var/radio/music/{library_subdir}"
+        )
+        library_unc = os.getenv(
+            "LIBRARY_UNC",
+            rf"\\192.168.178.120\music\{library_subdir}"
+        )
+
+        # Common library roots (new + legacy fallbacks)
         roots = [
-            "Z:/radio_library/", 
-            "Z:\\radio_library\\",
-            r"M:\Library\\", 
-            r"M:\Library/", 
-            "/var/azuracast/stations/yourparty/media/"
+            library_root_win,
+            library_root_linux,
+            library_unc,
+            "Z:/radio_library",
+            r"Z:\radio_library",
+            r"M:\Library",
+            "/var/azuracast/stations/yourparty/media",
+            "/var/azuracast/stations/radio4yourparty/media",
+            "/var/radio/music",
+            "/mnt/music_hdd",
         ]
         
         normalized = full_path.replace("\\", "/")
-        for root in roots:
-            root_norm = root.replace("\\", "/")
+        normalized_roots = [
+            r.replace("\\", "/").rstrip("/") + "/"
+            for r in roots
+            if r
+        ]
+        for root_norm in normalized_roots:
             if normalized.lower().startswith(root_norm.lower()):
                 return normalized[len(root_norm):].strip("/")
         
