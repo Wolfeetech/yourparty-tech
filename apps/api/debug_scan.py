@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def debug_scan():
     print("--- DEBUG SCAN STARTED ---")
     scanner = MusicScanner()
-    path = "/var/radio/music/radio_library/Music"
+    path = os.getenv("LIBRARY_ROOT_LINUX", "/var/radio/music/yourparty_Libary")
     
     print(f"Scanning: {path}")
     if not os.path.exists(path):

@@ -144,24 +144,31 @@ def sync_db_to_files():
                 fail_count += 1
                 continue
             if not os.path.exists(file_path):
+                library_root_linux = os.getenv(
+                    "LIBRARY_ROOT_LINUX",
+                    "/var/radio/music/yourparty_Libary"
+                )
                 # Try to map /mnt/music_hdd path if stored differently
                 # Check for common path variations if running in container vs local
-                container_path = file_path.replace("/mnt/music_hdd", "/var/radio/music")
+                container_path = file_path.replace("/mnt/music_hdd", library_root_linux)
                 if os.path.exists(container_path):
                      file_path = container_path
                 else:
-                    # Broken Symlink Fix: /var/radio/music/Music -> /var/radio/music/radio_library/Music
+                    # Broken Symlink Fix: /var/radio/music/Music -> <library_root>/Music
                     if "/var/radio/music/Music/" in file_path:
-                        fix_path = file_path.replace("/var/radio/music/Music/", "/var/radio/music/radio_library/Music/")
+                        fix_path = file_path.replace(
+                            "/var/radio/music/Music/",
+                            f"{library_root_linux}/Music/"
+                        )
                         if os.path.exists(fix_path):
                              file_path = fix_path
                         else:
                              # Double check if it was mapped from outside (AzuraCast path Music/...)
                              # AzuraCast path: Music/_input/...
-                             # Local path: /var/radio/music/radio_library/Music/_input/...
+                             # Local path: <library_root>/Music/_input/...
                              # Just try constructing it
                              base_name = file_path.split("/Music/")[-1]
-                             fix_path_2 = f"/var/radio/music/radio_library/Music/{base_name}"
+                             fix_path_2 = f"{library_root_linux}/Music/{base_name}"
                              if os.path.exists(fix_path_2):
                                  file_path = fix_path_2
                              else:

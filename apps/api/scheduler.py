@@ -6,7 +6,10 @@ import subprocess
 from pathlib import Path
 from apps.api.library_service import LibraryService
 from apps.api.sync_playlists import sync_playlists
-from apps.api.secrets import SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
+from apps.api.config_secrets import (
+    SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD,
+    LIBRARY_ROOT_WIN
+)
 
 # Configure Logging
 logging.basicConfig(
@@ -66,7 +69,7 @@ def run_scheduler():
                 ensure_mount()
                 
                 # Init service
-                service = LibraryService("Z:\\radio_library")
+                service = LibraryService(LIBRARY_ROOT_WIN)
                 service.run_ingestion()
                 
                 logger.info("✅ Ingestion Complete.")

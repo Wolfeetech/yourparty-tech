@@ -11,8 +11,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from library_service import LibraryService
 
-# Define path
-MUSIC_DIR = os.getenv("MUSIC_DIR", "/var/radio/music")
+# Define path (prefer library root, fallback to legacy env)
+MUSIC_DIR = os.getenv(
+    "LIBRARY_ROOT_LINUX",
+    os.getenv("MUSIC_DIR", "/var/radio/music/yourparty_Libary")
+)
 
 print(f"Starting force scan on {MUSIC_DIR}...")
 try:
