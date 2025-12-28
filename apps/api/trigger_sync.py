@@ -51,19 +51,23 @@ def main():
     scanner = MusicScanner()
     
     # 3. Sync
-    directory = "/var/radio/music"
-    if not os.path.exists(directory):
-        logger.error(f"Directory {directory} not found!")
+    library_root = (
+        os.getenv("LIBRARY_ROOT_LINUX")
+        or os.getenv("MUSIC_DIR")
+        or "/var/radio/music/yourparty_Libary"
+    )
+    if not os.path.exists(library_root):
+        logger.error(f"Directory {library_root} not found!")
         return
 
-    logger.info(f"Scanning {directory}...")
+    logger.info(f"Scanning {library_root}...")
     
     # Synchronous iteration of generator
     count = 0
     synced = 0
     
     try:
-        for file_entry in scanner.scan_directory(directory):
+        for file_entry in scanner.scan_directory(library_root):
             count += 1
             mongo.sync_track_metadata(file_entry['path'], file_entry['metadata'])
             synced += 1

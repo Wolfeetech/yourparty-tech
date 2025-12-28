@@ -97,6 +97,10 @@ MONGO_HOST="$MongoHost"
 MONGO_PORT="$MongoPort"
 MONGO_INITDB_ROOT_USERNAME="$MongoUser"
 MONGO_INITDB_ROOT_PASSWORD="$MongoPass"
+LIBRARY_SUBDIR="yourparty_Libary"
+LIBRARY_UNC="\\192.168.178.120\music\yourparty_Libary"
+LIBRARY_ROOT_WIN="Z:\yourparty_Libary"
+LIBRARY_ROOT_LINUX="/var/radio/music/yourparty_Libary"
 "@
 
 # Save to backend AND tools

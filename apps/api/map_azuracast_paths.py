@@ -26,6 +26,12 @@ if not MONGO_URI or "root:yourparty" in MONGO_URI:
     port = os.getenv("MONGO_PORT", "27017")
     MONGO_URI = f"mongodb://{user}:{pwd}@{host}:{port}/?authSource=admin"
 
+LIBRARY_ROOT_LINUX = (
+    os.getenv("LIBRARY_ROOT_LINUX")
+    or os.getenv("MUSIC_DIR")
+    or "/var/radio/music/yourparty_Libary"
+)
+
 AC_URL = os.getenv("AZURACAST_URL", "http://192.168.178.210")
 AC_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
@@ -51,7 +57,7 @@ def run_mapping():
     for item in media_list:
         song_id = item.get('unique_id')
         # Path in AzuraCast might be relative to media dir, e.g. "Techno/Song.mp3"
-        # We need to map this to our NFS mount: /var/radio/music/Techno/Song.mp3
+        # We map it to the local library root.
         ac_path = item.get('path', '')
         
         if not song_id or not ac_path:
@@ -59,7 +65,7 @@ def run_mapping():
             
         # Construct local path
         # Assuming AzuraCast 'path' is relative to station media root
-        local_path = os.path.join("/var/radio/music", ac_path)
+        local_path = os.path.join(LIBRARY_ROOT_LINUX, ac_path)
         
         # Update MongoDB
         try:

@@ -2,10 +2,10 @@
 """
 MusicBrainz Renamer Script
 ==========================
-Scans Z:\radio_library\Inbox, identifies tracks via MusicBrainz,
+Scans Z:\yourparty_Libary\Inbox, identifies tracks via MusicBrainz,
 and renames/moves them to a clean folder structure.
 
-Structure: Z:\radio_library\Genre\Artist\Album\Track - Title.ext
+Structure: Z:\yourparty_Libary\Genre\Artist\Album\Track - Title.ext
 """
 import os
 import sys

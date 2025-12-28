@@ -76,7 +76,7 @@ class MongoDatabaseClient:
     def normalize_path(self, full_path: str) -> str:
         """
         Converts absolute Windows/Linux paths to a relative path from the library root.
-        E.g., 'Z:\\radio_library\\Rock\\Artist\\Song.mp3' -> 'Rock/Artist/Song.mp3'
+        E.g., 'Z:\\yourparty_Libary\\Rock\\Artist\\Song.mp3' -> 'Rock/Artist/Song.mp3'
         """
         library_subdir = os.getenv("LIBRARY_SUBDIR", "yourparty_Libary")
         library_root_win = os.getenv("LIBRARY_ROOT_WIN", rf"Z:\{library_subdir}")

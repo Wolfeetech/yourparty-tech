@@ -6,6 +6,9 @@ import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Load environment early so path config uses .env values.
+load_dotenv()
+
 # Ensure we can import app modules. 
 # Assuming script is deployed to /app/scripts/ and app root is /app/
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,9 +42,14 @@ logging.basicConfig(
 logger = logging.getLogger("LibraryAuto")
 
 # Configuration (Server Paths)
-INBOX_DIR = "/var/radio/music/Inbox"
-LIBRARY_DIR = "/var/radio/music/Library"
-ARCHIVE_DIR = "/var/radio/music/Archive"
+LIBRARY_ROOT_LINUX = (
+    os.getenv("LIBRARY_ROOT_LINUX")
+    or os.getenv("MUSIC_DIR")
+    or "/var/radio/music/yourparty_Libary"
+)
+INBOX_DIR = os.path.join(LIBRARY_ROOT_LINUX, "Inbox")
+LIBRARY_DIR = os.path.join(LIBRARY_ROOT_LINUX, "Library")
+ARCHIVE_DIR = os.path.join(LIBRARY_ROOT_LINUX, "Archive")
 
 def ensure_dirs():
     for d in [INBOX_DIR, LIBRARY_DIR, ARCHIVE_DIR]:
