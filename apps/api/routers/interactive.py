@@ -151,8 +151,6 @@ async def vote_mood(request: Request, mood_request: MoodVoteRequest):
         if request.rating:
             state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
             
-            state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
-            
     # Broadcast 'Pulse' to refresh dashboards
     await realtime.manager.broadcast({"type": "pulse", "target": "moods"})
             
