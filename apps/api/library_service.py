@@ -6,11 +6,17 @@ from pathlib import Path
 try:
     from apps.api.music_scanner import MusicScanner
     from apps.api.mongo_client import MongoDatabaseClient
-    from apps.api.config_secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
+    from apps.api.config_secrets import (
+        MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD,
+        LIBRARY_ROOT_WIN
+    )
 except ImportError:
     from music_scanner import MusicScanner
     from mongo_client import MongoDatabaseClient
-    from config_secrets import MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD
+    from config_secrets import (
+        MONGO_URI, SMB_SERVER, SMB_SHARE, SMB_USERNAME, SMB_PASSWORD,
+        LIBRARY_ROOT_WIN
+    )
 
 # Logging
 logging.basicConfig(
@@ -179,7 +185,7 @@ if __name__ == "__main__":
     import subprocess
     
     # Ensure Drive Mount
-    drive_letter = "Z:"
+    drive_letter = Path(LIBRARY_ROOT_WIN).drive or "Z:"
     unc_path = f"\\\\{SMB_SERVER}\\{SMB_SHARE}"
     
     # Check if mounted
@@ -192,5 +198,5 @@ if __name__ == "__main__":
             sys.exit(1)
     
     # Run Service
-    service = LibraryService(f"{drive_letter}\\radio_library")
+    service = LibraryService(LIBRARY_ROOT_WIN)
     service.run_ingestion()

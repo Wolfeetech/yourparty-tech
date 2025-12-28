@@ -6,7 +6,10 @@ import mutagen
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, TXXX, COMM, TIT2, TPE1, TALB
 from pymongo import MongoClient
-from secrets import MONGO_URI, SMB_USERNAME, SMB_PASSWORD, SMB_SERVER, SMB_SHARE
+from config_secrets import (
+    MONGO_URI, SMB_USERNAME, SMB_PASSWORD, SMB_SERVER, SMB_SHARE,
+    LIBRARY_ROOT_WIN
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -129,7 +132,7 @@ if __name__ == "__main__":
     import sys
     
     # 1. Mount Drive
-    drive_letter = "Z:"
+    drive_letter = Path(LIBRARY_ROOT_WIN).drive or "Z:"
     unc_path = f"\\\\{SMB_SERVER}\\{SMB_SHARE}"
     
     print(f"🔌 Mounting {unc_path} to {drive_letter}...")
@@ -150,8 +153,7 @@ if __name__ == "__main__":
 
     # 2. Run Sync
     try:
-        path = f"{drive_letter}\\radio_library" 
-        manager = MusicManager(path)
+        manager = MusicManager(LIBRARY_ROOT_WIN)
         # Default to dry_run=False since we want to fix it now
         manager.sync_metadata(dry_run=False)
     finally:

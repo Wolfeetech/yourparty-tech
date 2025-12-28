@@ -13,7 +13,10 @@ from azuracast_client import AzuraCastClient
 from tag_improver import TagImprover
 from genre_organizer import GenreOrganizer
 from music_scanner import MusicScanner
-from config_secrets import MONGO_URI, AZURACAST_API_URL, AZURACAST_API_KEY, AZURACAST_STATION_ID
+from config_secrets import (
+    MONGO_URI, AZURACAST_API_URL, AZURACAST_API_KEY, AZURACAST_STATION_ID,
+    LIBRARY_ROOT_WIN
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LibraryManager")
@@ -27,9 +30,9 @@ class LibraryManager:
         self.improver = TagImprover()
         self.scanner = MusicScanner()
         
-        # Configuration - Z: is the central network share for StudioPC
-        self.inbox_dir = r"Z:\radio_library\Inbox"
-        self.library_dir = r"Z:\radio_library"
+        # Configuration - network share library root
+        self.library_dir = LIBRARY_ROOT_WIN
+        self.inbox_dir = os.path.join(self.library_dir, "Inbox")
         self.organizer = GenreOrganizer(self.library_dir)
 
     async def process_inbox(self):
