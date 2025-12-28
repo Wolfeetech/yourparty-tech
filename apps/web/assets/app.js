@@ -885,80 +885,77 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
     try {
-      try {
-        const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
-        const response = await fetch(buildEndpoint(`history?station_id=${sid}`));
-        if (!response.ok) throw new Error(`History HTTP ${response.status}`);
-        const data = await response.json();
-        const items = Array.isArray(data) ? data : data.history ?? [];
-        renderHistory(items);
-      } catch (error) {
-        console.error("History fetch failed:", error);
-        renderHistory([]);
-      }
-    };
+      const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
+      const response = await fetch(buildEndpoint(`history?station_id=${sid}`));
+      if (!response.ok) throw new Error(`History HTTP ${response.status}`);
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data.history ?? [];
+      renderHistory(items);
+    } catch (error) {
+      console.error("History fetch failed:", error);
+      renderHistory([]);
+    }
+  };
 
-    const setScheduleSkeleton = () => {
-      if (!scheduleList) return;
-      scheduleList.innerHTML = `
+  const setScheduleSkeleton = () => {
+    if (!scheduleList) return;
+    scheduleList.innerHTML = `
       <li class="schedule-item schedule-item--loading"></li>
       <li class="schedule-item schedule-item--loading"></li>
       <li class="schedule-item schedule-item--loading"></li>
     `;
-    };
+  };
 
-    const fetchSchedule = async () => {
-      if (scheduleList) {
-        setScheduleSkeleton();
-      }
-      try {
-        // 1. Fetch Schedule (Shows)
-        try {
-          // 1. Fetch Schedule (Shows)
-          const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
-          const response = await fetch(buildEndpoint(`schedule?station_id=${sid}`));
-          if (!response.ok) throw new Error(`Schedule HTTP ${response.status}`);
-          const data = await response.json();
-          const items = Array.isArray(data) ? data : data.schedule ?? [];
-          renderSchedule(items);
-        } catch (error) {
-          console.error("Schedule fetch failed:", error);
-          renderSchedule([]);
-        }
-      };
+  const fetchSchedule = async () => {
+    if (scheduleList) {
+      setScheduleSkeleton();
+    }
+    try {
+      // 1. Fetch Schedule (Shows)
+      const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
+      const response = await fetch(buildEndpoint(`schedule?station_id=${sid}`));
+      if (!response.ok) throw new Error(`Schedule HTTP ${response.status}`);
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : data.schedule ?? [];
+      renderSchedule(items);
+    } catch (error) {
+      console.error("Schedule fetch failed:", error);
+      renderSchedule([]);
+    }
+  };
 
-      const renderQueue = (items = []) => {
-        const queueList = document.getElementById('queue-list');
-        if (queueList) {
-          queueList.innerHTML = "";
+  const renderQueue = (items = []) => {
+    const queueList = document.getElementById('queue-list');
+    if (queueList) {
+      queueList.innerHTML = "";
 
-          if (!items.length) {
-            queueList.innerHTML = '<div class="queue-item" style="color:#666;">Warte auf Titel...</div>';
+      if (!items.length) {
+        queueList.innerHTML = '<div class="queue-item" style="color:#666;">Warte auf Titel...</div>';
+      } else {
+        // Items usually come from /station/queue as a list
+        let cumulativeSeconds = 0;
+
+        items.slice(0, 3).forEach((entry, index) => {
+          const title = fallback(entry.song?.title ?? entry.title, "Musik");
+          const artist = fallback(entry.song?.artist ?? entry.artist, "");
+
+          // Calculate real time based on song durations
+          let timeLabel = "";
+          if (index === 0) {
+            timeLabel = "Next";
           } else {
-            // Items usually come from /station/queue as a list
-            let cumulativeSeconds = 0;
+            // Add duration of previous songs to get cumulative time
+            for (let i = 0; i < index; i++) {
+              const duration = items[i]?.song?.duration ?? items[i]?.duration ?? 180; // Default 3 min if unknown
+              cumulativeSeconds += duration;
+            }
 
-            items.slice(0, 3).forEach((entry, index) => {
-              const title = fallback(entry.song?.title ?? entry.title, "Musik");
-              const artist = fallback(entry.song?.artist ?? entry.artist, "");
+            // Simplified format: only minutes, no "photo finish"
+            const minutes = Math.round(cumulativeSeconds / 60);
+            timeLabel = `in ~${minutes} min`;
+          }
 
-              // Calculate real time based on song durations
-              let timeLabel = "";
-              if (index === 0) {
-                timeLabel = "Next";
-              } else {
-                // Add duration of previous songs to get cumulative time
-                for (let i = 0; i < index; i++) {
-                  const duration = items[i]?.song?.duration ?? items[i]?.duration ?? 180; // Default 3 min if unknown
-                  cumulativeSeconds += duration;
-                }
-
-                // Simplified format: only minutes, no "photo finish"
-                const minutes = Math.round(cumulativeSeconds / 60);
-                timeLabel = `in ~${minutes} min`;
-              }
-
-              queueList.innerHTML += `
+          queueList.innerHTML += `
                 <div class="queue-item" style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding:4px 0;">
                     <div style="display:flex; flex-direction:column; max-width:80%;">
                         <span style="color:#eee; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</span>
@@ -966,314 +963,312 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <span style="color:var(--neon-green); font-size:0.8em; opacity:0.8;">${timeLabel}</span>
                 </div>`;
-            });
+        });
+      }
+    }
+  };
+
+  const fetchQueue = async () => {
+    try {
+      // 2. Fetch Queue (Tracks)
+      const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
+      const response = await fetch(buildEndpoint(`queue?station_id=${sid}`));
+      if (!response.ok) throw new Error(`Queue HTTP ${response.status}`);
+      const data = await response.json();
+      // data is expected to be a list for /station/queue, or object with 'playing_next' for /nowplaying
+      let queue = [];
+      if (Array.isArray(data)) {
+        queue = data;
+      } else if (data.playing_next) {
+        queue = Array.isArray(data.playing_next) ? data.playing_next : [data.playing_next];
+      }
+      renderQueue(queue);
+    } catch (error) {
+      console.error("Queue fetch failed:", error);
+      renderQueue([]);
+    }
+  };
+
+  const submitRating = async (value) => {
+    const ratingValue = Number(value);
+    if (!ratingValue || ratingValue < 1 || ratingValue > 5) return;
+
+    if (!currentSongId) {
+      if (voteFeedback) {
+        voteFeedback.textContent =
+          "Keine aktive Wiedergabe. Bitte warte auf den nächsten Track.";
+      }
+      return;
+    }
+
+    if (isSendingVote) return;
+
+    isSendingVote = true;
+    pendingSelection = ratingValue;
+    setStarHighlight(ratingValue);
+    if (voteFeedback) {
+      voteFeedback.textContent = "Bewertung wird übertragen …";
+    }
+
+    try {
+      const response = await fetch(buildEndpoint("rate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          song_id: currentSongId,
+          rating: ratingValue,
+          vote:
+            ratingValue >= 4
+              ? "like"
+              : ratingValue <= 2
+                ? "dislike"
+                : "neutral",
+        }),
+      });
+      if (!response.ok) throw new Error(`Vote HTTP ${response.status}`);
+      const result = await response.json();
+
+      const isDislike = ratingValue <= 2;
+      showToast(
+        isDislike ? 'Verstanden' : 'Vibe gesendet',
+        isDislike ? 'Wir werden diesen Song seltener spielen.' : `Deine ${ratingValue}-Sterne Bewertung wurde gespeichert.`
+      );
+
+      const counts = result.ratings ?? {};
+
+      const average = computeAverageFromRating(counts) || ratingValue;
+      const votes = computeTotalVotes(counts);
+      lastServerAverage = average;
+      pendingSelection = 0;
+      resetStarHighlight();
+
+      if (ratingAverageElement) {
+        ratingAverageElement.textContent = average
+          ? average.toFixed(1).replace(".", ",")
+          : ratingValue.toFixed(1).replace(".", ",");
+      }
+      if (ratingTotalElement) {
+        const totalVotes = votes || Number(counts.total) || 0;
+        ratingTotalElement.textContent = totalVotes
+          ? `${totalVotes} ${totalVotes === 1 ? "Bewertung" : "Bewertungen"
+          }`
+          : "Deine Bewertung ist eingegangen";
+      }
+
+      if (voteFeedback) {
+        voteFeedback.textContent =
+          "Danke! Deine Bewertung beeinflusst das Programm.";
+      }
+    } catch (error) {
+      console.error("Vote failed:", error);
+      if (voteFeedback) {
+        voteFeedback.textContent =
+          "Bewertung nicht möglich. Bitte später erneut versuchen.";
+      }
+    } finally {
+      isSendingVote = false;
+    }
+  };
+
+  ratingStars.forEach((star) => {
+    const value = Number(star.dataset.value);
+    star.addEventListener("mouseenter", () => setStarHighlight(value));
+    star.addEventListener("focus", () => setStarHighlight(value));
+    star.addEventListener("mouseleave", resetStarHighlight);
+    star.addEventListener("blur", resetStarHighlight);
+    star.addEventListener("click", () => submitRating(value));
+    star.addEventListener("keydown", (event) => {
+      const key = event.key;
+      if (key === "Enter" || key === " ") {
+        event.preventDefault();
+        submitRating(value);
+      }
+      if (key === "ArrowLeft" || key === "ArrowDown") {
+        event.preventDefault();
+        const prev = Math.max(1, value - 1);
+        const prevStar = ratingStars.find(
+          (item) => Number(item.dataset.value) === prev
+        );
+        if (prevStar) prevStar.focus();
+      }
+      if (key === "ArrowRight" || key === "ArrowUp") {
+        event.preventDefault();
+        const next = Math.min(5, value + 1);
+        const nextStar = ratingStars.find(
+          (item) => Number(item.dataset.value) === next
+        );
+        if (nextStar) nextStar.focus();
+      }
+    });
+  });
+
+  // Like Button Action (Calls MoodModule for Vote + Logic)
+  const likeButton = document.getElementById("like-button");
+  if (likeButton) {
+    likeButton.addEventListener("click", () => {
+      if (window.YourPartyAppInstance?.modules?.mood) {
+        window.YourPartyAppInstance.modules.mood.castVote('like');
+      } else {
+        submitRating(5); // Fallback
+      }
+    });
+  }
+
+  // Dislike Button Action
+  const dislikeButton = document.getElementById("dislike-button");
+  if (dislikeButton) {
+    dislikeButton.addEventListener("click", () => {
+      if (window.YourPartyAppInstance?.modules?.mood) {
+        window.YourPartyAppInstance.modules.mood.castVote('dislike');
+      } else {
+        submitRating(1); // Fallback
+      }
+    });
+  }
+
+  if (historyRefresh) {
+    historyRefresh.addEventListener("click", fetchHistory);
+  }
+
+  fetchStatus();
+  fetchHistory();
+  fetchSchedule();
+  setInterval(fetchStatus, 10000);
+  setInterval(fetchHistory, 30000);
+  fetchSchedule();
+  fetchQueue();
+
+  setInterval(fetchSchedule, 60000);
+  setInterval(fetchQueue, 30000);
+  // History Rating Listener (Delegation)
+  if (historyList) {
+    historyList.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('history-star')) {
+        const star = e.target;
+        const container = star.closest('.history-stars');
+        const songId = container.dataset.songId;
+        const value = parseInt(star.dataset.value);
+
+        // Visual Feedback
+        const stars = container.querySelectorAll('.history-star');
+        stars.forEach((s, i) => {
+          if (i < value) {
+            s.classList.add('filled');
+            s.style.color = 'var(--emerald)';
+          } else {
+            s.classList.remove('filled');
+            s.style.color = '#444';
           }
-        }
-      };
-
-      const fetchQueue = async () => {
-        try {
-          // 2. Fetch Queue (Tracks)
-          try {
-            // 2. Fetch Queue (Tracks)
-            const sid = stationSwitcher ? stationSwitcher.currentStation : 1;
-            const response = await fetch(buildEndpoint(`queue?station_id=${sid}`));
-            if (!response.ok) throw new Error(`Queue HTTP ${response.status}`);
-            const data = await response.json();
-            // data is expected to be a list for /station/queue, or object with 'playing_next' for /nowplaying
-            let queue = [];
-            if (Array.isArray(data)) {
-              queue = data;
-            } else if (data.playing_next) {
-              queue = Array.isArray(data.playing_next) ? data.playing_next : [data.playing_next];
-            }
-            renderQueue(queue);
-          } catch (error) {
-            console.error("Queue fetch failed:", error);
-            renderQueue([]);
-          }
-        };
-
-        const submitRating = async (value) => {
-          const ratingValue = Number(value);
-          if (!ratingValue || ratingValue < 1 || ratingValue > 5) return;
-
-          if (!currentSongId) {
-            if (voteFeedback) {
-              voteFeedback.textContent =
-                "Keine aktive Wiedergabe. Bitte warte auf den nächsten Track.";
-            }
-            return;
-          }
-
-          if (isSendingVote) return;
-
-          isSendingVote = true;
-          pendingSelection = ratingValue;
-          setStarHighlight(ratingValue);
-          if (voteFeedback) {
-            voteFeedback.textContent = "Bewertung wird übertragen …";
-          }
-
-          try {
-            const response = await fetch(buildEndpoint("rate"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                song_id: currentSongId,
-                rating: ratingValue,
-                vote:
-                  ratingValue >= 4
-                    ? "like"
-                    : ratingValue <= 2
-                      ? "dislike"
-                      : "neutral",
-              }),
-            });
-            if (!response.ok) throw new Error(`Vote HTTP ${response.status}`);
-            const result = await response.json();
-
-            const isDislike = ratingValue <= 2;
-            showToast(
-              isDislike ? 'Verstanden' : 'Vibe gesendet',
-              isDislike ? 'Wir werden diesen Song seltener spielen.' : `Deine ${ratingValue}-Sterne Bewertung wurde gespeichert.`
-            );
-
-            const counts = result.ratings ?? {};
-
-            const average = computeAverageFromRating(counts) || ratingValue;
-            const votes = computeTotalVotes(counts);
-            lastServerAverage = average;
-            pendingSelection = 0;
-            resetStarHighlight();
-
-            if (ratingAverageElement) {
-              ratingAverageElement.textContent = average
-                ? average.toFixed(1).replace(".", ",")
-                : ratingValue.toFixed(1).replace(".", ",");
-            }
-            if (ratingTotalElement) {
-              const totalVotes = votes || Number(counts.total) || 0;
-              ratingTotalElement.textContent = totalVotes
-                ? `${totalVotes} ${totalVotes === 1 ? "Bewertung" : "Bewertungen"
-                }`
-                : "Deine Bewertung ist eingegangen";
-            }
-
-            if (voteFeedback) {
-              voteFeedback.textContent =
-                "Danke! Deine Bewertung beeinflusst das Programm.";
-            }
-          } catch (error) {
-            console.error("Vote failed:", error);
-            if (voteFeedback) {
-              voteFeedback.textContent =
-                "Bewertung nicht möglich. Bitte später erneut versuchen.";
-            }
-          } finally {
-            isSendingVote = false;
-          }
-        };
-
-        ratingStars.forEach((star) => {
-          const value = Number(star.dataset.value);
-          star.addEventListener("mouseenter", () => setStarHighlight(value));
-          star.addEventListener("focus", () => setStarHighlight(value));
-          star.addEventListener("mouseleave", resetStarHighlight);
-          star.addEventListener("blur", resetStarHighlight);
-          star.addEventListener("click", () => submitRating(value));
-          star.addEventListener("keydown", (event) => {
-            const key = event.key;
-            if (key === "Enter" || key === " ") {
-              event.preventDefault();
-              submitRating(value);
-            }
-            if (key === "ArrowLeft" || key === "ArrowDown") {
-              event.preventDefault();
-              const prev = Math.max(1, value - 1);
-              const prevStar = ratingStars.find(
-                (item) => Number(item.dataset.value) === prev
-              );
-              if (prevStar) prevStar.focus();
-            }
-            if (key === "ArrowRight" || key === "ArrowUp") {
-              event.preventDefault();
-              const next = Math.min(5, value + 1);
-              const nextStar = ratingStars.find(
-                (item) => Number(item.dataset.value) === next
-              );
-              if (nextStar) nextStar.focus();
-            }
-          });
         });
 
-        // Like Button Action (Calls MoodModule for Vote + Logic)
-        const likeButton = document.getElementById("like-button");
-        if (likeButton) {
-          likeButton.addEventListener("click", () => {
-            if (window.YourPartyAppInstance?.modules?.mood) {
-              window.YourPartyAppInstance.modules.mood.castVote('like');
-            } else {
-              submitRating(5); // Fallback
-            }
+        // API Call
+        try {
+          await fetch('/wp-json/yourparty/v1/rate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              song_id: songId,
+              rating: value,
+              vote: value >= 4 ? 'like' : value <= 2 ? 'dislike' : 'neutral'
+            })
           });
+        } catch (err) {
+          console.error('Rating failed', err);
         }
+      }
+    });
+  }
 
-        // Dislike Button Action
-        const dislikeButton = document.getElementById("dislike-button");
-        if (dislikeButton) {
-          dislikeButton.addEventListener("click", () => {
-            if (window.YourPartyAppInstance?.modules?.mood) {
-              window.YourPartyAppInstance.modules.mood.castVote('dislike');
-            } else {
-              submitRating(1); // Fallback
-            }
-          });
+  // Modal Logic
+  const modal = document.getElementById('page-modal');
+  const modalBody = document.getElementById('modal-body');
+  const modalClose = document.querySelector('.modal-close');
+
+  if (modal && modalBody) {
+    const openModal = async (url) => {
+      modal.classList.add('active');
+      modal.setAttribute('aria-hidden', 'false');
+      modalBody.innerHTML = '<div style="text-align:center; padding:40px; color: #fff;">Lade Inhalte...</div>';
+
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        // Try to find the main content area
+        const content = doc.querySelector('main') || doc.querySelector('#content') || doc.querySelector('.entry-content') || doc.body;
+
+        // Remove hero if present in content (optional)
+        const hero = content.querySelector('#hero');
+        if (hero) hero.remove();
+
+        modalBody.innerHTML = content.innerHTML;
+      } catch (e) {
+        modalBody.innerHTML = '<p style="color: #fff;">Fehler beim Laden der Seite.</p>';
+      }
+    };
+
+    const closeModal = () => {
+      modal.classList.remove('active');
+      modal.setAttribute('aria-hidden', 'true');
+      modalBody.innerHTML = '';
+    };
+
+    if (modalClose) modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Attach to footer links
+    document.querySelectorAll('.site-footer a, .site-footer__legal a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        // Only intercept internal links that are not anchors
+        if (href && href.startsWith('http') && href.includes(window.location.hostname) && !href.includes('#')) {
+          e.preventDefault();
+          openModal(href);
         }
+      });
+    });
+  }
 
-        if (historyRefresh) {
-          historyRefresh.addEventListener("click", fetchHistory);
-        }
+  // Mini Player Visibility
+  // Mini Player Visibility
+  if (!radioCard && miniPlayer) {
+    miniPlayer.style.display = 'flex';
+  }
 
-        fetchStatus();
-        fetchHistory();
-        fetchSchedule();
-        setInterval(fetchStatus, 10000);
-        setInterval(fetchHistory, 30000);
-        fetchSchedule();
-        fetchQueue();
+  // FULLSCREEN VISUALIZER LOGIC
+  const visualizerToggle = document.getElementById('visualizer-toggle');
+  let isFullscreenVisualizer = false;
+  let fullscreenCanvas = null;
+  let fullscreenCtx = null;
+  let animationFrameId = null;
 
-        setInterval(fetchSchedule, 60000);
-        setInterval(fetchQueue, 30000);
-        // History Rating Listener (Delegation)
-        if (historyList) {
-          historyList.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('history-star')) {
-              const star = e.target;
-              const container = star.closest('.history-stars');
-              const songId = container.dataset.songId;
-              const value = parseInt(star.dataset.value);
+  if (visualizerToggle) {
+    visualizerToggle.addEventListener('click', () => {
+      toggleFullscreenVisualizer();
+    });
+  }
 
-              // Visual Feedback
-              const stars = container.querySelectorAll('.history-star');
-              stars.forEach((s, i) => {
-                if (i < value) {
-                  s.classList.add('filled');
-                  s.style.color = 'var(--emerald)';
-                } else {
-                  s.classList.remove('filled');
-                  s.style.color = '#444';
-                }
-              });
+  // PROFESSIONAL FULLSCREEN VISUALIZER
+  let proWaveformHistory = [];
 
-              // API Call
-              try {
-                await fetch('/wp-json/yourparty/v1/rate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    song_id: songId,
-                    rating: value,
-                    vote: value >= 4 ? 'like' : value <= 2 ? 'dislike' : 'neutral'
-                  })
-                });
-              } catch (err) {
-                console.error('Rating failed', err);
-              }
-            }
-          });
-        }
+  const toggleFullscreenVisualizer = () => {
+    isFullscreenVisualizer = !isFullscreenVisualizer;
 
-        // Modal Logic
-        const modal = document.getElementById('page-modal');
-        const modalBody = document.getElementById('modal-body');
-        const modalClose = document.querySelector('.modal-close');
+    if (isFullscreenVisualizer) {
+      // Create Overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'visualizer-fullscreen pro-mode';
 
-        if (modal && modalBody) {
-          const openModal = async (url) => {
-            modal.classList.add('active');
-            modal.setAttribute('aria-hidden', 'false');
-            modalBody.innerHTML = '<div style="text-align:center; padding:40px; color: #fff;">Lade Inhalte...</div>';
+      const ratingHtml = document.querySelector('.rating-container')?.innerHTML || '';
+      const coverSrc = coverElement ? coverElement.src : '';
+      const title = titleElement ? titleElement.textContent : 'Unknown Track';
+      const artist = artistElement ? artistElement.textContent : 'Unknown Artist';
+      const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-            try {
-              const response = await fetch(url);
-              const text = await response.text();
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(text, 'text/html');
-              // Try to find the main content area
-              const content = doc.querySelector('main') || doc.querySelector('#content') || doc.querySelector('.entry-content') || doc.body;
-
-              // Remove hero if present in content (optional)
-              const hero = content.querySelector('#hero');
-              if (hero) hero.remove();
-
-              modalBody.innerHTML = content.innerHTML;
-            } catch (e) {
-              modalBody.innerHTML = '<p style="color: #fff;">Fehler beim Laden der Seite.</p>';
-            }
-          };
-
-          const closeModal = () => {
-            modal.classList.remove('active');
-            modal.setAttribute('aria-hidden', 'true');
-            modalBody.innerHTML = '';
-          };
-
-          if (modalClose) modalClose.addEventListener('click', closeModal);
-          modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-          });
-
-          // Attach to footer links
-          document.querySelectorAll('.site-footer a, .site-footer__legal a').forEach(link => {
-            link.addEventListener('click', (e) => {
-              const href = link.getAttribute('href');
-              // Only intercept internal links that are not anchors
-              if (href && href.startsWith('http') && href.includes(window.location.hostname) && !href.includes('#')) {
-                e.preventDefault();
-                openModal(href);
-              }
-            });
-          });
-        }
-
-        // Mini Player Visibility
-        // Mini Player Visibility
-        if (!radioCard && miniPlayer) {
-          miniPlayer.style.display = 'flex';
-        }
-
-        // FULLSCREEN VISUALIZER LOGIC
-        const visualizerToggle = document.getElementById('visualizer-toggle');
-        let isFullscreenVisualizer = false;
-        let fullscreenCanvas = null;
-        let fullscreenCtx = null;
-        let animationFrameId = null;
-
-        if (visualizerToggle) {
-          visualizerToggle.addEventListener('click', () => {
-            toggleFullscreenVisualizer();
-          });
-        }
-
-        // PROFESSIONAL FULLSCREEN VISUALIZER
-        let proWaveformHistory = [];
-
-        const toggleFullscreenVisualizer = () => {
-          isFullscreenVisualizer = !isFullscreenVisualizer;
-
-          if (isFullscreenVisualizer) {
-            // Create Overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'visualizer-fullscreen pro-mode';
-
-            const ratingHtml = document.querySelector('.rating-container')?.innerHTML || '';
-            const coverSrc = coverElement ? coverElement.src : '';
-            const title = titleElement ? titleElement.textContent : 'Unknown Track';
-            const artist = artistElement ? artistElement.textContent : 'Unknown Artist';
-            const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-
-            overlay.innerHTML = `
+      overlay.innerHTML = `
         <div class="pro-header">
             <div class="pro-brand">
                 <span>YOURPARTY RADIO</span>
@@ -1320,371 +1315,371 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-            document.body.appendChild(overlay);
-            document.body.classList.add('visualizer-active');
+      document.body.appendChild(overlay);
+      document.body.classList.add('visualizer-active');
 
-            fullscreenCanvas = overlay.querySelector('canvas');
-            fullscreenCtx = fullscreenCanvas.getContext('2d');
+      fullscreenCanvas = overlay.querySelector('canvas');
+      fullscreenCtx = fullscreenCanvas.getContext('2d');
 
-            // Close handler
-            overlay.querySelector('.pro-close').addEventListener('click', toggleFullscreenVisualizer);
+      // Close handler
+      overlay.querySelector('.pro-close').addEventListener('click', toggleFullscreenVisualizer);
 
-            // Mode Handlers
-            overlay.querySelectorAll('.vis-btn').forEach(btn => {
-              btn.addEventListener('click', (e) => {
-                visualizerMode = e.target.dataset.mode;
-                overlay.querySelectorAll('.vis-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-              });
-            });
-
-            // Clock Update
-            const clockInterval = setInterval(() => {
-              const t = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-              const clock = overlay.querySelector('.pro-clock');
-              if (clock) clock.textContent = t;
-              else clearInterval(clockInterval);
-            }, 1000);
-
-            resizeFullscreenCanvas();
-            window.addEventListener('resize', resizeFullscreenCanvas);
-            drawFullscreenVisualizer();
-
-          } else {
-            const overlay = document.querySelector('.visualizer-fullscreen');
-            if (overlay) overlay.remove();
-            document.body.classList.remove('visualizer-active');
-            window.removeEventListener('resize', resizeFullscreenCanvas);
-            cancelAnimationFrame(animationFrameId);
-          }
-        };
-
-        const resizeFullscreenCanvas = () => {
-          if (fullscreenCanvas) {
-            fullscreenCanvas.width = fullscreenCanvas.parentElement.clientWidth;
-            fullscreenCanvas.height = fullscreenCanvas.parentElement.clientHeight;
-          }
-        };
-
-        const drawFullscreenVisualizer = () => {
-          if (!isFullscreenVisualizer) return;
-          animationFrameId = requestAnimationFrame(drawFullscreenVisualizer);
-
-          const width = fullscreenCanvas.width;
-          const height = fullscreenCanvas.height;
-          const ctx = fullscreenCtx;
-
-          // Fade effect for trails
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-          ctx.fillRect(0, 0, width, height);
-
-          if (!analyser || (audioContext && audioContext.state === 'suspended')) {
-            ctx.fillStyle = '#666';
-            ctx.font = '20px Inter';
-            ctx.textAlign = 'center';
-            ctx.fillText('Click Play to Start Visualizer', width / 2, height / 2);
-            return;
-          }
-
-          analyser.getByteFrequencyData(dataArray);
-
-          if (visualizerMode === 'circular') {
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.min(width, height) / 4;
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#333';
-            ctx.stroke();
-
-            for (let i = 0; i < dataArray.length; i++) {
-              const barHeight = (dataArray[i] / 255) * 100;
-              const angle = (i / dataArray.length) * 2 * Math.PI;
-
-              const x1 = centerX + Math.cos(angle) * radius;
-              const y1 = centerY + Math.sin(angle) * radius;
-              const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-              const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-              ctx.strokeStyle = `hsl(${i / dataArray.length * 360}, 100%, 50%)`;
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.stroke();
-            }
-          } else if (visualizerMode === 'shockwave') {
-            // Bass detection
-            let bass = 0;
-            for (let i = 0; i < 10; i++) bass += dataArray[i];
-            bass /= 10;
-
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = (bass / 255) * (Math.min(width, height) / 2);
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.strokeStyle = `hsl(${bass}, 100%, 50%)`;
-            ctx.lineWidth = 5;
-            ctx.stroke();
-
-            if (bass > 200) {
-              ctx.fillStyle = `rgba(255, 255, 255, ${bass / 500})`;
-              ctx.fillRect(0, 0, width, height);
-            }
-          } else if (visualizerMode === 'spectrum') {
-            // Existing Spectrum
-            const barWidth = (width / dataArray.length) * 2.5;
-            let x = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              const barHeight = (dataArray[i] / 255) * height;
-              const hue = i / dataArray.length * 360;
-              ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-              ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-              x += barWidth + 1;
-              if (x > width) break;
-            }
-          } else {
-            // Existing Waveform
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-            let average = sum / dataArray.length;
-
-            proWaveformHistory.push(average);
-            if (proWaveformHistory.length > width / 2) proWaveformHistory.shift();
-
-            const centerY = height / 2;
-            const playheadX = width;
-
-            for (let i = 0; i < proWaveformHistory.length; i++) {
-              const vol = proWaveformHistory[proWaveformHistory.length - 1 - i];
-              const x = playheadX - (i * 2);
-              if (x < 0) break;
-              const h = (vol / 255) * height * 0.9;
-              const hue = 190 + (vol / 255) * 60;
-              ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
-              ctx.fillRect(x, centerY - h / 2, 2, h);
-            }
-          }
-        };
-
-        // INLINE VISUALIZER LOGIC
-        const inlineCanvas = document.getElementById('inline-visualizer');
-        let visualizerCtx = null;
-        let visualizerAnimationFrame = null;
-        let inlineWaveformHistory = [];
-
-
-        // Vibe / Mood Next Voting Logic
-        const vibeButtons = document.querySelectorAll('.vibe-btn');
-        vibeButtons.forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            const btnEl = e.currentTarget;
-            const vote = btnEl.dataset.vote;
-
-            // Visual Feedback
-            vibeButtons.forEach(b => b.classList.remove('selected'));
-            btnEl.classList.add('selected');
-
-            const config = window.YourPartyConfig || {};
-            // Robust ID retrieval
-            const songId = window.currentSongId || (window.YourPartyAppInstance?.modules?.mood?.currentSongId);
-
-            if (!songId) {
-              console.warn('Cannot vote: No current song ID');
-              const feedbackEl = document.getElementById('vibe-feedback');
-              if (feedbackEl) {
-                feedbackEl.textContent = "Kein aktiver Song!";
-                feedbackEl.className = 'vibe-feedback error';
-              }
-              return;
-            }
-
-            try {
-              const response = await fetch(`${config.wpRestBase}/vote-next-mood`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-WP-Nonce': config.nonce
-                },
-                body: JSON.stringify({
-                  song_id: songId,
-                  mood_next: vote
-                })
-              });
-
-              if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-              }
-
-              const data = await response.json();
-
-              // Show feedback in UI (vibe-feedback)
-              const feedbackEl = document.getElementById('vibe-feedback');
-              if (feedbackEl && vote) {
-                feedbackEl.textContent = `Voted for ${vote.toUpperCase()} next!`;
-                feedbackEl.className = 'vibe-feedback success';
-                setTimeout(() => {
-                  feedbackEl.textContent = '';
-                  feedbackEl.className = 'vibe-feedback';
-                }, 3000);
-              }
-
-            } catch (err) {
-              console.error("Vibe vote failed", err);
-              const feedbackEl = document.getElementById('vibe-feedback');
-              if (feedbackEl) {
-                feedbackEl.textContent = "Fehler beim Voten.";
-                feedbackEl.className = 'vibe-feedback error';
-              }
-            }
-          });
+      // Mode Handlers
+      overlay.querySelectorAll('.vis-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          visualizerMode = e.target.dataset.mode;
+          overlay.querySelectorAll('.vis-btn').forEach(b => b.classList.remove('active'));
+          e.target.classList.add('active');
         });
-
-        // Mode Switcher Logic
-        document.querySelectorAll('.vis-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.vis-btn').forEach(b => b.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            visualizerMode = e.currentTarget.dataset.mode;
-          });
-        });
-
-        if (inlineCanvas) {
-          visualizerCtx = inlineCanvas.getContext('2d');
-
-          const resizeVisualizer = () => {
-            inlineCanvas.width = inlineCanvas.parentElement.clientWidth;
-            inlineCanvas.height = inlineCanvas.parentElement.clientHeight;
-          };
-
-          window.addEventListener('resize', resizeVisualizer);
-          resizeVisualizer();
-
-          // Start loop
-          drawInlineVisualizer();
-        }
-
-        function drawInlineVisualizer() {
-          visualizerAnimationFrame = requestAnimationFrame(drawInlineVisualizer);
-
-          if (!inlineCanvas || !visualizerCtx) return;
-
-          const width = inlineCanvas.width;
-          const height = inlineCanvas.height;
-          const ctx = visualizerCtx;
-
-          // Clear Canvas
-          ctx.fillStyle = '#000';
-          ctx.fillRect(0, 0, width, height);
-
-          // Draw Grid
-          ctx.strokeStyle = '#222';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          for (let x = 0; x < width; x += 50) {
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-          }
-          ctx.stroke();
-
-          if (!analyser || (audioContext && audioContext.state === 'suspended')) {
-            // Draw idle line
-            ctx.strokeStyle = '#333';
-            ctx.beginPath();
-            ctx.moveTo(0, height / 2);
-            ctx.lineTo(width, height / 2);
-            ctx.stroke();
-            return;
-          }
-
-          analyser.getByteFrequencyData(dataArray);
-
-          if (visualizerMode === 'circular') {
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.min(width, height) / 4;
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#333';
-            ctx.stroke();
-
-            for (let i = 0; i < dataArray.length; i++) {
-              const barHeight = (dataArray[i] / 255) * 60;
-              const angle = (i / dataArray.length) * 2 * Math.PI;
-
-              const x1 = centerX + Math.cos(angle) * radius;
-              const y1 = centerY + Math.sin(angle) * radius;
-              const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-              const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-              ctx.strokeStyle = `hsl(${i / dataArray.length * 360}, 100%, 50%)`;
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.stroke();
-            }
-          } else if (visualizerMode === 'shockwave') {
-            // Bass detection
-            let bass = 0;
-            for (let i = 0; i < 10; i++) bass += dataArray[i];
-            bass /= 10;
-
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = (bass / 255) * (Math.min(width, height) / 2);
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.strokeStyle = `hsl(${bass}, 100%, 50%)`;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-          } else if (visualizerMode === 'spectrum') {
-            // SPECTRUM MODE
-            const barWidth = (width / dataArray.length) * 2.5;
-            let barHeight;
-            let x = 0;
-
-            for (let i = 0; i < dataArray.length; i++) {
-              barHeight = (dataArray[i] / 255) * height;
-
-              const hue = i / dataArray.length * 360;
-              ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
-              ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-
-              x += barWidth + 1;
-              if (x > width) break;
-            }
-          } else {
-            // WAVEFORM MODE (Scrolling)
-
-            // Calculate average volume
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-            let average = sum / dataArray.length;
-
-            inlineWaveformHistory.push(average);
-            if (inlineWaveformHistory.length > width / 2) inlineWaveformHistory.shift();
-
-            const centerY = height / 2;
-            const playheadX = width;
-
-            for (let i = 0; i < inlineWaveformHistory.length; i++) {
-              const vol = inlineWaveformHistory[inlineWaveformHistory.length - 1 - i];
-              const x = playheadX - (i * 2);
-
-              if (x < 0) break;
-
-              const h = (vol / 255) * height * 0.8;
-              const hue = 190 + (vol / 255) * 40;
-              ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-              ctx.fillRect(x, centerY - h / 2, 2, h);
-            }
-          }
-        }
-
       });
+
+      // Clock Update
+      const clockInterval = setInterval(() => {
+        const t = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        const clock = overlay.querySelector('.pro-clock');
+        if (clock) clock.textContent = t;
+        else clearInterval(clockInterval);
+      }, 1000);
+
+      resizeFullscreenCanvas();
+      window.addEventListener('resize', resizeFullscreenCanvas);
+      drawFullscreenVisualizer();
+
+    } else {
+      const overlay = document.querySelector('.visualizer-fullscreen');
+      if (overlay) overlay.remove();
+      document.body.classList.remove('visualizer-active');
+      window.removeEventListener('resize', resizeFullscreenCanvas);
+      cancelAnimationFrame(animationFrameId);
+    }
+  };
+
+  const resizeFullscreenCanvas = () => {
+    if (fullscreenCanvas) {
+      fullscreenCanvas.width = fullscreenCanvas.parentElement.clientWidth;
+      fullscreenCanvas.height = fullscreenCanvas.parentElement.clientHeight;
+    }
+  };
+
+  const drawFullscreenVisualizer = () => {
+    if (!isFullscreenVisualizer) return;
+    animationFrameId = requestAnimationFrame(drawFullscreenVisualizer);
+
+    const width = fullscreenCanvas.width;
+    const height = fullscreenCanvas.height;
+    const ctx = fullscreenCtx;
+
+    // Fade effect for trails
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, 0, width, height);
+
+    if (!analyser || (audioContext && audioContext.state === 'suspended')) {
+      ctx.fillStyle = '#666';
+      ctx.font = '20px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click Play to Start Visualizer', width / 2, height / 2);
+      return;
+    }
+
+    analyser.getByteFrequencyData(dataArray);
+
+    if (visualizerMode === 'circular') {
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) / 4;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#333';
+      ctx.stroke();
+
+      for (let i = 0; i < dataArray.length; i++) {
+        const barHeight = (dataArray[i] / 255) * 100;
+        const angle = (i / dataArray.length) * 2 * Math.PI;
+
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+        ctx.strokeStyle = `hsl(${i / dataArray.length * 360}, 100%, 50%)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    } else if (visualizerMode === 'shockwave') {
+      // Bass detection
+      let bass = 0;
+      for (let i = 0; i < 10; i++) bass += dataArray[i];
+      bass /= 10;
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = (bass / 255) * (Math.min(width, height) / 2);
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = `hsl(${bass}, 100%, 50%)`;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      if (bass > 200) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${bass / 500})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+    } else if (visualizerMode === 'spectrum') {
+      // Existing Spectrum
+      const barWidth = (width / dataArray.length) * 2.5;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const barHeight = (dataArray[i] / 255) * height;
+        const hue = i / dataArray.length * 360;
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+        if (x > width) break;
+      }
+    } else {
+      // Existing Waveform
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      let average = sum / dataArray.length;
+
+      proWaveformHistory.push(average);
+      if (proWaveformHistory.length > width / 2) proWaveformHistory.shift();
+
+      const centerY = height / 2;
+      const playheadX = width;
+
+      for (let i = 0; i < proWaveformHistory.length; i++) {
+        const vol = proWaveformHistory[proWaveformHistory.length - 1 - i];
+        const x = playheadX - (i * 2);
+        if (x < 0) break;
+        const h = (vol / 255) * height * 0.9;
+        const hue = 190 + (vol / 255) * 60;
+        ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+        ctx.fillRect(x, centerY - h / 2, 2, h);
+      }
+    }
+  };
+
+  // INLINE VISUALIZER LOGIC
+  const inlineCanvas = document.getElementById('inline-visualizer');
+  let visualizerCtx = null;
+  let visualizerAnimationFrame = null;
+  let inlineWaveformHistory = [];
+
+
+  // Vibe / Mood Next Voting Logic
+  const vibeButtons = document.querySelectorAll('.vibe-btn');
+  vibeButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const btnEl = e.currentTarget;
+      const vote = btnEl.dataset.vote;
+
+      // Visual Feedback
+      vibeButtons.forEach(b => b.classList.remove('selected'));
+      btnEl.classList.add('selected');
+
+      const config = window.YourPartyConfig || {};
+      // Robust ID retrieval
+      const songId = window.currentSongId || (window.YourPartyAppInstance?.modules?.mood?.currentSongId);
+
+      if (!songId) {
+        console.warn('Cannot vote: No current song ID');
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = "Kein aktiver Song!";
+          feedbackEl.className = 'vibe-feedback error';
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(`${config.wpRestBase}/vote-next-mood`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': config.nonce
+          },
+          body: JSON.stringify({
+            song_id: songId,
+            mood_next: vote
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Show feedback in UI (vibe-feedback)
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl && vote) {
+          feedbackEl.textContent = `Voted for ${vote.toUpperCase()} next!`;
+          feedbackEl.className = 'vibe-feedback success';
+          setTimeout(() => {
+            feedbackEl.textContent = '';
+            feedbackEl.className = 'vibe-feedback';
+          }, 3000);
+        }
+
+      } catch (err) {
+        console.error("Vibe vote failed", err);
+        const feedbackEl = document.getElementById('vibe-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = "Fehler beim Voten.";
+          feedbackEl.className = 'vibe-feedback error';
+        }
+      }
+    });
+  });
+
+  // Mode Switcher Logic
+  document.querySelectorAll('.vis-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.vis-btn').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      visualizerMode = e.currentTarget.dataset.mode;
+    });
+  });
+
+  if (inlineCanvas) {
+    visualizerCtx = inlineCanvas.getContext('2d');
+
+    const resizeVisualizer = () => {
+      inlineCanvas.width = inlineCanvas.parentElement.clientWidth;
+      inlineCanvas.height = inlineCanvas.parentElement.clientHeight;
+    };
+
+    window.addEventListener('resize', resizeVisualizer);
+    resizeVisualizer();
+
+    // Start loop
+    drawInlineVisualizer();
+  }
+
+  function drawInlineVisualizer() {
+    visualizerAnimationFrame = requestAnimationFrame(drawInlineVisualizer);
+
+    if (!inlineCanvas || !visualizerCtx) return;
+
+    const width = inlineCanvas.width;
+    const height = inlineCanvas.height;
+    const ctx = visualizerCtx;
+
+    // Clear Canvas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw Grid
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x < width; x += 50) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    ctx.stroke();
+
+    if (!analyser || (audioContext && audioContext.state === 'suspended')) {
+      // Draw idle line
+      ctx.strokeStyle = '#333';
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+      return;
+    }
+
+    analyser.getByteFrequencyData(dataArray);
+
+    if (visualizerMode === 'circular') {
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) / 4;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#333';
+      ctx.stroke();
+
+      for (let i = 0; i < dataArray.length; i++) {
+        const barHeight = (dataArray[i] / 255) * 60;
+        const angle = (i / dataArray.length) * 2 * Math.PI;
+
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+        ctx.strokeStyle = `hsl(${i / dataArray.length * 360}, 100%, 50%)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    } else if (visualizerMode === 'shockwave') {
+      // Bass detection
+      let bass = 0;
+      for (let i = 0; i < 10; i++) bass += dataArray[i];
+      bass /= 10;
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = (bass / 255) * (Math.min(width, height) / 2);
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = `hsl(${bass}, 100%, 50%)`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else if (visualizerMode === 'spectrum') {
+      // SPECTRUM MODE
+      const barWidth = (width / dataArray.length) * 2.5;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < dataArray.length; i++) {
+        barHeight = (dataArray[i] / 255) * height;
+
+        const hue = i / dataArray.length * 360;
+        ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+        ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+
+        x += barWidth + 1;
+        if (x > width) break;
+      }
+    } else {
+      // WAVEFORM MODE (Scrolling)
+
+      // Calculate average volume
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      let average = sum / dataArray.length;
+
+      inlineWaveformHistory.push(average);
+      if (inlineWaveformHistory.length > width / 2) inlineWaveformHistory.shift();
+
+      const centerY = height / 2;
+      const playheadX = width;
+
+      for (let i = 0; i < inlineWaveformHistory.length; i++) {
+        const vol = inlineWaveformHistory[inlineWaveformHistory.length - 1 - i];
+        const x = playheadX - (i * 2);
+
+        if (x < 0) break;
+
+        const h = (vol / 255) * height * 0.8;
+        const hue = 190 + (vol / 255) * 40;
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillRect(x, centerY - h / 2, 2, h);
+      }
+    }
+  }
+
+});

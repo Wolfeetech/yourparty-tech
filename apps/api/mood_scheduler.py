@@ -167,6 +167,14 @@ async def select_live_vote_track(mongo_client, azura_client, station_id: int = 1
     """
     try:
         # 1. Check for specific track votes (User explicitly voted for a track)
+        import inspect
+        logger.info(f"DEBUG: mongo_client type: {type(mongo_client)}")
+        logger.info(f"DEBUG: get_top_voted_track method: {mongo_client.get_top_voted_track}")
+        try:
+             logger.info(f"DEBUG: Sig: {inspect.signature(mongo_client.get_top_voted_track)}")
+        except Exception as e:
+             logger.info(f"DEBUG: Could not get sig: {e}")
+
         top_track_id = mongo_client.get_top_voted_track(time_window_minutes=5, station_id=station_id)
         
         if top_track_id:

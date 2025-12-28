@@ -76,7 +76,7 @@ class MongoDatabaseClient:
     def normalize_path(self, full_path: str) -> str:
         """
         Converts absolute Windows/Linux paths to a relative path from the library root.
-        E.g., 'Z:\radio_library\Rock\Artist\Song.mp3' -> 'Rock/Artist/Song.mp3'
+        E.g., 'Z:\\radio_library\\Rock\\Artist\\Song.mp3' -> 'Rock/Artist/Song.mp3'
         """
         # Common library roots (Z: is primary, M: is legacy)
         roots = [
@@ -366,7 +366,7 @@ class MongoDatabaseClient:
 
     # ========== MOOD VOTING SYSTEM ==========
     
-    def submit_mood_next_vote(self, song_id: str, mood_next: str, user_id: str = "anonymous") -> Dict[str, Any]:
+    def submit_mood_next_vote(self, song_id: str, mood_next: str, user_id: str = "anonymous", station_id: int = 1) -> Dict[str, Any]:
         """
         Store a user's preference for what mood they want next.
         Used by the auto-DJ to influence track selection.
@@ -375,25 +375,28 @@ class MongoDatabaseClient:
             song_id: Current song ID (for context)
             mood_next: Desired mood for next track
             user_id: User identifier
+            station_id: Station identifier
         """
         try:
             if not hasattr(self, 'mood_next_votes_collection'):
                 self.mood_next_votes_collection = self.db["mood_next_votes"]
                 self.mood_next_votes_collection.create_index("timestamp")
                 self.mood_next_votes_collection.create_index("mood_next")
+                self.mood_next_votes_collection.create_index("station_id")
             
             vote_doc = {
                 "song_id": song_id,  # What was playing when vote was cast
                 "mood_next": mood_next,
                 "user_id": user_id,
+                "station_id": station_id,
                 "timestamp": datetime.utcnow()
             }
             
             self.mood_next_votes_collection.insert_one(vote_doc)
-            logger.info(f"Mood next vote stored: {mood_next}")
+            logger.info(f"Mood next vote stored for station {station_id}: {mood_next}")
             
             # Recalculate dominant mood for immediate feedback
-            dominant = self.get_dominant_next_mood(time_window_minutes=30)
+            dominant = self.get_dominant_next_mood(time_window_minutes=30, station_id=station_id)
             
             return {
                 "success": True, 
@@ -404,13 +407,14 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting mood_next vote: {e}")
             return {"success": False, "error": str(e)}
     
-    def get_dominant_next_mood(self, time_window_minutes: int = 10) -> Optional[str]:
+    def get_dominant_next_mood(self, time_window_minutes: int = 10, station_id: int = 1) -> Optional[str]:
         """
         Get the dominant mood preference from recent votes.
         Used by auto-DJ to select the next track.
         
         Args:
             time_window_minutes: How far back to look for votes
+            station_id: Station identifier
             
         Returns:
             Most voted mood in the time window, or None
@@ -423,7 +427,10 @@ class MongoDatabaseClient:
             cutoff = datetime.utcnow() - timedelta(minutes=time_window_minutes)
             
             pipeline = [
-                {"$match": {"timestamp": {"$gte": cutoff}}},
+                {"$match": {
+                    "timestamp": {"$gte": cutoff},
+                    "station_id": station_id
+                }},
                 {"$group": {"_id": "$mood_next", "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}},
                 {"$limit": 1}
@@ -432,7 +439,7 @@ class MongoDatabaseClient:
             results = list(self.mood_next_votes_collection.aggregate(pipeline))
             
             if results and results[0]["_id"]:
-                logger.info(f"Dominant next mood: {results[0]['_id']} ({results[0]['count']} votes)")
+                logger.info(f"Dominant next mood for station {station_id}: {results[0]['_id']} ({results[0]['count']} votes)")
                 return results[0]["_id"]
             
             return None
@@ -512,18 +519,20 @@ class MongoDatabaseClient:
 
     # ========== NEXT TRACK VOTING ==========
 
-    def submit_next_track_vote(self, candidate_song_id: str, user_id: str = "anonymous") -> bool:
+    def submit_next_track_vote(self, candidate_song_id: str, user_id: str = "anonymous", station_id: int = 1) -> bool:
         """Vote for a specific track to play next."""
         try:
             if not hasattr(self, 'next_track_votes_collection'):
                 self.next_track_votes_collection = self.db["next_track_votes"]
                 self.next_track_votes_collection.create_index("candidate_song_id")
                 self.next_track_votes_collection.create_index("timestamp")
+                self.next_track_votes_collection.create_index("station_id")
             
             # Simple vote document
             self.next_track_votes_collection.insert_one({
                 "candidate_song_id": candidate_song_id,
                 "user_id": user_id,
+                "station_id": station_id,
                 "timestamp": datetime.utcnow()
             })
             return True
@@ -557,7 +566,7 @@ class MongoDatabaseClient:
             logger.error(f"Error getting next track vote counts: {e}")
             return {cid: 0 for cid in candidate_ids}
 
-    def get_top_voted_track(self, time_window_minutes: int = 15) -> Optional[str]:
+    def get_top_voted_track(self, time_window_minutes: int = 15, station_id: int = 1) -> Optional[str]:
         """Get the song_id with the most votes in the window."""
         try:
             if not hasattr(self, 'next_track_votes_collection'):
@@ -565,7 +574,10 @@ class MongoDatabaseClient:
             
             cutoff = datetime.utcnow() - timedelta(minutes=time_window_minutes)
             pipeline = [
-                {"$match": {"timestamp": {"$gte": cutoff}}},
+                {"$match": {
+                    "timestamp": {"$gte": cutoff},
+                    "station_id": station_id
+                }},
                 {"$group": {"_id": "$candidate_song_id", "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}},
                 {"$limit": 1}
@@ -573,7 +585,7 @@ class MongoDatabaseClient:
             
             results = list(self.next_track_votes_collection.aggregate(pipeline))
             if results and results[0]["_id"]:
-                logger.info(f"Top voted track: {results[0]['_id']} ({results[0]['count']} votes)")
+                logger.info(f"Top voted track for station {station_id}: {results[0]['_id']} ({results[0]['count']} votes)")
                 return results[0]["_id"]
             return None
         except Exception as e:
