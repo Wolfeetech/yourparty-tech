@@ -20,6 +20,18 @@ SMB_SHARE = os.getenv("SMB_SHARE", "music") # Change if 'public', 'share' etc.
 SMB_USERNAME = os.getenv("SMB_USERNAME", "wolf")
 SMB_PASSWORD = os.getenv("SMB_PASSWORD", "YpWolf2024!")
 
+# Library Root (Single Source of Truth)
+LIBRARY_SUBDIR = os.getenv("LIBRARY_SUBDIR", "yourparty_Libary")
+LIBRARY_UNC = os.getenv(
+    "LIBRARY_UNC",
+    rf"\\{SMB_SERVER}\{SMB_SHARE}\{LIBRARY_SUBDIR}"
+)
+LIBRARY_ROOT_WIN = os.getenv("LIBRARY_ROOT_WIN", rf"Z:\{LIBRARY_SUBDIR}")
+LIBRARY_ROOT_LINUX = os.getenv(
+    "LIBRARY_ROOT_LINUX",
+    f"/var/radio/music/{LIBRARY_SUBDIR}"
+)
+
 # 3. MongoDB (Found in config, but good to keep here)
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin")
 
