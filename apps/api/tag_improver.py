@@ -87,11 +87,16 @@ class TagImprover:
             
             new_metadata = {
                 "title": recording.get('title', best_match['title']),
-                "artist": best_match['artist'], # Default
+                "artist": best_match['artist'], 
                 "album": "",
                 "year": "",
-                "genre": ""
+                "genre": "",
+                "musicbrainz_id": best_match['recording_id'],
+                "acoustid_id": recording.get('id'), # This is often the same or related
+                "spotify_id": "" # Placeholder for future Spotify enhancement
             }
+
+            # ... existing logic for Artist and Album ...
 
             # Artist
             if 'artist-credit' in recording:

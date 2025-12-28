@@ -39,6 +39,13 @@ class MongoDatabaseClient:
                 # Try to get default database from URI
                 self.db = self.client.get_default_database(default="yourparty")
             
+            self.ratings_collection = self.db["rating_events"]
+            self.tracks_collection = self.db["tracks"]
+            self.sync_log_collection = self.db["sync_log"]
+            self.moods_collection = self.db["moods"]
+            self.mood_next_votes_collection = self.db["mood_next_votes"]
+            self.shoutouts_collection = self.db["shoutouts"]
+
             # Configure timeouts to prevent hanging
             # If these are not set, it can hang for 30s+ which systemd might kill
             # serverSelectionTimeoutMS=5000 (5s)
@@ -48,22 +55,14 @@ class MongoDatabaseClient:
                    # Re-init with explicit timeout if not in URI
                    self.client = MongoClient(connection_string, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
             
-            self.ratings_collection = self.db["rating_events"]
-            self.tracks_collection = self.db["tracks"]
-            self.sync_log_collection = self.db["sync_log"]
-            self.moods_collection = self.db["moods"]
-            self.mood_next_votes_collection = self.db["mood_next_votes"]
-            
-            # Create indexes for performance (Best Effort)
+            # Configure indexing
             try:
                 self.ratings_collection.create_index("song_id")
                 self.ratings_collection.create_index("user_id")
-                # Handle potential unique constraint conflict if legacy duplicates exist
-                try:
-                    self.tracks_collection.create_index("file_path", unique=True)
-                except Exception:
-                    # Fallback to non-unique if unique fails
-                    self.tracks_collection.create_index("file_path")
+                
+                # Use relative_path for cross-platform consistency (SSOT requirement)
+                self.tracks_collection.create_index("relative_path", unique=True)
+                self.tracks_collection.create_index("file_path") # Legacy support
                 self.tracks_collection.create_index("song_id")
             except Exception as ie:
                 logger.warning(f"Index creation warning: {ie}")
@@ -73,6 +72,29 @@ class MongoDatabaseClient:
             # Only fail on connection errors, not index errors
             logger.error(f"MongoDB connection failed: {e}")
             raise
+
+    def normalize_path(self, full_path: str) -> str:
+        """
+        Converts absolute Windows/Linux paths to a relative path from the library root.
+        E.g., 'Z:\radio_library\Rock\Artist\Song.mp3' -> 'Rock/Artist/Song.mp3'
+        """
+        # Common library roots (Z: is primary, M: is legacy)
+        roots = [
+            "Z:/radio_library/", 
+            "Z:\\radio_library\\",
+            r"M:\Library\\", 
+            r"M:\Library/", 
+            "/var/azuracast/stations/yourparty/media/"
+        ]
+        
+        normalized = full_path.replace("\\", "/")
+        for root in roots:
+            root_norm = root.replace("\\", "/")
+            if normalized.lower().startswith(root_norm.lower()):
+                return normalized[len(root_norm):].strip("/")
+        
+        # If no root match, return the basename
+        return normalized.split("/")[-1]
 
     def get_track_rating(self, file_path: str = None, song_id: str = None, station_id: int = 1) -> Optional[Dict[str, Any]]:
         """

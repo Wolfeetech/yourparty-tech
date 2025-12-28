@@ -213,6 +213,7 @@ add_action('wp_enqueue_scripts', function () {
         // Point to WP REST API (Unified Gateway via inc/api.php)
         'restBase' => esc_url_raw(rest_url('yourparty/v1')), 
         'wpRestBase' => esc_url_raw(rest_url('yourparty/v1')),
+        'apiBase' => esc_url_raw(rest_url('yourparty/v1')), // Add for ShoutoutModule compatibility
         'publicBase' => esc_url_raw(yourparty_public_url()),
         'streamUrl' => esc_url_raw($stream_url),
         'publicSchedule' => esc_url_raw($schedule_url),

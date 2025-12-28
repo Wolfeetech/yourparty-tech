@@ -119,8 +119,10 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 # BACKGROUND TASKS
 
 async def public_status_loop():
-    """Poll AzuraCast public API for Metadata."""
+    """Poll AzuraCast public API for Metadata (Multiple Stations)."""
     logger.info("Public Status Loop Started.")
+    stations = [1, 2]  # Active stations
+    
     while True:
         try:
             azura_base = os.getenv("AZURACAST_URL")
@@ -128,74 +130,79 @@ async def public_status_loop():
                 await asyncio.sleep(10)
                 continue
             
-            # Use public endpoint
-            url = f"{azura_base}/api/nowplaying/1" 
-            
-            async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL, follow_redirects=True) as client:
+            for sid in stations:
                 try:
-                    resp = await client.get(url, timeout=5.0)
-                except httpx.ConnectError:
-                    url = azura_base.replace('http://', 'https://') + "/api/nowplaying/1"
-                    resp = await client.get(url, timeout=5.0)
+                    # Use public endpoint
+                    url = f"{azura_base}/api/nowplaying/{sid}" 
+                    
+                    async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL, follow_redirects=True) as client:
+                        try:
+                            resp = await client.get(url, timeout=5.0)
+                        except httpx.ConnectError:
+                            url = azura_base.replace('http://', 'https://') + f"/api/nowplaying/{sid}"
+                            resp = await client.get(url, timeout=5.0)
+                        except Exception as e:
+                            logger.error(f"Connection error to AzuraCast for station {sid}: {e}")
+                            resp = None
+
+                        if resp and resp.status_code == 200:
+                            data = resp.json()
+                            np = data.get('now_playing', {}).get('song', {})
+                            
+                            # Update Stream URL for this station
+                            for mount in data.get('station', {}).get('mounts', []):
+                                 if mount.get('is_default'):
+                                     stream_url = mount.get('url', '')
+                                     if stream_url.startswith('http://'):
+                                         stream_url = stream_url.replace('http://', 'https://')
+                                     state.stream_urls[sid] = stream_url
+
+                            current_track = {
+                                "title": np.get('title', ''),
+                                "artist": np.get('artist', ''),
+                                "album": np.get('album', ''),
+                                "art": np.get('art', ''), 
+                                "id": str(np.get('id', '')), 
+                                "duration": np.get('duration', 0),
+                                "genre": np.get('genre', '')
+                            }
+
+                            # Fix Art URL
+                            if '192.168' in current_track['art']:
+                                current_track['art'] = "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png"
+
+                            # Fallbacks
+                            if not current_track['title'] or not current_track['artist']:
+                                full_text = np.get('text', '')
+                                if ' - ' in full_text:
+                                    parts = full_text.split(' - ', 1)
+                                    if not current_track['artist']: current_track['artist'] = parts[0]
+                                    if not current_track['title']: current_track['title'] = parts[1]
+                                elif full_text and not current_track['title']:
+                                     current_track['title'] = full_text
+                            
+                            if not current_track['title']: current_track['title'] = 'Station Online'
+                            if not current_track['artist']: current_track['artist'] = 'YourParty Radio'
+                            
+                            # Inject Mongo Data
+                            if state.mongo_client and current_track['id']:
+                                 song_id = current_track['id']
+                                 rating_data = state.mongo_client.get_track_rating(song_id=song_id, station_id=sid)
+                                 current_track['rating'] = rating_data or {"average": 0.0, "total": 0}
+                                 
+                                 mood_data = state.mongo_client.get_song_moods(song_id)
+                                 current_track['top_mood'] = mood_data.get('top_mood')
+
+                            state.now_playing[sid] = current_track
+                            
+                            # Broadcast to WS for this station
+                            await realtime.manager.broadcast({
+                                "type": "song",
+                                "song": current_track
+                            }, station_id=str(sid))
                 except Exception as e:
-                    logger.error(f"Connection error to AzuraCast: {e}")
-                    resp = None
-
-                if resp and resp.status_code == 200:
-                    data = resp.json()
-                    np = data.get('now_playing', {}).get('song', {})
+                    logger.error(f"Error polling station {sid}: {e}")
                     
-                    # Update Stream URL
-                    for mount in data.get('station', {}).get('mounts', []):
-                         if mount.get('is_default'):
-                             stream_url = mount.get('url', '')
-                             if stream_url.startswith('http://'):
-                                 stream_url = stream_url.replace('http://', 'https://')
-                             state.stream_url = stream_url
-
-                    current_track = {
-                        "title": np.get('title', ''),
-                        "artist": np.get('artist', ''),
-                        "album": np.get('album', ''),
-                        "art": np.get('art', ''), 
-                        "id": str(np.get('id', '')), 
-                        "duration": np.get('duration', 0),
-                        "genre": np.get('genre', '')
-                    }
-
-                    # Fix Art URL
-                    if '192.168' in current_track['art']:
-                        current_track['art'] = "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png"
-
-                    # Fallbacks
-                    if not current_track['title'] or not current_track['artist']:
-                        full_text = np.get('text', '')
-                        if ' - ' in full_text:
-                            parts = full_text.split(' - ', 1)
-                            if not current_track['artist']: current_track['artist'] = parts[0]
-                            if not current_track['title']: current_track['title'] = parts[1]
-                        elif full_text and not current_track['title']:
-                             current_track['title'] = full_text
-                    
-                    if not current_track['title']: current_track['title'] = 'Station Online'
-                    if not current_track['artist']: current_track['artist'] = 'YourParty Radio'
-                    
-                    # Inject Mongo Data
-                    if state.mongo_client and current_track['id']:
-                         song_id = current_track['id']
-                         rating_data = state.mongo_client.get_track_rating(song_id=song_id)
-                         current_track['rating'] = rating_data or {"average": 0.0, "total": 0}
-                         
-                         mood_data = state.mongo_client.get_song_moods(song_id)
-                         current_track['top_mood'] = mood_data.get('top_mood')
-
-                    state.now_playing = current_track
-                    
-                    # Broadcast to WS
-                    await realtime.manager.broadcast({
-                        "type": "song",
-                        "song": current_track
-                    })
         except Exception as e:
             logger.error(f"Polling Main Loop Error: {e}")
             

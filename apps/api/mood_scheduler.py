@@ -106,164 +106,121 @@ except ImportError:
 
 # ========== MODE-SPECIFIC TRACK SELECTION ==========
 
-async def select_discovery_track(mongo_client) -> Optional[Dict[str, Any]]:
+async def select_discovery_track(mongo_client, station_id: int = 1) -> Optional[Dict[str, Any]]:
     """
     DISCOVERY MODE: Select an untagged/low-vote track for community tagging.
-    
-    Prioritizes:
-    1. Tracks with 0 mood votes
-    2. Tracks from DISCOVERY_GENRES
-    3. Recently added tracks
-    
-    Returns:
-        Track dict ready for queueing
     """
     try:
-        # Get tracks with no/few mood votes
-        untagged = mongo_client.get_untagged_tracks(genres=DISCOVERY_GENRES, limit=50)
+        # Get tracks with no/few mood votes for this station
+        untagged = mongo_client.get_untagged_tracks(genres=DISCOVERY_GENRES, limit=50, station_id=station_id)
         
         if not untagged:
-            logger.info("No untagged tracks found - trying all genres")
-            untagged = mongo_client.get_untagged_tracks(limit=30)
+            logger.info(f"No untagged tracks found for station {station_id} - trying all genres")
+            untagged = mongo_client.get_untagged_tracks(limit=30, station_id=station_id)
         
         if not untagged:
-            logger.warning("No tracks available for Discovery mode")
+            logger.warning(f"No tracks available for Discovery mode on station {station_id}")
             return None
         
         selected = random.choice(untagged)
-        logger.info(f"[DISCOVERY] Selected: {selected.get('metadata', {}).get('title', 'Unknown')}")
+        logger.info(f"[DISCOVERY] [STATION {station_id}] Selected: {selected.get('metadata', {}).get('title', 'Unknown')}")
         return selected
         
     except Exception as e:
-        logger.error(f"Discovery track selection error: {e}")
+        logger.error(f"Discovery track selection error for station {station_id}: {e}")
         return None
 
 
-async def select_refinement_track(mongo_client) -> Optional[Dict[str, Any]]:
+async def select_refinement_track(mongo_client, station_id: int = 1) -> Optional[Dict[str, Any]]:
     """
     REFINEMENT MODE: Select a tagged track for community rating/verification.
-    
-    Prioritizes:
-    1. Tracks with mood tags but low vote count (needs more data)
-    2. Controversial tracks (high variance in votes)
-    
-    Returns:
-        Track dict ready for queueing
     """
     try:
         # Get tracks that have some tags but need more verification
         needs_refinement = mongo_client.get_tracks_needing_refinement(
             min_votes=1, 
             max_votes=10,
-            limit=30
+            limit=30,
+            station_id=station_id
         )
         
         if not needs_refinement:
             # Fallback: just get tagged tracks
-            needs_refinement = mongo_client.get_tagged_tracks(limit=30)
+            needs_refinement = mongo_client.get_tagged_tracks(limit=30, station_id=station_id)
         
         if not needs_refinement:
-            logger.warning("No tracks available for Refinement mode")
+            logger.warning(f"No tracks available for Refinement mode on station {station_id}")
             return None
         
         selected = random.choice(needs_refinement)
-        logger.info(f"[REFINEMENT] Selected: {selected.get('metadata', {}).get('title', 'Unknown')}")
+        logger.info(f"[REFINEMENT] [STATION {station_id}] Selected: {selected.get('metadata', {}).get('title', 'Unknown')}")
         return selected
         
     except Exception as e:
-        logger.error(f"Refinement track selection error: {e}")
+        logger.error(f"Refinement track selection error for station {station_id}: {e}")
         return None
 
 
-async def select_live_vote_track(mongo_client, azura_client) -> Optional[Dict[str, Any]]:
+async def select_live_vote_track(mongo_client, azura_client, station_id: int = 1) -> Optional[Dict[str, Any]]:
     """
     LIVE_VOTE MODE: Select track based on real-time community votes.
-    
-    The most recent mood_next votes determine the next track.
-    
-    Returns:
-        Track dict ready for queueing
     """
     try:
         # 1. Check for specific track votes (User explicitly voted for a track)
-        top_track_id = mongo_client.get_top_voted_track(time_window_minutes=5)
+        top_track_id = mongo_client.get_top_voted_track(time_window_minutes=5, station_id=station_id)
         
         if top_track_id:
-             logger.info(f"[LIVE_VOTE] Winner by Track Vote: {top_track_id}")
-             # Find full track doc
-             # Try simple lookup first, or use a helper
-             track = mongo_client.tracks_collection.find_one({"song_id": top_track_id})
+             logger.info(f"[LIVE_VOTE] [STATION {station_id}] Winner by Track Vote: {top_track_id}")
+             track = mongo_client.tracks_collection.find_one({"song_id": top_track_id, "station_id": station_id})
              if track:
                  return {
                     "song_id": top_track_id, 
                     "file_path": track.get("file_path"),
                     "metadata": track.get("metadata", {})
                  }
-             else:
-                 # It might be a random library track with no mongo doc? 
-                 # We need to find it via get_song_metadata or similar.
-                 # Fallback to standard selection if track not found
-                 logger.warning(f"Winning track {top_track_id} not found in DB")
 
         # 2. Check for dominant mood (User voted for a mood)
-        dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=5)  # Shorter window for live
+        dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=5, station_id=station_id)
         
         if not dominant_mood:
-            logger.info("[LIVE_VOTE] No recent votes - using popular fallback")
-            return await select_refinement_track(mongo_client)
+            logger.info(f"[LIVE_VOTE] [STATION {station_id}] No recent votes - using popular fallback")
+            return await select_refinement_track(mongo_client, station_id=station_id)
         
-        logger.info(f"[LIVE_VOTE] Community voted for Mood: {dominant_mood}")
-        return await select_next_track_by_mood(mongo_client, dominant_mood)
+        logger.info(f"[LIVE_VOTE] [STATION {station_id}] Community voted for Mood: {dominant_mood}")
+        return await select_next_track_by_mood(mongo_client, dominant_mood, station_id=station_id)
         
     except Exception as e:
-        logger.error(f"Live vote track selection error: {e}")
+        logger.error(f"Live vote track selection error for station {station_id}: {e}")
         return None
 
 
-async def select_next_track_by_mood(mongo_client, dominant_mood: str) -> Optional[Dict[str, Any]]:
+async def select_next_track_by_mood(mongo_client, dominant_mood: str, station_id: int = 1) -> Optional[Dict[str, Any]]:
     """
     Select a track matching the dominant mood from the database.
-    
-    Args:
-        mongo_client: MongoDatabaseClient instance
-        dominant_mood: The mood to match
-        
-    Returns:
-        Track dict with song_id and metadata, or None
     """
     if not mongo_client:
         logger.warning("MongoDB client not available")
         return None
     
     try:
-        tracks = mongo_client.get_tracks_by_mood(dominant_mood, limit=20)
+        tracks = mongo_client.get_tracks_by_mood(dominant_mood, limit=20, station_id=station_id)
         
         if not tracks:
-            logger.info(f"No tracks found for mood: {dominant_mood}")
+            logger.info(f"No tracks found for mood '{dominant_mood}' on station {station_id}")
             return None
         
-        # Simple random selection from matching tracks
-        import random
         selected = random.choice(tracks)
-        
-        logger.info(f"Selected track for mood '{dominant_mood}': {selected.get('metadata', {}).get('title', 'Unknown')}")
+        logger.info(f"[STATION {station_id}] Selected track for mood '{dominant_mood}': {selected.get('metadata', {}).get('title', 'Unknown')}")
         return selected
         
     except Exception as e:
-        logger.error(f"Error selecting track by mood: {e}")
+        logger.error(f"Error selecting track by mood for station {station_id}: {e}")
         return None
 
 
-async def queue_track_in_azuracast(azura_client, track: Dict[str, Any]) -> bool:
+async def queue_track_in_azuracast(azura_client, track: Dict[str, Any], station_id: int = 1) -> bool:
     """
     Queue a track in AzuraCast.
-    
-    Args:
-        azura_client: AzuraCastClient instance
-        track: Track dict with song_id
-        
-    Returns:
-        True if successfully queued
     """
     try:
         song_id = track.get("song_id")
@@ -274,36 +231,35 @@ async def queue_track_in_azuracast(azura_client, track: Dict[str, Any]) -> bool:
         # Add small delay to avoid hammering AzuraCast
         await asyncio.sleep(0.5)
         
-        success = await azura_client.queue_track(int(song_id))
+        success = await azura_client.queue_track(int(song_id), station_id=station_id)
         
         if success:
-            logger.info(f"Successfully queued track: {track.get('metadata', {}).get('title', song_id)}")
+            logger.info(f"[STATION {station_id}] Successfully queued track: {track.get('metadata', {}).get('title', song_id)}")
             MOOD_QUEUE_TRIGGERED.inc()
         
         return success
         
     except Exception as e:
-        logger.error(f"Error queuing track: {e}")
+        logger.error(f"Error queuing track for station {station_id}: {e}")
         return False
 
 
-async def get_fallback_track(mongo_client) -> Optional[Dict[str, Any]]:
+async def get_fallback_track(mongo_client, station_id: int = 1) -> Optional[Dict[str, Any]]:
     """
     Get a random track from general rotation when mood selection fails.
     """
     try:
         # Get highly-rated tracks as fallback
-        tracks = mongo_client.get_all_rated_tracks(min_rating=3.0)
+        tracks = mongo_client.get_all_rated_tracks(min_rating=3.0, station_id=station_id)
         
         if not tracks:
-            logger.warning("No fallback tracks available")
+            logger.warning(f"No fallback tracks available for station {station_id}")
             return None
         
-        import random
         selected = random.choice(tracks[:20])  # Top 20 rated
         
         MOOD_FALLBACK_TRIGGERED.inc()
-        logger.info(f"Using fallback track: {selected.get('metadata', {}).get('title', 'Unknown')}")
+        logger.info(f"[STATION {station_id}] Using fallback track: {selected.get('metadata', {}).get('title', 'Unknown')}")
         return selected
         
     except Exception as e:
@@ -311,95 +267,73 @@ async def get_fallback_track(mongo_client) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def mood_queue_worker_iteration(mongo_client, azura_client, steering_callback=None) -> bool:
+async def mood_queue_worker_iteration(mongo_client, azura_client, station_id: int = 1, current_steering: dict = None) -> bool:
     """
-    Single iteration with Manual Override support.
+    Single iteration per station with Manual Override support.
     """
-    global current_mode
-    
     try:
         # PRE-FLIGHT CHECK: Avoid double-queuing
-        # If there are tracks in the "playing_next" queue (e.g. from Live Voting), skip Auto-DJ
         try:
-            upcoming = await azura_client.get_upcoming_queue()
+            upcoming = await azura_client.get_upcoming_queue(station_id=station_id)
             if upcoming and len(upcoming) > 0:
-                logger.info(f"Skipping Auto-DJ: Queue already has {len(upcoming)} track(s).")
-                MOOD_QUEUE_TRIGGERED.inc() # Treat as success to avoid error noise? Or separate metric.
+                logger.info(f"[STATION {station_id}] Skipping Auto-DJ: Queue already has {len(upcoming)} track(s).")
                 return True
         except Exception as e:
-            logger.warning(f"Failed to check AzuraCast queue, proceeding with caution: {e}")
+            logger.warning(f"[STATION {station_id}] Failed to check AzuraCast queue: {e}")
 
         # 0. Check Manual Override first
+        track = None
         manual_target = None
-        if steering_callback:
-            steering = steering_callback()
-            if steering and steering.get('mode') == 'manual':
-                manual_target = steering.get('target')
+        if current_steering and current_steering.get('mode') == 'manual':
+             manual_target = current_steering.get('target')
 
         if manual_target:
-            logger.info(f"=== MANUAL STEERING ACTIVE: {manual_target.upper()} ===")
-            current_mode = PlaytimeMode.AUTO # Treat as auto but forced target
-            track = await select_next_track_by_mood(mongo_client, manual_target)
-            
-            if not track:
-                logger.warning(f"Manual steering for '{manual_target}' found no tracks - falling back")
-                # Fall through to standard logic
+            logger.info(f"=== [STATION {station_id}] MANUAL STEERING ACTIVE: {manual_target.upper()} ===")
+            track = await select_next_track_by_mood(mongo_client, manual_target, station_id=station_id)
 
         # If no manual target or manual selection failed, verify standard mode
-        if not manual_target or not track:
+        if not track:
             # 1. Determine current playtime mode
-            current_mode = get_current_playtime_mode()
-            logger.info(f"=== Playtime Mode: {current_mode.value.upper()} ===")
+            mode = get_current_playtime_mode()
+            logger.info(f"=== [STATION {station_id}] Playtime Mode: {mode.value.upper()} ===")
         
-            # Update Prometheus gauge
-            mode_map = {PlaytimeMode.AUTO: 0, PlaytimeMode.DISCOVERY: 1, 
-                        PlaytimeMode.REFINEMENT: 2, PlaytimeMode.LIVE_VOTE: 3}
-            CURRENT_MODE_GAUGE.set(mode_map.get(current_mode, 0))
-            
-            track = None
-            
             # 2. Select track based on mode
-            if current_mode == PlaytimeMode.DISCOVERY:
-                track = await select_discovery_track(mongo_client)
-            elif current_mode == PlaytimeMode.REFINEMENT:
-                track = await select_refinement_track(mongo_client)
-            elif current_mode == PlaytimeMode.LIVE_VOTE:
-                track = await select_live_vote_track(mongo_client, azura_client)
+            if mode == PlaytimeMode.DISCOVERY:
+                track = await select_discovery_track(mongo_client, station_id=station_id)
+            elif mode == PlaytimeMode.REFINEMENT:
+                track = await select_refinement_track(mongo_client, station_id=station_id)
+            elif mode == PlaytimeMode.LIVE_VOTE:
+                track = await select_live_vote_track(mongo_client, azura_client, station_id=station_id)
             else:  # AUTO mode
-                # Check if we have enough tagged tracks
-                dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=10)
+                dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=10, station_id=station_id)
                 if dominant_mood:
-                    track = await select_next_track_by_mood(mongo_client, dominant_mood)
+                    track = await select_next_track_by_mood(mongo_client, dominant_mood, station_id=station_id)
                 else:
-                    # Mix discovery and refinement
-                    import random
                     if random.random() < 0.3:  # 30% discovery, 70% refinement
-                        track = await select_discovery_track(mongo_client)
+                        track = await select_discovery_track(mongo_client, station_id=station_id)
                     else:
-                        track = await select_refinement_track(mongo_client)
+                        track = await select_refinement_track(mongo_client, station_id=station_id)
         
         # 3. Fallback if no mode-specific track found
         if not track:
-            logger.info("Mode selection failed - using general fallback")
-            track = await get_fallback_track(mongo_client)
+            logger.info(f"[STATION {station_id}] Mode selection failed - using general fallback")
+            track = await get_fallback_track(mongo_client, station_id=station_id)
         
         if not track:
-            logger.warning("No track available to queue")
+            logger.warning(f"[STATION {station_id}] No track available to queue")
             return False
         
         # 4. Queue in AzuraCast
-        success = await queue_track_in_azuracast(azura_client, track)
-        
-        return success
+        return await queue_track_in_azuracast(azura_client, track, station_id=station_id)
         
     except Exception as e:
-        logger.error(f"Mood queue worker error: {e}")
+        logger.error(f"Mood queue worker error for station {station_id}: {e}")
         return False
 
 
-async def schedule_mood_queue_worker(mongo_client, azura_client, steering_callback=None):
+async def schedule_mood_queue_worker(mongo_client, azura_client, steering_status_map: dict):
     """
-    Background task that runs the mood queue worker on a cycle.
+    Background task that runs the mood queue worker for each station independently.
     """
     logger.info(f"Mood Queue Worker starting (cycle: {MOOD_CYCLE_SECONDS}s, enabled: {FEATURE_MOOD_AUTODJ})")
     
@@ -407,15 +341,17 @@ async def schedule_mood_queue_worker(mongo_client, azura_client, steering_callba
         logger.info("FEATURE_MOOD_AUTODJ is disabled - worker will not run")
         return
     
+    stations = [1, 2] # TODO: get from config
+    
     while True:
         try:
-            # logger.info("Running mood queue iteration...")
-            await mood_queue_worker_iteration(mongo_client, azura_client, steering_callback)
+            for sid in stations:
+                steering = steering_status_map.get(sid)
+                await mood_queue_worker_iteration(mongo_client, azura_client, station_id=sid, current_steering=steering)
             
         except Exception as e:
-            logger.error(f"Mood queue worker error: {e}")
+            logger.error(f"Mood queue worker main loop error: {e}")
         
-        # Wait for next cycle
         await asyncio.sleep(MOOD_CYCLE_SECONDS)
 
 

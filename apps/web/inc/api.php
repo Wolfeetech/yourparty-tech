@@ -1305,6 +1305,60 @@ add_action('rest_api_init', function () {
             },
         ]
     );
+
+    // SHOUTOUT PROXY
+    register_rest_route(
+        'yourparty/v1',
+        '/shoutout',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                // Rate limiting
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                if (!yourparty_check_rate_limit($ip)) {
+                    return new WP_Error('rate_limit', 'Too many requests', ['status' => 429]);
+                }
+
+                $message = sanitize_textarea_field($request->get_param('message'));
+                $sender = sanitize_text_field($request->get_param('sender') ?: 'Anonymous');
+                
+                if (empty($message)) {
+                    return new WP_Error('invalid_payload', 'Message is required', ['status' => 400]);
+                }
+
+                // Proxy to FastAPI backend
+                $api_url = yourparty_api_base_url() . '/shoutout';
+                
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => wp_json_encode([
+                        'message' => $message,
+                        'sender' => $sender,
+                        'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
+                    ]),
+                    'timeout' => 5,
+                    'sslverify' => false
+                ]);
+
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] shoutout failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Service unavailable', ['status' => 503]);
+                }
+
+                $code = (int) wp_remote_retrieve_response_code($response);
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+
+                if ($code >= 400) {
+                    $error_msg = $data['detail'] ?? $data['message'] ?? 'Backend error';
+                    return new WP_Error('backend_error', $error_msg, ['status' => $code]);
+                }
+                
+                return rest_ensure_response($data ?: ['status' => 'sent']);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
 });
 
 /**

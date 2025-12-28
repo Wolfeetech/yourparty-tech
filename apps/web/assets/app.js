@@ -85,10 +85,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (typeof MoodModule !== 'undefined') {
         window.YourPartyAppInstance.modules.mood = new MoodModule(window.YourPartyConfig);
       } else {
-        console.warn('[YourParty] MoodModule not defined - mood features will be unavailable');
+        console.warn('[YourParty] MoodModule not defined');
+      }
+
+      if (typeof ShoutoutModule !== 'undefined') {
+        window.YourPartyAppInstance.modules.shoutout = new ShoutoutModule(window.YourPartyConfig);
+      } else {
+        console.warn('[YourParty] ShoutoutModule not defined');
       }
     } catch (e) {
-      console.warn('[YourParty] MoodModule initialization failed:', e);
+      console.warn('[YourParty] Module initialization failed:', e);
     }
   }
 
