@@ -21,7 +21,7 @@ export default class Visualizer {
         this.canvas.addEventListener('click', () => {
             this.modeIndex = (this.modeIndex + 1) % this.modes.length;
             // Show toast if available?
-            console.log(`Visualizer Mode: ${this.modes[this.modeIndex]}`);
+            // console.log(`Visualizer Mode: ${this.modes[this.modeIndex]}`);
         });
         this.canvas.style.cursor = 'pointer';
 

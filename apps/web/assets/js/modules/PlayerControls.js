@@ -97,6 +97,8 @@ export default class PlayerControls {
             if (this.dom.cover.src !== newSrc) {
                 this.dom.cover.src = newSrc;
             }
+            // SEO: Dynamic Alt Text
+            this.dom.cover.setAttribute('alt', `Album Art for ${song.title} by ${song.artist}`);
         }
     }
 

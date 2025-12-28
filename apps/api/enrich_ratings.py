@@ -1,14 +1,18 @@
 import os
 import logging
 import asyncio
+from dotenv import load_dotenv
 from mongo_client import MongoDatabaseClient
 from azuracast_client import AzuraCastClient
+
+# Load Env
+load_dotenv()
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("EnrichRatings")
 
-def enrich_metadata():
+async def enrich_metadata():
     """
     Fetch all rated tracks from MongoDB that are missing metadata.
     Query AzuraCast History to find them.
@@ -32,12 +36,14 @@ def enrich_metadata():
         logger.warning("AZURACAST_API_KEY not set. Cannot fetch history.")
         return
 
+    # Use context manager if possible or just instance
+    # AzuraCastClient is now async
     client = AzuraCastClient(ac_url, ac_key, ac_station)
 
     # 3. Fetch History
     try:
         logger.info(f"Fetching History from {ac_url}...")
-        now_playing_data = client.get_now_playing()
+        now_playing_data = await client.get_now_playing()
         
         # Build Map: Song ID -> {title, artist, album}
         id_map = {}
@@ -90,12 +96,6 @@ def enrich_metadata():
             
             logger.info(f"Updating ID {song_id}: {clean_meta['artist']} - {clean_meta['title']}")
             
-            # Use sync_track_metadata to save
-            # Note: file_path might be None if we only have ID in DB.
-            # If so, we can't update 'tracks' collection by file_path easily unless we use song_id query.
-            # db.sync_track_metadata uses file_path as filter.
-            # let's modify/extend it inline or rely on file_path if present.
-            
             if file_path:
                 db.sync_track_metadata(file_path, clean_meta, song_id)
                 updated_count += 1
@@ -115,4 +115,4 @@ def enrich_metadata():
     db.close()
 
 if __name__ == "__main__":
-    enrich_metadata()
+    asyncio.run(enrich_metadata())

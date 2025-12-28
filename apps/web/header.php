@@ -37,7 +37,8 @@
     <meta name="twitter:image" content="<?php echo esc_url($yourparty_og); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fonts loaded via functions.php -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <?php
     $yourparty_public = function_exists('yourparty_public_url') ? yourparty_public_url() : '';
     if ($yourparty_public):

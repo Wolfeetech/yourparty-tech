@@ -8,6 +8,16 @@ Community-driven radio web application with mood-based playlists.
 > - **Infrastructure:** `/infrastructure` (nginx, docker, systemd)
 > - **Documentation:** `/docs` (planning, ops, network, ssl)
 
+## Features ✨
+
+- 🎶 **Live Radio Streaming** via AzuraCast
+- ⭐ **Community Ratings** (1-5 stars with averages)
+- 🎛️ **Mood-Based Auto-DJ** (Energy/Chill/Groove/Dark modes)
+- 🗳️ **Live Voting** for next track
+- 🔐 **JWT Authentication** for admin endpoints
+- 🛡️ **Rate Limiting** on public endpoints
+- 📊 **Real-time WebSocket** updates
+
 ## Quick Start (Docker)
 
 ```bash
@@ -50,6 +60,19 @@ docker-compose up -d
                   └─────────────────┘
 ```
 
+## API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/token` | POST | - | Login (returns JWT) |
+| `/rate` | POST | - | Submit track rating |
+| `/vote-mood` | POST | - | Vote for mood/track |
+| `/vote-next-candidates` | GET | - | Get voting candidates |
+| `/vote-next-track` | POST | - | Vote for specific track |
+| `/now-playing` | GET | - | Current track info |
+| `/library/all` | GET | Auth | Full library metadata |
+| `/control/steer` | POST | Auth | Set Auto-DJ mode |
+
 ## Services
 
 | Service | Port | Purpose |
@@ -76,3 +99,4 @@ See documentation in `/docs`:
 ## License
 
 MIT
+

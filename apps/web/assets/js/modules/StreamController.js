@@ -49,7 +49,7 @@ export default class StreamController {
             miniPlayer.style.display = 'flex';
         }
 
-        console.log('[StreamController] Initialized (ES6)');
+        // console.log('[StreamController] Initialized (ES6)');
     }
 
     bindEvents() {

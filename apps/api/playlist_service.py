@@ -7,7 +7,7 @@ logger = logging.getLogger("PlaylistService")
 class PlaylistService:
     def __init__(self, mongo_client, azura_client):
         self.mongo = mongo_client
-        self.azura = azura
+        self.azura = azura_client
         
         # Configuration: Playlist Name mapped to Mongo Mood Query
         self.playlist_rules = [

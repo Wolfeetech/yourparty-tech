@@ -274,7 +274,7 @@ async def queue_track_in_azuracast(azura_client, track: Dict[str, Any]) -> bool:
         # Add small delay to avoid hammering AzuraCast
         await asyncio.sleep(0.5)
         
-        success = azura_client.queue_track(int(song_id))
+        success = await azura_client.queue_track(int(song_id))
         
         if success:
             logger.info(f"Successfully queued track: {track.get('metadata', {}).get('title', song_id)}")
@@ -318,6 +318,17 @@ async def mood_queue_worker_iteration(mongo_client, azura_client, steering_callb
     global current_mode
     
     try:
+        # PRE-FLIGHT CHECK: Avoid double-queuing
+        # If there are tracks in the "playing_next" queue (e.g. from Live Voting), skip Auto-DJ
+        try:
+            upcoming = await azura_client.get_upcoming_queue()
+            if upcoming and len(upcoming) > 0:
+                logger.info(f"Skipping Auto-DJ: Queue already has {len(upcoming)} track(s).")
+                MOOD_QUEUE_TRIGGERED.inc() # Treat as success to avoid error noise? Or separate metric.
+                return True
+        except Exception as e:
+            logger.warning(f"Failed to check AzuraCast queue, proceeding with caution: {e}")
+
         # 0. Check Manual Override first
         manual_target = None
         if steering_callback:

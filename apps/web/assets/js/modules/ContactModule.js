@@ -26,7 +26,7 @@ export default class ContactModule {
             });
         });
 
-        console.log('[ContactModule] Initialized');
+        // console.log('[ContactModule] Initialized');
     }
 
     async handleSubmit(e) {

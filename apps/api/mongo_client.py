@@ -39,6 +39,15 @@ class MongoDatabaseClient:
                 # Try to get default database from URI
                 self.db = self.client.get_default_database(default="yourparty")
             
+            # Configure timeouts to prevent hanging
+            # If these are not set, it can hang for 30s+ which systemd might kill
+            # serverSelectionTimeoutMS=5000 (5s)
+            
+            if connection_string:
+               if 'serverSelectionTimeoutMS' not in connection_string:
+                   # Re-init with explicit timeout if not in URI
+                   self.client = MongoClient(connection_string, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
+            
             self.ratings_collection = self.db["rating_events"]
             self.tracks_collection = self.db["tracks"]
             self.sync_log_collection = self.db["sync_log"]

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    environment:
+      - TZ=Europe/Berlin
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+volumes:
+  uptime-kuma-data:
+    driver: local
+
+# Deployment:
+# 1. Copy to server: scp -r infrastructure/docker/uptime-kuma pve:/root/
+# 2. SSH to PVE: ssh pve
+# 3. cd /root/uptime-kuma && docker compose up -d
+# 4. Access at http://192.168.178.25:3001

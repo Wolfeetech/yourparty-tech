@@ -57,7 +57,7 @@ export default class RatingModule {
             }
         });
 
-        console.log('[RatingModule] Initialized (ES6)');
+        // console.log('[RatingModule] Initialized (ES6)');
     }
 
     setInitialRating(songId, average, total, userRating = 0) {
@@ -88,7 +88,7 @@ export default class RatingModule {
             const songRating = allRatings[songId];
 
             if (songRating) {
-                console.log(`[RatingModule] Loaded rating for ${songId}: ${songRating.average} (${songRating.total} votes)`);
+                // console.log(`[RatingModule] Loaded rating for ${songId}: ${songRating.average} (${songRating.total} votes)`);
                 this.updateDisplay(songRating.average, songRating.total);
             } else {
                 // No rating yet - show default

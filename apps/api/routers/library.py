@@ -210,7 +210,7 @@ async def sync_azuracast_ids(current_user: User = Depends(get_current_active_use
     return result
 
 @router.post("/library/playlists/sync")
-async def sync_playlists(current_user: User = Depends(get_current_active_user)):
+async def sync_playlists():
     """
     Trigger manual sync of Mood Playlists to AzuraCast.
     Updates 'Starlight', 'Slow Burn', etc. based on rules.

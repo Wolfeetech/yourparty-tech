@@ -38,15 +38,20 @@ async def rate_track(request: Request, rating_request: RatingRequest):
     
     if state.mongo_client:
         result = state.mongo_client.submit_rating(
+            song_id=rating_request.song_id,
+            rating=rating_request.rating,
+            user_id=rating_request.user_id,
+            file_path=rating_request.file_path,
+            metadata=get_metadata_context(rating_request.song_id)
         )
-        if request.file_path and os.path.exists(request.file_path):
+        if rating_request.file_path and os.path.exists(rating_request.file_path):
             new_stats = result.get("ratings", {})
             avg_rating = new_stats.get("average")
             if avg_rating:
-                write_metadata_to_file(request.file_path, rating=avg_rating)     
+                write_metadata_to_file(rating_request.file_path, rating=avg_rating)     
         return result
     else:
-        return {"success": True, "ratings": {"average": float(request.rating), "total": 1, "warning": "Persistence unavailable"}}
+        return {"success": True, "ratings": {"average": float(rating_request.rating), "total": 1, "warning": "Persistence unavailable"}}
 
 @router.get("/ratings")
 async def get_ratings(song_id: Optional[str] = None):
@@ -119,14 +124,14 @@ async def vote_mood(request: Request, mood_request: MoodVoteRequest):
             result["vote_counts"] = counts
             if request.vote == "dislike" and counts.get("dislike", 0) >= counts.get("like", 0) + 3:
                  if state.azura_client:
-                     state.azura_client.skip_current_song()
+                     await state.azura_client.skip_current_song()
                      result["action_taken"] = "skip"
             if request.vote == "like" and counts.get("like", 0) >= 3:
                  if state.azura_client:
                      try:
                          mid = int(request.song_id) if request.song_id.isdigit() else None
                          if mid:
-                             state.azura_client.add_to_playlist(mid, "Starlight")
+                             await state.azura_client.add_to_playlist(mid, "Starlight")
                              result["action_taken"] = "playlist_add"
                      except Exception as e:
                          logger.error(f"Playlist add failed: {e}")
@@ -324,7 +329,7 @@ async def calculate_winner():
         # Try numeric ID first if looks like int, else string ID
         mid = winner.get('media_id') or winner.get('id')
         if mid:
-            queued = state.azura_client.queue_track(mid)
+            queued = await state.azura_client.queue_track(mid)
             
     # 4. Reset Session
     state.voting_session = {"candidates": [], "expires_at": None}

@@ -24,7 +24,7 @@
                 onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
                 <div style="margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; height: 200px;">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/service-stage.jpg"
-                        alt="Bühnenbau" style="width: 100%; height: 100%; object-fit: cover;">
+                        alt="Bühnenbau" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
                 </div>
                 <h3 style="margin-top: 0; font-size: 1.5rem;">
                     <?php echo esc_html(yourparty_get_content('service_1_title')); ?>
@@ -39,7 +39,7 @@
                 onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
                 <div style="margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; height: 200px;">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/reference-event.jpg"
-                        alt="FOH & Licht" style="width: 100%; height: 100%; object-fit: cover;">
+                        alt="FOH & Licht" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
                 </div>
                 <h3 style="margin-top: 0; font-size: 1.5rem;">
                     <?php echo esc_html(yourparty_get_content('service_2_title')); ?>
@@ -54,7 +54,7 @@
                 onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
                 <div style="margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; height: 200px;">
                     <img src="<?php echo get_template_directory_uri(); ?>/assets/images/hero-bodensee.jpg"
-                        alt="Drohnenaufnahmen" style="width: 100%; height: 100%; object-fit: cover;">
+                        alt="Drohnenaufnahmen" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
                 </div>
                 <h3 style="margin-top: 0; font-size: 1.5rem;">
                     <?php echo esc_html(yourparty_get_content('service_3_title')); ?>

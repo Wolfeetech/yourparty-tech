@@ -36,7 +36,7 @@ export default class RealtimeModule {
         const wsUrl = `wss://${wsHost}/ws/${slug}`;
 
         if (this.reconnectAttempts === 0) {
-            console.log('[Realtime] Connecting to ' + wsUrl);
+            // console.log('[Realtime] Connecting to ' + wsUrl);
         }
 
         try {
@@ -47,7 +47,7 @@ export default class RealtimeModule {
         }
 
         this.socket.onopen = () => {
-            console.log('[Realtime] Connected');
+            // console.log('[Realtime] Connected');
             this.reconnectAttempts = 0;
             // Send subscription/hello if needed
             this.socket.send(JSON.stringify({ "subs": { [slug]: {} } }));
@@ -73,7 +73,7 @@ export default class RealtimeModule {
 
     scheduleReconnect() {
         if (this.reconnectAttempts > 10) {
-            console.log('[Realtime] stopped retrying (Fallback to polling).');
+            // console.log('[Realtime] stopped retrying (Fallback to polling).');
             return;
         }
 

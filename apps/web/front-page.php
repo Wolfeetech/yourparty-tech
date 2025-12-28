@@ -39,7 +39,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     
                     <!-- Cover Art (Floating) -->
                     <div class="player-cover">
-                        <img id="cover-art" src="https://placehold.co/600x600/10b981/ffffff?text=YourParty" alt="Cover" loading="eager">
+                        <img id="cover-art" src="https://placehold.co/600x600/10b981/ffffff?text=YourParty" alt="Cover" loading="eager" fetchpriority="high">
                         <div class="cover-glow"></div>
                     </div>
 

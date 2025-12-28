@@ -52,7 +52,7 @@ def get_library_service(mongo_client=None):
             try:
                 # Run blocking sync in thread if needed, or just run it (it's sync requests)
                 # For safety in async context:
-                media_list = azura_client.get_station_media()
+                media_list = await azura_client.get_station_media()
                 count = 0
                 
                 for media in media_list:

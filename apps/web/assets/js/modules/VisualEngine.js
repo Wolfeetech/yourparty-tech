@@ -199,7 +199,7 @@ export default class VisualEngine {
     setMode(index) {
         if (index >= 0 && index < this.MODES.length) {
             this.currentMode = index;
-            console.log(`[Visual] Mode switched to: ${this.MODES[index].name}`);
+            // console.log(`[Visual] Mode switched to: ${this.MODES[index].name}`);
         }
     }
 

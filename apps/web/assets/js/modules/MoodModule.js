@@ -70,7 +70,7 @@ class MoodModule {
     }
 
     init() {
-        console.log('[MoodModule] Init (ES6 - Dual Voting)');
+        // console.log('[MoodModule] Init (ES6 - Dual Voting)');
         this.bindGlobalEvents();
         this.createDialog();
         this.processQueue(); // Try to flush queue on init
@@ -83,11 +83,11 @@ class MoodModule {
                 // Check if static dialog exists (from front-page.php) - let it handle itself
                 const staticDialog = document.getElementById('mood-dialog');
                 if (staticDialog && staticDialog.querySelector('.mood-option')) {
-                    console.log('[MoodModule] Static dialog detected, skipping module handler');
+                    // console.log('[MoodModule] Static dialog detected, skipping module handler');
                     return; // Let inline onclick handle it
                 }
 
-                console.log('[MoodModule] Delegated Click Triggered');
+                // console.log('[MoodModule] Delegated Click Triggered');
                 e.preventDefault();
                 e.stopPropagation();
                 this.openDialog();
@@ -96,7 +96,7 @@ class MoodModule {
 
         // Debug Log
         if (document.getElementById('mood-tag-button')) {
-            console.log('[MoodModule] Tag Button Visible on Init');
+            // console.log('[MoodModule] Tag Button Visible on Init');
         }
 
         // Listen for online status
@@ -110,7 +110,7 @@ class MoodModule {
         document.addEventListener('click', (e) => {
             // Tag Button
             if (e.target.closest('#mood-tag-button')) {
-                console.log('[MoodModule] Tag Button Clicked');
+                // console.log('[MoodModule] Tag Button Clicked');
                 e.preventDefault();
                 this.openDialog();
             }
@@ -125,7 +125,7 @@ class MoodModule {
 
         // Global Facade for Inline Calls (Robustness)
         window.openMoodDialog = () => {
-            console.log('[MoodModule] Global openMoodDialog triggered');
+            // console.log('[MoodModule] Global openMoodDialog triggered');
             this.openDialog();
         };
     }
@@ -180,17 +180,17 @@ class MoodModule {
             const title = type === 'success' ? '✓ Vote Recorded' : '⚠ Notice';
             showToast(title, msg, type, 3000);
         } else {
-            console.log(`[Feedback] ${msg}`);
+            // console.log(`[Feedback] ${msg}`);
         }
     }
 
     createDialog() {
-        console.log('[MoodModule] createDialog called');
+        // console.log('[MoodModule] createDialog called');
         if (document.getElementById('mood-dialog')) {
-            console.log('[MoodModule] Dialog already exists, skipping creation');
+            // console.log('[MoodModule] Dialog already exists, skipping creation');
             return;
         }
-        console.log('[MoodModule] Creating new dialog...');
+        // console.log('[MoodModule] Creating new dialog...');
 
         const moodButtonsHTML = Object.entries(MOODS).map(([key, m]) => `
             <button class="mood-btn" data-value="${key}" 
@@ -335,7 +335,7 @@ class MoodModule {
     }
 
     openDialog() {
-        console.log('[MoodModule] openDialog called');
+        // console.log('[MoodModule] openDialog called');
         let dialog = document.getElementById('mood-dialog');
 
         // Failsafe: Re-create if missing
@@ -376,7 +376,7 @@ class MoodModule {
 
         dialog.classList.add('active');
         dialog.style.display = 'flex';
-        console.log('[MoodModule] Dialog should now be visible, display:', dialog.style.display);
+        // console.log('[MoodModule] Dialog should now be visible, display:', dialog.style.display);
     }
 
     closeDialog() {
@@ -515,7 +515,7 @@ class MoodModule {
     async processQueue() {
         if (this.voteQueue.length === 0 || !navigator.onLine) return;
 
-        console.log(`[MoodModule] Processing ${this.voteQueue.length} queued votes...`);
+        // console.log(`[MoodModule] Processing ${this.voteQueue.length} queued votes...`);
         const queue = [...this.voteQueue];
         this.voteQueue = [];
         localStorage.setItem('yp_vote_queue', '[]');
@@ -523,7 +523,7 @@ class MoodModule {
         for (const payload of queue) {
             try {
                 await this.sendVote(payload);
-                console.log('Synced vote:', payload);
+                // console.log('Synced vote:', payload);
             } catch (err) {
                 console.error('Sync failed, requeueing:', payload);
                 this.voteQueue.push(payload); // Put back

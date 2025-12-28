@@ -798,12 +798,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const fetchStatus = async () => {
     try {
-      const response = await fetch(buildEndpoint("status"));
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+      const response = await fetch(buildEndpoint("status"), {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       if (!response.ok) throw new Error(`Status HTTP ${response.status}`);
       const data = await response.json();
       updateStatus(data);
     } catch (error) {
       console.error("Status fetch failed:", error);
+
+      // Remove skeleton classes so error text is visible
+      if (titleElement) titleElement.classList.remove('skeleton');
+      if (artistElement) artistElement.classList.remove('skeleton');
+
       if (statusElement) {
         statusElement.textContent = "Offline";
         statusElement.classList.remove("status-online");
@@ -811,7 +823,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (titleElement) titleElement.textContent = "Stream offline";
       if (artistElement)
-        artistElement.textContent = "Bitte AzuraCast pruefen";
+        artistElement.textContent = "Verbindung zu AzuraCast fehlgeschlagen";
       if (albumElement) albumElement.textContent = "-";
       if (voteFeedback) {
         voteFeedback.textContent =

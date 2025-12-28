@@ -1,0 +1,12 @@
+[Unit]
+Description=Radio YourParty - Sync Playlists
+After=radio-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -X POST http://localhost:8000/library/playlists/sync
+# Optional: Add authentication header if we enforce it for localhost later
+# ExecStart=/usr/bin/curl -X POST -H "Authorization: Bearer ..." http://localhost:8000/library/playlists/sync
+
+[Install]
+WantedBy=multi-user.target

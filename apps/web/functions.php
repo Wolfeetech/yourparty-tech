@@ -286,13 +286,13 @@ add_filter(
 add_action('init', function () {
     add_rewrite_rule('^control/?$', 'index.php?yourparty_control=1', 'top');
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
-
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
+    add_rewrite_rule('^tech/?$', 'index.php?yourparty_tech=1', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v6')) {
+    if (!get_option('yourparty_rules_flushed_v7')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v6', true);
+        update_option('yourparty_rules_flushed_v7', true);
     }
 });
 
@@ -307,6 +307,7 @@ add_filter('redirect_canonical', function ($redirect_url) {
 add_filter('query_vars', function ($vars) {
     $vars[] = 'yourparty_control';
     $vars[] = 'yourparty_stream';
+    $vars[] = 'yourparty_tech';
 
     $vars[] = 'yourparty_module';
     return $vars;
@@ -346,6 +347,9 @@ add_action('template_redirect', function () {
 add_action('template_include', function ($template) {
     if (get_query_var('yourparty_control')) {
         return get_template_directory() . '/templates/page-control.php';
+    }
+    if (get_query_var('yourparty_tech')) {
+        return get_template_directory() . '/templates/page-tech.php';
     }
     return $template;
 });
