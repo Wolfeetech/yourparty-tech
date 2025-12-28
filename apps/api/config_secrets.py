@@ -25,5 +25,5 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:4f5cd00532af49b5941d6f6385b2e
 
 # 4. AzuraCast (Radio)
 AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "http://192.168.178.210/api") # Updated to match .env
-AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY", "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c") # Corrected from .env
+AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 AZURACAST_STATION_ID = int(os.getenv("AZURACAST_STATION_ID", 1))

@@ -86,7 +86,7 @@ def sync_db_to_files():
                 try:
                     from apps.api.azuracast_client import AzuraCastClient
                     ac_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
-                    ac_key = os.getenv("AZURACAST_API_KEY", "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c")
+                    ac_key = os.getenv("AZURACAST_API_KEY")
                     client = AzuraCastClient(ac_url, ac_key, 1) # Station 1
                     
                     # 1. Ask AzuraCast who this ID is

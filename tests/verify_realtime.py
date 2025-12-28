@@ -6,13 +6,22 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
-API_URL = "http://192.168.178.210/api"
-WS_URL = "ws://192.168.178.210/api/ws/1"
+API_URL = "http://localhost:8000"
+WS_URL = "ws://localhost:8000/ws/1"
 TIMEOUT = 5
 
 async def test_realtime_steer():
     logging.info(f"Connecting to {WS_URL}...")
     try:
+        # 0. Get Token
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{API_URL}/token", data={"username": "admin", "password": "admin"})
+            if resp.status_code != 200:
+                logging.error(f"❌ Login Failed: {resp.text}")
+                return
+            token = resp.json()["access_token"]
+            logging.info("✅ Login Successful, Token acquired.")
+
         async with websockets.connect(WS_URL) as websocket:
             # 1. Wait for initial 'song' message
             init_msg = await asyncio.wait_for(websocket.recv(), timeout=TIMEOUT)
@@ -23,11 +32,14 @@ async def test_realtime_steer():
             target = "energetic"
             logging.info("Triggering Steering Change -> MANUAL / ENERGETIC")
             async with httpx.AsyncClient() as client:
-                resp = await client.post(f"{API_URL}/control/steer", json={
-                    "station_id": 1,
-                    "mode": "manual",
-                    "target": target
-                })
+                resp = await client.post(f"{API_URL}/control/steer", 
+                    json={
+                        "station_id": 1,
+                        "mode": "manual",
+                        "target": target
+                    },
+                    headers={"Authorization": f"Bearer {token}"}
+                )
                 logging.info(f"API Response: {resp.status_code}")
                 assert resp.status_code == 200
 
