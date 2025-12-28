@@ -23,18 +23,23 @@ with open(source, 'rb') as f:
     # Use base64 to avoid character issues
     b64_data = base64.b64encode(f.read().replace(b'\r\n', b'\n')).decode('ascii')
 
+# Use unique tmp filename
+tmp_base = os.path.basename(source)
+remote_tmp = f"{dest_path}.{tmp_base}.b64"
+
 # Initialize the file
-subprocess.run(['ssh', '-q', dest_host, f'printf "" > {dest_path}.b64'])
+subprocess.run(['ssh', '-q', dest_host, f'printf "" > {remote_tmp}'])
 
 # Chunk size (1KB)
 chunk_size = 1024
 for i in range(0, len(b64_data), chunk_size):
     chunk = b64_data[i:i+chunk_size]
     # Append chunk
-    subprocess.run(['ssh', '-q', dest_host, f'printf "{chunk}" >> {dest_path}.b64'])
-    time.sleep(0.05) # Rate limit
+    subprocess.run(['ssh', '-q', dest_host, f'printf "{chunk}" >> {remote_tmp}'])
+    time.sleep(0.02) # Rate limit
 
 # Decode on host
-subprocess.run(['ssh', '-q', dest_host, f'base64 -d {dest_path}.b64 > {dest_path}'])
+subprocess.run(['ssh', '-q', dest_host, f'base64 -d {remote_tmp} > {dest_path}'])
+subprocess.run(['ssh', '-q', dest_host, f'rm -f {remote_tmp}'])
 
 print("✅ Successfully pushed file to Host.")

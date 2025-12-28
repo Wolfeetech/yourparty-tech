@@ -17,6 +17,11 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+# Load environment variables early
+base_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(base_dir, '.env'))
+print(f"DEBUG: JWT_SECRET_KEY starts with: {os.getenv('JWT_SECRET_KEY', 'MISSING')[:4]}")
+
 # Import State
 from state import state, AppState
 
@@ -35,9 +40,6 @@ from mood_scheduler import schedule_mood_queue_worker
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import Depends, HTTPException, status
 from auth import Token, User, create_access_token, get_current_active_user, users_db, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
-
-# Load environment variables
-load_dotenv()
 
 # ========== FEATURE FLAGS ==========
 FEATURE_MOOD_VOTES = os.getenv("FEATURE_MOOD_VOTES", "true").lower() == "true"
