@@ -9,7 +9,7 @@ Write-Color "Dieses Skript stellt die Verbindung zum AzuraCast Server und zur Da
 Write-Color "" "White"
 
 # 1. SMB Connection (Music Folder)
-$SmbServer = "192.168.178.210"
+$SmbServer = "192.168.178.120"
 $SmbShare = "music"
 $Drive = "M:"
 
