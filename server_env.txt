@@ -1,0 +1,19 @@
+# YourParty.tech Production Environment
+# Updated: 2025-12-28 22:15
+
+# MongoDB
+MONGO_URI=mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/yourparty_radio?authSource=admin
+
+# AzuraCast
+AZURACAST_URL=https://192.168.178.210
+AZURACAST_API_KEY=609dc63da623190:c9f8c3a22e25932753dd3f
+AZURACAST_STATION_ID=1
+
+# Security
+JWT_SECRET_KEY=98f82f8c5b5a8e0f6e9c4d2a1b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c
+
+# Feature Flags
+FEATURE_MOOD_VOTES=true
+FEATURE_MOOD_SYNC=true
+FEATURE_MOOD_AUTODJ=true
+MOOD_CYCLE_SECONDS=60
