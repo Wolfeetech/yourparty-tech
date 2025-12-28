@@ -1,9 +1,13 @@
 import httpx
 import logging
+import urllib3
 from typing import Dict, Any, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Suppress InsecureRequestWarning
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class AzuraCastClient:
     def __init__(self, base_url: str, api_key: str, station_id: int):
