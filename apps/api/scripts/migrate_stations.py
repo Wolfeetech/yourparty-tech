@@ -7,8 +7,16 @@ from pymongo import MongoClient
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("StationMigration")
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://192.168.178.222:27017/")
-DB_NAME = "yourparty"
+# Load env if possible or use the one found
+from dotenv import load_dotenv
+load_dotenv("/app/.env")
+
+MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    # Fallback to the one found in logs just in case env loading fails
+    MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0b@192.168.178.222:27017/yourparty_radio?authSource=admin"
+
+DB_NAME = "yourparty_radio" # Updated from .env
 
 def migrate():
     try:

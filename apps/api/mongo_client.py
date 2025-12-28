@@ -74,19 +74,22 @@ class MongoDatabaseClient:
             logger.error(f"MongoDB connection failed: {e}")
             raise
 
-    def get_track_rating(self, file_path: str = None, song_id: str = None) -> Optional[Dict[str, Any]]:
+    def get_track_rating(self, file_path: str = None, song_id: str = None, station_id: int = 1) -> Optional[Dict[str, Any]]:
         """
         Get aggregated rating for a track.
         
         Args:
             file_path: Local file path
             song_id: AzuraCast song ID
+            station_id: Station identifier
         
         Returns:
             Dict with rating statistics or None
         """
         try:
             query = {}
+            if station_id:
+                query["station_id"] = station_id
             if song_id:
                 query["song_id"] = song_id
             elif file_path:
@@ -131,7 +134,7 @@ class MongoDatabaseClient:
             return None
 
     def submit_rating(self, song_id: str, rating: int, user_id: str = "anonymous", 
-                     file_path: str = None, **kwargs) -> Dict[str, Any]:
+                     file_path: str = None, station_id: int = 1, **kwargs) -> Dict[str, Any]:
         """
         Submit a new rating for a track.
         
@@ -139,6 +142,7 @@ class MongoDatabaseClient:
             song_id: AzuraCast song ID
             rating: Rating value (1-5)
             user_id: User identifier
+            station_id: Station identifier
             file_path: Optional local file path for tracking
         
         Returns:
@@ -152,6 +156,7 @@ class MongoDatabaseClient:
                 "song_id": song_id,
                 "rating": rating,
                 "user_id": user_id,
+                "station_id": station_id,
                 "timestamp": datetime.utcnow(),
                 "file_path": file_path
             }
@@ -185,7 +190,7 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting rating: {e}")
             return {"success": False, "error": str(e)}
 
-    def submit_vote(self, song_id: str, vote: str, user_id: str = "anonymous") -> Dict[str, int]:
+    def submit_vote(self, song_id: str, vote: str, user_id: str = "anonymous", station_id: int = 1) -> Dict[str, int]:
         """
         Submit a boolean vote (like/dislike) and return updated counts.
         """
@@ -204,7 +209,7 @@ class MongoDatabaseClient:
             
             # Aggregate counts
             pipeline = [
-                {"$match": {"song_id": song_id}},
+                {"$match": {"song_id": song_id, "station_id": station_id}},
                 {"$group": {"_id": "$vote", "count": {"$sum": 1}}}
             ]
             results = list(self.votes_collection.aggregate(pipeline))
@@ -215,7 +220,7 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting vote: {e}")
             return {}
 
-    def submit_mood(self, song_id: str, mood: str = None, genre: str = None, user_id: str = "anonymous", **kwargs) -> Dict[str, Any]:
+    def submit_mood(self, song_id: str, mood: str = None, genre: str = None, user_id: str = "anonymous", station_id: int = 1, **kwargs) -> Dict[str, Any]:
         """
         Submit a new mood or genre tag for a track.
         """
@@ -223,6 +228,7 @@ class MongoDatabaseClient:
             doc = {
                 "song_id": song_id,
                 "user_id": user_id,
+                "station_id": station_id,
                 "timestamp": datetime.utcnow()
             }
             if mood:

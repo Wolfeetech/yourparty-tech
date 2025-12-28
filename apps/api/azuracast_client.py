@@ -50,11 +50,12 @@ class AzuraCastClient:
                 logger.error(f"PUT {url} failed: {e}")
                 return None
 
-    async def sync_media(self) -> Dict[str, Any]:
+    async def sync_media(self, station_id: Optional[int] = None) -> Dict[str, Any]:
         """
         Triggers a media scan/check.
         """
-        url = f"{self.base_url}/api/station/{self.station_id}/status"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/status"
         async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.get(url, headers=self.headers)
@@ -68,15 +69,17 @@ class AzuraCastClient:
                 logger.error(f"AzuraCast sync failed: {e}")
                 return {"success": False, "error": str(e)}
 
-    async def get_playlists(self) -> List[Dict]:
+    async def get_playlists(self, station_id: Optional[int] = None) -> List[Dict]:
         """Fetch all playlists for the station."""
-        url = f"{self.base_url}/api/station/{self.station_id}/playlists"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlists"
         res = await self._get(url)
         return res if isinstance(res, list) else []
 
-    async def create_playlist(self, name: str, weight: int = 3):
+    async def create_playlist(self, name: str, weight: int = 3, station_id: Optional[int] = None):
         """Create a new playlist."""
-        url = f"{self.base_url}/api/station/{self.station_id}/playlists"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlists"
         payload = {
             "name": name,
             "weight": weight,
@@ -89,9 +92,10 @@ class AzuraCastClient:
              logger.info(f"Created playlist: {name}")
         return res
 
-    async def get_station_media(self) -> List[Dict]:
+    async def get_station_media(self, station_id: Optional[int] = None) -> List[Dict]:
         """Get all media files for the station."""
-        url = f"{self.base_url}/api/station/{self.station_id}/files"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/files"
         logger.info(f"Fetching media from {url} (using requests)")
         try:
             # Fallback to sync requests because httpx is acting up on this env
@@ -110,14 +114,16 @@ class AzuraCastClient:
              logger.info(f"Media Response Content (First 100): {str(res)[:100]}")
         return res if isinstance(res, list) else []
 
-    async def get_now_playing(self):
+    async def get_now_playing(self, station_id: Optional[int] = None):
         """Get current playback information including history."""
-        url = f"{self.base_url}/api/nowplaying/{self.station_id}"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/nowplaying/{sid}"
         return await self._get(url)
 
-    async def replace_playlist_content(self, playlist_id: int, media_ids: list) -> bool:
+    async def replace_playlist_content(self, playlist_id: int, media_ids: list, station_id: Optional[int] = None) -> bool:
         """Replace entire content of a playlist with new media IDs."""
-        url = f"{self.base_url}/api/station/{self.station_id}/files/batch"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/files/batch"
         payload = {
             "do": "playlist",
             "playlists": [playlist_id], 
@@ -126,9 +132,10 @@ class AzuraCastClient:
         res = await self._put(url, json=payload)
         return bool(res)
 
-    async def queue_track(self, media_id: int) -> bool:
+    async def queue_track(self, media_id: int, station_id: Optional[int] = None) -> bool:
         """Queue a specific track ID to play next."""
-        url = f"{self.base_url}/api/station/{self.station_id}/request/{media_id}"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/request/{media_id}"
         # Requests don't return JSON body always, just 204 or 200
         async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
             try:
@@ -140,9 +147,10 @@ class AzuraCastClient:
                 logger.error(f"Failed to queue media {media_id}: {e}")
                 return False
 
-    async def skip_current_song(self) -> bool:
+    async def skip_current_song(self, station_id: Optional[int] = None) -> bool:
         """Skip the currently playing song."""
-        url = f"{self.base_url}/api/station/{self.station_id}/backend/skip"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/backend/skip"
         async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.post(url, headers=self.headers)
@@ -153,11 +161,11 @@ class AzuraCastClient:
                 logger.error(f"Failed to skip song: {e}")
                 return False
 
-    async def get_upcoming_queue(self) -> List[Dict]:
+    async def get_upcoming_queue(self, station_id: Optional[int] = None) -> List[Dict]:
         """
         Get the list of tracks currently in the queue (playing_next).
         """
-        data = await self.get_now_playing()
+        data = await self.get_now_playing(station_id)
         if not data:
             return []
         
@@ -167,21 +175,22 @@ class AzuraCastClient:
 
         return playing_next.get('song_history', [])
 
-    async def add_to_playlist(self, media_id: int, playlist_name: str) -> bool:
+    async def add_to_playlist(self, media_id: int, playlist_name: str, station_id: Optional[int] = None) -> bool:
         """Add a media item to a specific playlist (by name)."""
-        playlists = await self.get_playlists()
+        playlists = await self.get_playlists(station_id)
         
         target_playlist = next((p for p in playlists if p['name'].lower() == playlist_name.lower()), None)
         
         if not target_playlist:
             logger.info(f"Playlist '{playlist_name}' not found. Creating it...")
-            target_playlist = await self.create_playlist(playlist_name)
+            target_playlist = await self.create_playlist(playlist_name, station_id=station_id)
             if not target_playlist:
                 return False
         
         playlist_id = target_playlist['id']
         
-        url = f"{self.base_url}/api/station/{self.station_id}/files/batch"
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/files/batch"
         payload = {
             "do": "playlist",
             "playlists": [playlist_id],
