@@ -128,7 +128,8 @@ function yourparty_render_admin_page()
     // Handle Actions
     if (isset($_POST['sync_library'])) {
          // Trigger Python Sync
-         wp_remote_post(YOURPARTY_API_BASE . '/library/sync?directory=/var/radio/music/radio_library');
+         $library_root = getenv('LIBRARY_ROOT_LINUX') ?: '/var/radio/music/yourparty_Libary';
+         wp_remote_post(YOURPARTY_API_BASE . '/library/sync?directory=' . urlencode($library_root));
          echo '<div class="notice notice-success"><p>Library Sync Triggered!</p></div>';
     }
 

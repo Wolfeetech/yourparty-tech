@@ -9,8 +9,8 @@ logger = logging.getLogger("SystemAudit")
 
 # Config
 MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin"
-LIBRARY_ROOT = r"Z:\radio_library"
-INBOX_ROOT = r"Z:\radio_library\Inbox"
+LIBRARY_ROOT = os.getenv("LIBRARY_ROOT_WIN", r"Z:\yourparty_Libary")
+INBOX_ROOT = os.path.join(LIBRARY_ROOT, "Inbox")
 
 def audit_mongo():
     try:

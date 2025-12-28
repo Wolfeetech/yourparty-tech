@@ -25,9 +25,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("MusicBrainzRenamer")
 
 # Configuration
-INBOX_DIR = r"Z:\radio_library\Inbox"
-LIBRARY_DIR = r"Z:\radio_library"  # Files go into Genre/Artist/Album subfolders
-ARCHIVE_DIR = r"Z:\radio_library\Archive"  # Failed/unknown files
+LIBRARY_DIR = os.getenv("LIBRARY_ROOT_WIN", r"Z:\yourparty_Libary")
+INBOX_DIR = os.path.join(LIBRARY_DIR, "Inbox")
+ARCHIVE_DIR = os.path.join(LIBRARY_DIR, "Archive")  # Failed/unknown files
 
 def ensure_dirs():
     """Create required directories if missing."""

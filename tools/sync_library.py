@@ -19,7 +19,7 @@ AZURACAST_URL = os.getenv("AZURACAST_URL")
 AZURACAST_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
 
-LOCAL_DRIVE = "M:\\"
+LOCAL_DRIVE = os.getenv("LIBRARY_ROOT_WIN", r"M:\yourparty_Libary")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("SyncManager")
