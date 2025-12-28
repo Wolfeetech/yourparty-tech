@@ -297,11 +297,12 @@ add_action('init', function () {
     add_rewrite_rule('^radio-stream/?$', 'index.php?yourparty_stream=1', 'top');
     add_rewrite_rule('^modules/(.+)$', 'index.php?yourparty_module=$matches[1]', 'top');
     add_rewrite_rule('^tech/?$', 'index.php?yourparty_tech=1', 'top');
+    add_rewrite_rule('^sw\.js$', 'wp-content/themes/yourparty-tech/sw.js', 'top');
     
     // Auto-flush if needed (Self-cleaning)
-    if (!get_option('yourparty_rules_flushed_v7')) {
+    if (!get_option('yourparty_rules_flushed_v8')) {
         flush_rewrite_rules();
-        update_option('yourparty_rules_flushed_v7', true);
+        update_option('yourparty_rules_flushed_v8', true);
     }
 });
 
