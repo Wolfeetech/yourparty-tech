@@ -17,14 +17,15 @@ logger = logging.getLogger(__name__)
 
 FEATURE_MOOD_VOTES = os.getenv("FEATURE_MOOD_VOTES", "true").lower() == "true"
 
-def get_metadata_context(song_id: str) -> Optional[Dict[str, Any]]:
-    if state.now_playing and str(state.now_playing.get('id')) == str(song_id):
+def get_metadata_context(song_id: str, station_id: int = 1) -> Optional[Dict[str, Any]]:
+    np = state.now_playing.get(station_id, {})
+    if np and str(np.get('id')) == str(song_id):
         return {
-            "title": state.now_playing.get("title"),
-            "artist": state.now_playing.get("artist"),
-            "album": state.now_playing.get("album"),
-            "cover_art": state.now_playing.get("art"),
-            "genre": state.now_playing.get("genre")
+            "title": np.get("title"),
+            "artist": np.get("artist"),
+            "album": np.get("album"),
+            "cover_art": np.get("art"),
+            "genre": np.get("genre")
         }
     return None
 
@@ -42,7 +43,8 @@ async def rate_track(request: Request, rating_request: RatingRequest):
             rating=rating_request.rating,
             user_id=rating_request.user_id,
             file_path=rating_request.file_path,
-            metadata=get_metadata_context(rating_request.song_id)
+            station_id=rating_request.station_id,
+            metadata=get_metadata_context(rating_request.song_id, rating_request.station_id)
         )
         if rating_request.file_path and os.path.exists(rating_request.file_path):
             new_stats = result.get("ratings", {})
@@ -93,7 +95,7 @@ async def get_rated_tracks(min_rating: float = 0.0):
 async def tag_mood(request: MoodRequest):
     if state.mongo_client:
         return state.mongo_client.submit_mood(
-            song_id=request.song_id, mood=request.mood, genre=request.genre
+            song_id=request.song_id, mood=request.mood, genre=request.genre, station_id=request.station_id
         )
     return {"success": True, "warning": "Mock Success - DB Missing"}
 
@@ -165,7 +167,8 @@ async def get_vote_candidates():
     
     # 1. Check for Active Session
     now = datetime.utcnow()
-    current_session = state.voting_session
+    station_id = 1 # TODO: Allow passing station_id in query if needed
+    current_session = state.voting_session.get(station_id, {})
     candidates = []
     
     is_valid_session = False
@@ -235,8 +238,8 @@ async def get_vote_candidates():
         expires_at = expiration_time.isoformat()
         
         # Update State
-        state.voting_session["candidates"] = final_candidates
-        state.voting_session["expires_at"] = expires_at
+        state.voting_session[station_id]["candidates"] = final_candidates
+        state.voting_session[station_id]["expires_at"] = expires_at
         
     # Get Real Vote Counts (Always Fresh)
     vote_counts = {c['id']: 0 for c in final_candidates}
@@ -275,27 +278,31 @@ async def vote_next_simple(request: VoteNextRequest):
         
     # Infer song_id from now_playing or use generic
     song_id = "global_vote"
-    if state.now_playing and state.now_playing.get("id"):
-        song_id = str(state.now_playing.get("id"))
+    sid = request.station_id
+    np = state.now_playing.get(sid, {})
+    if np and np.get("id"):
+        song_id = str(np.get("id"))
         
     state.mongo_client.submit_next_mood_vote(
         song_id=song_id, 
         mood=request.vote, 
-        user_id="anonymous"
+        user_id="anonymous",
+        station_id=sid
     )
-    return {"success": True, "mood_next": request.vote, "inferred_song": song_id}
+    return {"success": True, "mood_next": request.vote, "inferred_song": song_id, "station_id": sid}
 
 @router.post("/control/vote-next-winner")
-async def calculate_winner():
+async def calculate_winner(station_id: int = 1):
     """
     Calculate the winner of the current voting session, queue it, and reset.
     """
     import random
     
     # 1. Get Current Candidates
-    candidates = state.voting_session.get("candidates", [])
+    current_session = state.voting_session.get(station_id, {})
+    candidates = current_session.get("candidates", [])
     if not candidates:
-        return {"success": False, "message": "No active voting session"}
+        return {"success": False, "message": f"No active voting session for station {station_id}"}
         
     # 2. Count Votes
     winner = None
@@ -329,10 +336,10 @@ async def calculate_winner():
         # Try numeric ID first if looks like int, else string ID
         mid = winner.get('media_id') or winner.get('id')
         if mid:
-            queued = await state.azura_client.queue_track(mid)
+            queued = await state.azura_client.queue_track(mid, station_id=station_id)
             
     # 4. Reset Session
-    state.voting_session = {"candidates": [], "expires_at": None}
+    state.voting_session[station_id] = {"candidates": [], "expires_at": None}
     
     return {
         "success": True, 
@@ -342,17 +349,21 @@ async def calculate_winner():
     }
 
 @router.get("/control/steer")
-async def get_steering():
-    return state.steering_status
+async def get_steering(station_id: int = 1):
+    return state.steering_status.get(station_id, {"mode": "off", "target": None})
 
 @router.post("/control/steer")
 @limiter.limit("20/minute")
 async def set_steering(request: Request, steering_request: SteeringRequest, current_user: User = Depends(get_current_active_user)):
-    state.steering_status["mode"] = steering_request.mode
-    state.steering_status["target"] = steering_request.target
+    sid = steering_request.station_id
+    if sid not in state.steering_status:
+        state.steering_status[sid] = {"mode": "auto", "target": None, "updated_at": None}
+        
+    state.steering_status[sid]["mode"] = steering_request.mode
+    state.steering_status[sid]["target"] = steering_request.target
     from datetime import datetime
-    state.steering_status["updated_at"] = datetime.now().isoformat()
-    return state.steering_status
+    state.steering_status[sid]["updated_at"] = datetime.now().isoformat()
+    return state.steering_status[sid]
 
 @router.post("/shoutout")
 @limiter.limit("5/minute")

@@ -9,22 +9,22 @@ async def root():
     return {"message": "Music Library Automation API is running"}
 
 @router.get("/status")
-async def public_status():
+async def public_status(station_id: int = 1):
     """Public status endpoint compatible with frontend polling."""
     return {
         "now_playing": {
-            "song": state.now_playing
+            "song": state.now_playing.get(station_id, {})
         },
         "listeners": {"total": 0}, 
         "playing_next": {"song": {"title": "Coming Soon", "artist": "YourParty"}},
-        "steering": state.steering_status # Add steering info for dashboard/frontend
+        "steering": state.steering_status.get(station_id, {})
     }
 
 @router.get("/debug/status")
-async def debug_status():
+async def debug_status(station_id: int = 1):
     """Debug endpoint to check internal state."""
     return {
-        "now_playing": state.now_playing,
+        "now_playing": state.now_playing.get(station_id, {}),
         "mongo_connected": state.mongo_client is not None,
         "loop_running": True
     }

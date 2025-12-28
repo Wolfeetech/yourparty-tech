@@ -37,6 +37,7 @@ class RatingRequest(BaseModel):
     file_path: Optional[str] = None
     title: Optional[str] = None
     artist: Optional[str] = None
+    station_id: int = 1
 
 class MoodRequest(BaseModel):
     song_id: str

@@ -15,17 +15,25 @@ class AppState:
         self.azura_client = None # Global AzuraCast Client
         self.library_manager = None # Auto-Curation Manager
         
-        self.now_playing = {
-            "title": "Station Online",
-            "artist": "YourParty Radio",
-            "album": "",
-            "art": "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png",
-            "id": "init",
-            "duration": 0
-        }
-        self.steering_status = {"mode": "auto", "target": None, "updated_at": None}
-        self.voting_session = {"candidates": [], "expires_at": None}
-        self.stream_url = "https://radio.yourparty.tech/radio.mp3"
+        # Per-Station Data
+        self.now_playing: Dict[int, Dict[str, Any]] = {}
+        self.steering_status: Dict[int, Dict[str, Any]] = {}
+        self.voting_session: Dict[int, Dict[str, Any]] = {}
+        self.stream_urls: Dict[int, str] = {}
+        
+        # Initialize defaults for known stations
+        for sid in [1, 2]:
+            self.now_playing[sid] = {
+                "title": "Station Online",
+                "artist": "YourParty Radio",
+                "album": "",
+                "art": "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png",
+                "id": "init",
+                "duration": 0
+            }
+            self.steering_status[sid] = {"mode": "auto", "target": None, "updated_at": None}
+            self.voting_session[sid] = {"candidates": [], "expires_at": None}
+            self.stream_urls[sid] = f"https://radio.yourparty.tech/radio{sid if sid > 1 else ''}.mp3"
 
 state = AppState()
 
