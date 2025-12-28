@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, List
 from apps.api.mongo_client import MongoDatabaseClient
 from apps.api.azuracast_client import AzuraCastClient
-from apps.api.secrets import MONGO_URI, AZURACAST_API_URL, AZURACAST_API_KEY, AZURACAST_STATION_ID
+from apps.api.config_secrets import MONGO_URI, AZURACAST_API_URL, AZURACAST_API_KEY, AZURACAST_STATION_ID
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)

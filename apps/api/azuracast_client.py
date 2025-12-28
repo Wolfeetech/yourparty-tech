@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class AzuraCastClient:
     def __init__(self, base_url: str, api_key: str, station_id: int):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip('/').rstrip('/api')
         self.api_key = api_key
         self.station_id = station_id
         self.headers = {
@@ -59,7 +59,7 @@ class AzuraCastClient:
                 "error": str(e)
             }
 
-    async def get_playlists(self):
+    def get_playlists(self):
         """Fetch all playlists for the station."""
         url = f"{self.base_url}/api/station/{self.station_id}/playlists"
         try:
@@ -137,9 +137,8 @@ class AzuraCastClient:
         url = f"{self.base_url}/api/station/{self.station_id}/files/batch"
         payload = {
             "do": "playlist",
-            # "playlists": [playlist_id], # Some versions
-            "playlist_id": playlist_id, # Target playlist
-            "files": media_ids # Array of file unique IDs
+            "playlists": [playlist_id], 
+            "files": [str(mid) for mid in media_ids] # Ensure strings
         }
         
         # Note: We might need to handle 'remove from others' or clear connection logic
@@ -199,11 +198,7 @@ class AzuraCastClient:
         Add a media item to a specific playlist (by name).
         This requires finding the playlist ID first.
         """
-        playlists = asyncio.run(self.get_playlists()) if asyncio.iscoroutinefunction(self.get_playlists) else self.get_playlists() 
-        # Note: get_playlists is async in my code? Line 62 says async def. 
-        # But here I am in a sync method. I should fix get_playlists to be sync or handle it.
-        # Actually line 62 `async def get_playlists`... I should check if I can make it sync or use a helper.
-        # For simplicity, let's make a sync version or just use requests.
+        playlists = self.get_playlists()
         
         target_playlist = next((p for p in playlists if p['name'].lower() == playlist_name.lower()), None)
         

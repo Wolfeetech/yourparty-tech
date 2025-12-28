@@ -21,6 +21,6 @@ SMB_PASSWORD = "YpWolf2024!"
 MONGO_URI = "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin"
 
 # 4. AzuraCast (Radio)
-AZURACAST_API_URL = "http://192.168.178.210/api" # Internal Network Speed
-AZURACAST_API_KEY = "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c"
+AZURACAST_API_URL = "https://192.168.178.210/api" # Internal Network Speed
+AZURACAST_API_KEY = "8aa6ccfc64d9d32e:dcf81da2e093ef61a332025c2e7c09fb"
 AZURACAST_STATION_ID = 1

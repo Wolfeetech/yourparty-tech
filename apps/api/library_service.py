@@ -30,6 +30,65 @@ def get_library_service(mongo_client=None):
         def check_promotion(self, song_id):
             # Placeholder - can be expanded later
             pass
+            
+        async def get_all_tracks(self):
+            """Fetch all tracks from MongoDB."""
+            try:
+                # Limit to 2000 to prevent overload
+                cursor = self.mongo.tracks_collection.find().limit(2000)
+                tracks = []
+                for doc in cursor:
+                    if '_id' in doc:
+                        doc['_id'] = str(doc['_id'])
+                    tracks.append(doc)
+                return tracks
+            except Exception as e:
+                logger.error(f"Error fetching all tracks: {e}")
+                return []
+                
+        async def sync_azuracast_ids(self, azura_client):
+            """Sync AzuraCast Media IDs to MongoDB."""
+            import re
+            try:
+                # Run blocking sync in thread if needed, or just run it (it's sync requests)
+                # For safety in async context:
+                media_list = azura_client.get_station_media()
+                count = 0
+                
+                for media in media_list:
+                    az_song_id = media.get('song_id')
+                    az_media_id = media.get('id')
+                    az_path = media.get('path')
+                    
+                    if not az_media_id:
+                        continue
+                        
+                    # 1. Match by Song ID (Hash)
+                    if az_song_id:
+                        res = self.mongo.tracks_collection.update_one(
+                            {"song_id": az_song_id},
+                            {"$set": {"azuracast_id": az_media_id, "azuracast_path": az_path}}
+                        )
+                        if res.modified_count > 0:
+                            count += 1
+                            continue
+                            
+                    # 2. Match by Filename (Fallback)
+                    if az_path:
+                        # Normalize path separators (Azura uses /, Windows typically \)
+                        # We try to match the end of the file_path in Mongo
+                        search_path = az_path.replace('/', '[\\\\/]') 
+                        res = self.mongo.tracks_collection.update_one(
+                            {"file_path": {"$regex": search_path + "$", "$options": "i"}},
+                            {"$set": {"azuracast_id": az_media_id}}
+                        )
+                        if res.modified_count > 0:
+                            count += 1
+                            
+                return {"success": True, "synced_count": count}
+            except Exception as e:
+                logger.error(f"AzuraCast Sync Logic Failed: {e}")
+                return {"success": False, "error": str(e)}
     return LibraryServiceWrapper(mongo_client)
 
 class LibraryService:

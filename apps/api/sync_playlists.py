@@ -5,7 +5,7 @@ import logging
 import sys
 from typing import Dict, List, Optional
 
-from apps.api.secrets import (
+from apps.api.config_secrets import (
     MONGO_URI, 
     AZURACAST_API_URL, 
     AZURACAST_API_KEY, 
@@ -60,16 +60,6 @@ def create_azura_playlist(name: str) -> Optional[int]:
              logger.error(f"Response: {e.response.text}")
         return None
 
-def get_azura_media_id(mongo_song_id: str, db_client: MongoDatabaseClient) -> Optional[int]:
-    """Retrieve AzuraCast Media ID from Mongo using Song ID."""
-    # Assuming sync_azuracast_ids.py has run, the 'azuracast_id' should be in the 'songs' collection 
-    # or retrievable via valid 'path'.
-    # Simplified: Look up song in DB
-    song = db_client.db.songs.find_one({"_id": mongo_song_id})
-    if song and "azuracast_id" in song:
-        return song["azuracast_id"]
-    return None
-
 def sync_playlists():
     try:
         mongo = MongoDatabaseClient(MONGO_URI)
@@ -91,27 +81,37 @@ def sync_playlists():
         if not playlist_id:
             continue
 
-        # Get Tracks with this mood (simple majority or high confidence)
-        # Using a specialized query or aggregation from Mongo
-        # For prototype: Get all songs where 'top_mood' == mood
-        tracks = list(mongo.db.songs.find({"top_mood": mood}))
-        logger.info(f"Found {len(tracks)} tracks for mood {mood}")
-
-        # In a real sync, we would diff the playlist content.
-        # For now, we are just ENSURING the playlist exists and logging what would be added.
-        # To strictly Manage media, we'd need to use the /playlist/{id}/media endpoint
+        # Get Tracks with this mood
+        # We use the moods collection to find song_ids, then get tracks.
+        # This matches the schema in mongo_client.py
+        mood_docs = list(mongo.db.moods.find({"mood": mood}))
+        song_ids = [d['song_id'] for d in mood_docs if 'song_id' in d]
         
+        # Get AzuraCast IDs for these song_ids from 'tracks' collection
+        tracks = list(mongo.db.tracks.find({"song_id": {"$in": song_ids}}))
+        logger.info(f"Found {len(tracks)} synced tracks for mood {mood}")
+
         valid_media_ids = []
         for track in tracks:
+            # Check for azuracast_id in track document
+            # Note: This field needs to be populated by sync_azuracast_ids.py or similar
             az_id = track.get("azuracast_id")
             if az_id:
                 valid_media_ids.append(az_id)
         
         if valid_media_ids:
-            logger.info(f"-> Should ensure media IDs {valid_media_ids} are in playlist {playlist_id}")
-            # TODO: Implement accurate PUT/POST to AzuraCast playlist media endpoint
-            # This is complex because AzuraCast API for playlist media management requires specific formatting
-            # For this MVP step, ensuring the Playlist Exists is the success criteria.
+            logger.info(f"-> Syncing {len(valid_media_ids)} tracks to playlist {playlist_id}...")
+            
+            # Initialize Client
+            from apps.api.azuracast_client import AzuraCastClient
+            client = AzuraCastClient(AZURACAST_API_URL, AZURACAST_API_KEY, AZURACAST_STATION_ID)
+            
+            # Use batch update
+            success = client.replace_playlist_content(playlist_id, valid_media_ids)
+            if success:
+                logger.info(f"✅ Successfully updated playlist {playlist_name}")
+            else:
+                logger.error(f"❌ Failed to update playlist {playlist_name}")
 
 if __name__ == "__main__":
     sync_playlists()

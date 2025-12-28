@@ -185,14 +185,34 @@ async def select_live_vote_track(mongo_client, azura_client) -> Optional[Dict[st
         Track dict ready for queueing
     """
     try:
-        # Get the dominant next mood from recent votes
+        # 1. Check for specific track votes (User explicitly voted for a track)
+        top_track_id = mongo_client.get_top_voted_track(time_window_minutes=5)
+        
+        if top_track_id:
+             logger.info(f"[LIVE_VOTE] Winner by Track Vote: {top_track_id}")
+             # Find full track doc
+             # Try simple lookup first, or use a helper
+             track = mongo_client.tracks_collection.find_one({"song_id": top_track_id})
+             if track:
+                 return {
+                    "song_id": top_track_id, 
+                    "file_path": track.get("file_path"),
+                    "metadata": track.get("metadata", {})
+                 }
+             else:
+                 # It might be a random library track with no mongo doc? 
+                 # We need to find it via get_song_metadata or similar.
+                 # Fallback to standard selection if track not found
+                 logger.warning(f"Winning track {top_track_id} not found in DB")
+
+        # 2. Check for dominant mood (User voted for a mood)
         dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=5)  # Shorter window for live
         
         if not dominant_mood:
             logger.info("[LIVE_VOTE] No recent votes - using popular fallback")
             return await select_refinement_track(mongo_client)
         
-        logger.info(f"[LIVE_VOTE] Community voted for: {dominant_mood}")
+        logger.info(f"[LIVE_VOTE] Community voted for Mood: {dominant_mood}")
         return await select_next_track_by_mood(mongo_client, dominant_mood)
         
     except Exception as e:

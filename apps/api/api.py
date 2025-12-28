@@ -1,13 +1,40 @@
 import os
+import sys
 import logging
 import asyncio
-from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, WebSocket, BackgroundTasks, Request, Depends
+import httpx
+from datetime import timedelta
+from fastapi import FastAPI, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from limiter import limiter
+
+# Fix Path for Imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import httpx # NEW: For Public API Polling
 from dotenv import load_dotenv
+
+# Import State
+from state import state, AppState
+
+# Import Routers
+from routers import system, library, interactive, realtime
+
+# Import Helpers
+from azuracast_client import AzuraCastClient
+from mongo_client import MongoDatabaseClient
+from track_matcher import TrackMatcher
+from library_service import get_library_service
+from playlist_service import PlaylistService
+from mood_scheduler import schedule_mood_queue_worker
+
+# Auth Imports
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Depends, HTTPException, status
+from auth import Token, User, create_access_token, get_current_active_user, users_db, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Load environment variables
 load_dotenv()
@@ -17,39 +44,24 @@ FEATURE_MOOD_VOTES = os.getenv("FEATURE_MOOD_VOTES", "true").lower() == "true"
 FEATURE_MOOD_SYNC = os.getenv("FEATURE_MOOD_SYNC", "false").lower() == "true"
 FEATURE_MOOD_AUTODJ = os.getenv("FEATURE_MOOD_AUTODJ", "false").lower() == "true"
 MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
-MOOD_VOTE_COOLDOWN_MINUTES = int(os.getenv("MOOD_VOTE_COOLDOWN_MINUTES", "5"))
 AZURACAST_VERIFY_SSL = os.getenv("AZURACAST_VERIFY_SSL", "false").lower() == "true"
-
-from music_scanner import MusicScanner
-from tag_improver import TagImprover
-from genre_organizer import GenreOrganizer
-from azuracast_client import AzuraCastClient
-from mongo_client import MongoClient
-from library_manager import LibraryManager
-from track_matcher import TrackMatcher
-from library_service import get_library_service
-from tag_writer import write_metadata_to_file # NEW: Direct ID3 Writing
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Music Library Automation API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Catch-all handler to avoid leaking stack traces and return a stable JSON error body.
-    """
     logger.exception("Unhandled exception", exc_info=exc)
     return JSONResponse(
         status_code=500,
         content={"error": "internal_server_error", "path": str(request.url.path)},
     )
-
-@app.get("/debug/ping")
-async def debug_ping():
-    return {"status": "pong", "mongo": state.mongo_client is not None}
 
 # CORS
 app.add_middleware(
@@ -67,531 +79,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# INCLUDE ROUTERS
+app.include_router(system.router)
+app.include_router(library.router)
+app.include_router(interactive.router)
+app.include_router(realtime.router)
 
+# AUTH ENDPOINTS
 
-from datetime import datetime
-
-# Global State (In-memory for simplicity)
-class AppState:
-    def __init__(self):
-        self.library: List[Dict[str, Any]] = []
-        self.scanner = MusicScanner()
-        self.tag_improver = TagImprover()
-        self.organizer = None 
-        self.scan_path = ""
-        self.mongo_client = None
-        self.track_matcher = None
-        self.library_service = None
-        self.azura_client = None # Global AzuraCast Client
-        self.library_manager = None # Auto-Curation Manager
-        
-        self.now_playing = {
-            "title": "Station Online",
-            "artist": "YourParty Radio",
-            "album": "",
-            "art": "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png",
-            "id": "init",
-            "duration": 0
-        }
-        self.steering_status = {"mode": "auto", "target": None, "updated_at": None}
-        self.stream_url = "https://radio.yourparty.tech/radio.mp3"
-
-state = AppState()
-
-def get_state():
-    return state
-
-# HELPERS
-def get_metadata_context(song_id: str) -> Optional[Dict[str, Any]]:
-    """Get metadata for the song if it is currently playing."""
-    if state.now_playing and str(state.now_playing.get('id')) == str(song_id):
-        return {
-            "title": state.now_playing.get("title"),
-            "artist": state.now_playing.get("artist"),
-            "album": state.now_playing.get("album"),
-            "cover_art": state.now_playing.get("art"),
-            "genre": state.now_playing.get("genre")
-        }
-    return None
-
-# Models
-class ScanRequest(BaseModel):
-    path: str
-
-class OrganizeRequest(BaseModel):
-    dry_run: bool = True
-    output_path: str = None # Optional SMB/Network path
-
-class TagImproveRequest(BaseModel):
-    file_path: str
-
-class AzuraCastSyncRequest(BaseModel):
-    base_url: str
-    api_key: str
-    station_id: int
-
-class MongoConfigRequest(BaseModel):
-    connection_string: str = "mongodb://localhost:27017/"
-    database_name: str = "radio_ratings"
-
-class RatingRequest(BaseModel):
-    song_id: str
-    rating: int  # 1-5
-    user_id: str = "anonymous"
-    file_path: str = None
-
-# Endpoints
-
-@app.get("/")
-async def root():
-    return {"message": "Music Library Automation API is running"}
-
-
-async def run_scan_background(paths: List[str]):
-    """Background task to run the scan without blocking the main thread."""
-    logger.info("Starting background scan...")
-    all_files = []
-    valid_paths = []
-    
-    for path in paths:
-        if not os.path.exists(path):
-            logger.warning(f"Path does not exist: '{path}'")
-            continue
-        valid_paths.append(path)
-        try:
-            # Run the expensive scan in a worker thread so the event loop stays responsive.
-            files = await asyncio.to_thread(state.scanner.scan_directory, path)
-            all_files.extend(files)
-        except Exception as exc:
-            logger.exception(f"Scan failed for path '{path}'", exc_info=exc)
-
-    if valid_paths:
-        state.scan_path = ";".join(valid_paths)
-        state.organizer = GenreOrganizer(valid_paths[0])
-        state.library = all_files
-        logger.info(f"Background scan completed. Found {len(all_files)} files.")
-        
-        # Auto-Sync to MongoDB if connected
-        if state.mongo_client:
-            logger.info("Auto-syncing scan results to MongoDB...")
-            synced = 0
-            for file_entry in all_files:
-                state.mongo_client.sync_track_metadata(file_entry['path'], file_entry['metadata'])
-                synced += 1
-            logger.info(f"Synced {synced} tracks to MongoDB.")
-
-
-@app.post("/scan")
-async def scan_library(request: ScanRequest, background_tasks: BackgroundTasks):
-    logger.info(f"Received scan request for path: '{request.path}'")
-    
-    # Support multiple paths separated by semicolon
-    paths = [p.strip() for p in request.path.split(';') if p.strip()]
-    processed_paths = []
-
-    for path in paths:
-        # Fix common user typo: "C;/" -> "C:/"
-        if len(path) >= 3 and path[1] == ';' and path[2] in ('/', '\\'):
-             path = path[0] + ':' + path[2:]
-        processed_paths.append(path)
-    
-    # Trigger background task
-    background_tasks.add_task(run_scan_background, processed_paths)
-    
-    return {"message": "Scan started in background", "paths": processed_paths}
-
-@app.get("/library")
-async def get_library():
-    return state.library
-
-@app.post("/improve-tags")
-async def improve_tags(request: TagImproveRequest):
-    # Find file in library
-    file_entry = next((f for f in state.library if f['path'] == request.file_path), None)
-    if not file_entry:
-        raise HTTPException(status_code=404, detail="File not found in library")
-
-    result = state.tag_improver.improve_tags(request.file_path)
-    
-    if result['success']:
-        # Update in-memory library
-        # Note: This doesn't write to file yet, we need a separate 'apply' step or do it here
-        # For this prototype, we just return the result
-        pass
-        
-    return result
-
-@app.post("/organize")
-async def organize_library(request: OrganizeRequest):
-    if not state.organizer:
-        raise HTTPException(status_code=400, detail="Please scan a library first")
-    
-    results = []
-    for file_entry in state.library:
-        # Use current metadata from library state
-        res = state.organizer.organize_file(
-            file_entry['path'], 
-            file_entry['metadata'], 
-            dry_run=request.dry_run,
-            output_path=request.output_path
+@app.post("/token", response_model=Token)
+@limiter.limit("5/minute")
+async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    user_dict = users_db.get(form_data.username)
+    if not user_dict:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        results.append(res)
-        
-        # Update path in library if moved
-        if res['success'] and not request.dry_run:
-            old_path = file_entry['path']
-            new_path = res['destination']
-            file_entry['path'] = new_path
-            
-            # ⭐ PRESERVE RATINGS when file is moved
-            if state.track_matcher and old_path != new_path:
-                preserved = state.track_matcher.preserve_ratings_on_move(
-                    old_path,
-                    new_path,
-                    file_entry['metadata']
-                )
-                if preserved:
-                    logger.info(f"✅ Ratings preserved for: {file_entry['metadata'].get('title')}")
-            
-    return {"results": results}
-
-@app.post("/azuracast/sync")
-async def azuracast_sync(request: AzuraCastSyncRequest):
-    client = AzuraCastClient(request.base_url, request.api_key, request.station_id)
-    return client.sync_media()
-
-# MongoDB Endpoints
-
-@app.post("/mongo/connect")
-async def connect_mongo(request: MongoConfigRequest):
-    """Initialize MongoDB connection and Library Service."""
-    try:
-        state.mongo_client = MongoDatabaseClient(
-            request.connection_string,
-            request.database_name
+    user = User(**user_dict)
+    if not verify_password(form_data.password, user_dict["hashed_password"]):
+         raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        # Initialize track matcher for rating preservation
-        state.track_matcher = TrackMatcher(state.mongo_client)
-        
-        # ⭐ Initialize Library Service (Single Source of Truth)
-        state.library_service = get_library_service(state.mongo_client)
-        
-        logger.info("MongoDB, TrackMatcher and LibraryService initialized")
-        return {"success": True, "message": "MongoDB connected, Library Service ready"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/mongo/rating/submit")
-async def submit_rating(request: RatingRequest):
-    """Submit a rating for a track."""
-    if not state.mongo_client:
-        raise HTTPException(status_code=400, detail="MongoDB not connected. Call /mongo/connect first.")
     
-    result = state.mongo_client.submit_rating(
-        request.song_id,
-        request.rating,
-        request.user_id,
-        request.file_path
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
-    
-    # ⭐ NEW: Immediate ID3 Write-Back
-    # If file path is known, write the average rating to the file tags
-    if request.file_path and os.path.exists(request.file_path):
-        # We need the NEW average to write it perfectly
-        new_stats = result.get("ratings", {})
-        avg_rating = new_stats.get("average")
-        if avg_rating:
-            logger.info(f"Writing rating {avg_rating} to file tags: {request.file_path}")
-            write_metadata_to_file(request.file_path, rating=avg_rating)
-            
-    return result
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/mongo/rating/{song_id}")
-async def get_rating(song_id: str):
-    """Get aggregated rating for a track."""
-    if not state.mongo_client:
-        raise HTTPException(status_code=400, detail="MongoDB not connected")
-    
-    rating = state.mongo_client.get_track_rating(song_id=song_id)
-    if not rating:
-        return {"average": 0, "total": 0, "distribution": {}}
-    return rating
-
-@app.get("/mongo/tracks/rated")
-async def get_rated_tracks(min_rating: float = 0.0):
-    """Get all tracks with ratings."""
-    if not state.mongo_client:
-        raise HTTPException(status_code=400, detail="MongoDB not connected")
-    
-    tracks = state.mongo_client.get_all_rated_tracks(min_rating)
-    return {"tracks": tracks, "count": len(tracks)}
-
-@app.post("/mongo/sync/metadata")
-async def sync_metadata_to_mongo():
-    """Sync current library metadata to MongoDB."""
-    if not state.mongo_client:
-        raise HTTPException(status_code=400, detail="MongoDB not connected")
-    
-    synced = 0
-    for file_entry in state.library:
-        state.mongo_client.sync_track_metadata(
-            file_entry['path'],
-            file_entry['metadata']
-        )
-        synced += 1
-    
-    
-    state.mongo_client.log_sync_operation("metadata_sync", {
-        "tracks_synced": synced
-    })
-    
-    return {"success": True, "synced": synced}
-
-# ⭐ NEW: Library Service Endpoints (Best Practice)
-
-@app.get("/library/all")
-async def get_all_library_tracks():
-    """
-    Get ALL tracks from database immediately (Single Source of Truth).
-    This is what the UI should call on startup!
-    
-    Returns:
-        All tracks with metadata and ratings
-    """
-    if not state.library_service:
-        raise HTTPException(status_code=400, detail="Library Service not initialized. Connect to MongoDB first.")
-    
-    tracks = await state.library_service.get_all_tracks()
-    return {"tracks": tracks, "count": len(tracks)}
-
-@app.post("/library/sync")
-async def sync_library_directory(directory: str, background: bool = False):
-    """
-    Sync a directory with the library database.
-    
-    This will:
-    - Scan directory
-    - Detect duplicates
-    - Merge metadata
-    - Add new tracks
-    
-    Args:
-        directory: Directory to scan
-        background: Run in background
-        
-    Returns:
-        Sync statistics
-    """
-    if not state.library_service:
-        raise HTTPException(status_code=400, detail="Library Service not initialized")
-    
-    stats = await state.library_service.sync_directory(directory, background)
-    return stats
-
-@app.post("/library/cleanup")
-async def cleanup_missing_tracks():
-    """
-    Remove tracks from database where files no longer exist.
-    
-    Returns:
-        Number of tracks removed
-    """
-    if not state.library_service:
-        raise HTTPException(status_code=400, detail="Library Service not initialized")
-    
-    removed = await state.library_service.cleanup_missing_files()
-    return {"removed": removed}
-
-# --- REALTIME WEBSOCKET ---
-from fastapi import WebSocket, WebSocketDisconnect
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: Dict[str, Any]):
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception as e:
-                logger.error(f"Error broadcasting: {e}")
-                # clean up happens on disconnect
-
-manager = ConnectionManager()
-
-@app.websocket("/ws/{station_id}")
-async def websocket_endpoint(websocket: WebSocket, station_id: str):
-    await manager.connect(websocket)
-    logger.info("New WebSocket connection established")
-    try:
-        # 1. Send immediate "Now Playing" (Mock or Real)
-        # Check if we have library tracks
-        current_track = {
-            "title": "Deep Space Transmission",
-            "artist": "YourParty Radio",
-            "art": "https://placehold.co/600x600/10b981/ffffff?text=ON+AIR",
-            "rating": {"average": 5.0}
-        }
-        
-        if state.library:
-            import random
-            random_track = random.choice(state.library)
-            current_track = {
-                "title": random_track['metadata'].get('title', 'Unknown'),
-                "artist": random_track['metadata'].get('artist', 'Unknown'),
-                "art": "https://placehold.co/600x600/10b981/ffffff?text=Music", # Todo: Real Art URL
-                "rating": {"average": 0.0} # Todo: Fetch real rating
-            }
-            
-        await websocket.send_json({
-            "type": "song",
-            "data": current_track
-        })
-
-        # 2. Keep alive
-        while True:
-            # Wait for any message (ping/pong)
-            data = await websocket.receive_text()
-            # We could handle incoming 'vibe' votes here
-            
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.info("WebSocket disconnected")
-    except Exception as e:
-        logger.error(f"WebSocket Error: {e}")
-        # manager.disconnect(websocket) # Likely already closed
+@app.get("/users/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
 
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting Radio API...")
-    
-    # Initialize Global AzuraCast Client
-    azura_url = os.getenv("AZURACAST_URL")
-    azura_key = os.getenv("AZURACAST_API_KEY")
-    if azura_url and azura_key:
-        try:
-            state.azura_client = AzuraCastClient(azura_url, azura_key, 1) # Station ID 1 default
-            logger.info("Global AzuraCast Client initialized.")
-        except Exception as e:
-            logger.error(f"Failed to init AzuraCast client: {e}")
-
-    # Log feature flag status
-    logger.info(f"Feature Flags: MOOD_VOTES={FEATURE_MOOD_VOTES}, MOOD_SYNC={FEATURE_MOOD_SYNC}, MOOD_AUTODJ={FEATURE_MOOD_AUTODJ}")
-    
-    # 1. Start Polling Loop IMMEDIATELY (Critical for UI)
-    logger.info("Launching Public Status Loop...")
-    asyncio.create_task(public_status_loop())
-
-    # 2. Initialize Mongo
-    try:
-        from mongo_client import MongoDatabaseClient
-        mongo_uri = os.getenv("MONGO_URI")
-        if not mongo_uri:
-            # Construct URI
-            user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
-            pwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "")
-            host = os.getenv("MONGO_HOST", "localhost")
-            port = os.getenv("MONGO_PORT", "27017")
-            if user and pwd:
-                mongo_uri = f"mongodb://{user}:{pwd}@{host}:{port}/"
-            else:
-                mongo_uri = f"mongodb://{host}:{port}/"
-        
-        state.mongo_client = MongoDatabaseClient(mongo_uri)
-        state.track_matcher = TrackMatcher(state.mongo_client)
-        state.library_service = get_library_service(state.mongo_client)
-        
-        logger.info("Connected to MongoDB & Services Initialized.")
-    except Exception as e:
-        logger.error(f"Failed to connect to Mongo: {e}")
-
-    # 3. Start Mood Auto-DJ Scheduler
-    if FEATURE_MOOD_AUTODJ and state.mongo_client and state.azura_client:
-        try:
-            from mood_scheduler import schedule_mood_queue_worker
-            logger.info(f"Starting Mood Auto-DJ (cycle: {MOOD_CYCLE_SECONDS}s)...")
-            # Pass callback to get dynamic steering status
-            asyncio.create_task(schedule_mood_queue_worker(
-                state.mongo_client, 
-                state.azura_client,
-                steering_callback=lambda: state.steering_status
-            ))
-        except Exception as e:
-            logger.error(f"Failed to start Mood Auto-DJ: {e}")
-
-@app.get("/debug/status")
-async def debug_status():
-    """Debug endpoint to check internal state."""
-    return {
-        "now_playing": state.now_playing,
-        "mongo_connected": state.mongo_client is not None,
-        "loop_running": True
-    }
-
-@app.get("/status")
-async def public_status():
-    """Public status endpoint compatible with frontend polling."""
-    return {
-        "now_playing": {
-            "song": state.now_playing
-        },
-        "listeners": {"total": 0}, 
-        "playing_next": {"song": {"title": "Coming Soon", "artist": "YourParty"}},
-        "steering": state.steering_status # Add steering info for dashboard/frontend
-    }
-
-@app.get("/queue")
-async def get_queue():
-    """Proxy AzuraCast Queue for Mission Control."""
-    # We use a public endpoint or admin endpoint from AzuraCast
-    # /api/station/{id}/queue
-    azura_base = os.getenv('AZURACAST_URL')
-    if not azura_base:
-        return []  # AzuraCast not configured
-    url = f"{azura_base}/api/station/1/queue"
-    
-    async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL) as client:
-        try:
-             # This endpoint often requires API Key, let's try with headers
-             headers = {"X-API-Key": os.getenv("AZURACAST_API_KEY", "")}
-             resp = await client.get(url, headers=headers, timeout=5.0)
-             if resp.status_code == 200:
-                 return resp.json()
-             else:
-                 return []
-        except Exception as e:
-            logger.error(f"Queue fetch error: {e}")
-            return []
+# BACKGROUND TASKS
 
 async def public_status_loop():
     """Poll AzuraCast public API for Metadata."""
     logger.info("Public Status Loop Started.")
     while True:
         try:
-            # Public Endpoint: No Key Needed
             azura_base = os.getenv("AZURACAST_URL")
             if not azura_base:
-                # logger.warning("AZURACAST_URL not set, waiting...")
-                await asyncio.sleep(10)  # Wait for config
+                await asyncio.sleep(10)
                 continue
             
-            # Use public endpoint (more reliable for read-only)
+            # Use public endpoint
             url = f"{azura_base}/api/nowplaying/1" 
             
             async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL, follow_redirects=True) as client:
-                # Try HTTP first
                 try:
                     resp = await client.get(url, timeout=5.0)
                 except httpx.ConnectError:
-                    # Fallback to HTTPS
                     url = azura_base.replace('http://', 'https://') + "/api/nowplaying/1"
                     resp = await client.get(url, timeout=5.0)
                 except Exception as e:
@@ -602,10 +145,9 @@ async def public_status_loop():
                     data = resp.json()
                     np = data.get('now_playing', {}).get('song', {})
                     
-                    # Update Stream URL if available
+                    # Update Stream URL
                     for mount in data.get('station', {}).get('mounts', []):
                          if mount.get('is_default'):
-                             # Ensure HTTPS for mixed content
                              stream_url = mount.get('url', '')
                              if stream_url.startswith('http://'):
                                  stream_url = stream_url.replace('http://', 'https://')
@@ -621,754 +163,96 @@ async def public_status_loop():
                         "genre": np.get('genre', '')
                     }
 
-                    # Fix Art URL (Internal IP -> Public Domain)
+                    # Fix Art URL
                     if '192.168' in current_track['art']:
                         current_track['art'] = "https://radio.yourparty.tech/wp-content/uploads/2023/11/station_logo.png"
 
-                    # Fallback logic if AzuraCast returns empty fields but has 'text'
+                    # Fallbacks
                     if not current_track['title'] or not current_track['artist']:
                         full_text = np.get('text', '')
                         if ' - ' in full_text:
                             parts = full_text.split(' - ', 1)
-                            if not current_track['artist']:
-                                current_track['artist'] = parts[0]
-                            if not current_track['title']:
-                                current_track['title'] = parts[1]
+                            if not current_track['artist']: current_track['artist'] = parts[0]
+                            if not current_track['title']: current_track['title'] = parts[1]
                         elif full_text and not current_track['title']:
                              current_track['title'] = full_text
                     
-                    # Final fallback
                     if not current_track['title']: current_track['title'] = 'Station Online'
                     if not current_track['artist']: current_track['artist'] = 'YourParty Radio'
                     
-                    # Inject Mongo Data if connected
+                    # Inject Mongo Data
                     if state.mongo_client and current_track['id']:
                          song_id = current_track['id']
-                         # Fetch Rating
                          rating_data = state.mongo_client.get_track_rating(song_id=song_id)
-                         if rating_data:
-                              current_track['rating'] = rating_data
-                         else:
-                              current_track['rating'] = {"average": 0.0, "total": 0}
-                              
-                         # Fetch Mood
+                         current_track['rating'] = rating_data or {"average": 0.0, "total": 0}
+                         
                          mood_data = state.mongo_client.get_song_moods(song_id)
-                         if mood_data.get('top_mood'):
-                              current_track['top_mood'] = mood_data['top_mood']
-                         else:
-                              current_track['top_mood'] = None
+                         current_track['top_mood'] = mood_data.get('top_mood')
 
                     state.now_playing = current_track
-                    # logger.info(f"Polled Track: {current_track['title']}")
                     
                     # Broadcast to WS
-                    await manager.broadcast({
+                    await realtime.manager.broadcast({
                         "type": "song",
                         "song": current_track
                     })
         except Exception as e:
             logger.error(f"Polling Main Loop Error: {e}")
             
-        await asyncio.sleep(2.0) # Faster polling for more responsiveness
+        await asyncio.sleep(2.0)
 
-class RatingRequest(BaseModel):
-    song_id: str
-    rating: int
-    user_id: str = "anonymous"
-    file_path: Optional[str] = None
-    title: Optional[str] = None
-    artist: Optional[str] = None
-
-@app.post("/rate")
-async def rate_track(request: RatingRequest):
-    """Handle rating submission from frontend."""
-    logger.info(f"Received rating: {request.rating} for song {request.song_id}")
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting Radio API (Modularized)...")
     
-    if state.mongo_client:
-        result = state.mongo_client.submit_rating(
-            song_id=request.song_id,
-            rating=request.rating,
-            user_id=request.user_id,
-            file_path=request.file_path,
-            metadata=get_metadata_context(request.song_id)
-        )
-        return result
-    else:
-        # Fallback if Mongo is not connected
-        logger.warning("MongoDB not connected. Rating not saved.")
-        return {
-            "success": True,
-            "ratings": {
-                "average": float(request.rating),
-                "total": 1,
-                "warning": "Persistence unavailable"
-            }
-        }
-
-class MoodRequest(BaseModel):
-    song_id: str
-    mood: Optional[str] = None
-    genre: Optional[str] = None
-    title: Optional[str] = None
-    artist: Optional[str] = None
-
-@app.post("/mood-tag")
-async def tag_mood(request: MoodRequest):
-    """Handle mood tagging from frontend."""
-    logger.info(f"Received tag - Mood: {request.mood}, Genre: {request.genre} for song {request.song_id}")
-    
-    if state.mongo_client:
-        return state.mongo_client.submit_mood(
-            song_id=request.song_id, 
-            mood=request.mood, 
-            genre=request.genre
-        )
-    
-    return {"success": True, "warning": "Mock Success - DB Missing"}
-
-# ========== MOOD VOTING SYSTEM ==========
-class MoodVoteRequest(BaseModel):
-    """Request model for dual mood voting (current + next)."""
-    song_id: str
-    mood_current: Optional[str] = None  # What mood IS this song?
-    mood_next: Optional[str] = None     # What mood do you WANT next?
-    rating: Optional[int] = None        # 1-5 star rating
-    vote: Optional[str] = None          # like/dislike
-    user_id: str = "anonymous"
-
-VALID_MOODS = [
-    "energy", "chill", "groove", "dark", "euphoric",
-    "melancholic", "hypnotic", "aggressive", "trippy", "warm",
-    "driving", "acid", "soulful", "deep", "funky", 
-    "uplifting", "progressive", "psy", "classic", "energetic"
-]
-
-@app.post("/vote-mood")
-async def vote_mood(request: MoodVoteRequest):
-    """
-    Handle dual mood voting AND Like/Dislike (Skip) logic.
-    """
-    # Feature flag check
-    if not FEATURE_MOOD_VOTES:
-        raise HTTPException(status_code=503, detail="Mood voting is currently disabled")
-    
-    # Validate basics
-    if not request.mood_current and not request.mood_next and not request.rating and not request.vote:
-        raise HTTPException(status_code=400, detail="At least one vote type required")
-    
-    logger.info(f"Vote received for {request.song_id}: mood_cur={request.mood_current}, vote={request.vote}, rating={request.rating}")
-    
-    result = {
-        "success": True,
-        "song_id": request.song_id,
-        "message": "Vote recorded"
-    }
-
-    if state.mongo_client:
-        # 1. Handle Like/Dislike (Skip Logic)
-        if request.vote:
-            counts = state.mongo_client.submit_vote(request.song_id, request.vote, request.user_id)
-            result["vote_counts"] = counts
-            
-            # SKIP LOGIC: Skips >= Likes + 3
-            if request.vote == "dislike":
-                skips = counts.get("dislike", 0)
-                likes = counts.get("like", 0)
-                if skips >= likes + 3:
-                    logger.warning(f"🚨 SKIP TRIGGERED for {request.song_id} (Skips: {skips}, Likes: {likes})")
-                    if state.azura_client:
-                         state.azura_client.skip_current_song()
-                         result["action_taken"] = "skip"
-
-            # LIKE LOGIC: Likes >= 3 -> Starlight Playlist
-            if request.vote == "like":
-                likes = counts.get("like", 0)
-                if likes >= 3:
-                     logger.info(f"🌟 STARLIGHT TRIGGERED for {request.song_id} (Likes: {likes})")
-                     if state.azura_client:
-                         try:
-                             mid = int(request.song_id) if request.song_id.isdigit() else None
-                             if mid:
-                                 state.azura_client.add_to_playlist(mid, "Starlight")
-                                 result["action_taken"] = "playlist_add"
-                         except Exception as e:
-                             logger.error(f"Playlist add failed: {e}")
-
-        # 2. Store mood vote for current song perception
-        if request.mood_current:
-            state.mongo_client.submit_mood(
-                song_id=request.song_id,
-                mood=request.mood_current,
-                metadata=get_metadata_context(request.song_id)
-            )
-            
-            # Trigger Auto-Curation
-            if state.library_manager:
-                 state.library_manager.check_promotion(request.song_id)
-        
-        # 3. Store mood_next preference
-        if request.mood_next:
-            state.mongo_client.submit_mood_next_vote(
-                song_id=request.song_id,
-                mood_next=request.mood_next,
-                user_id=request.user_id,
-                metadata=get_metadata_context(request.song_id)
-            )
-            
-        # 4. Handle Rating
-        if request.rating:
-            state.mongo_client.submit_rating(
-                song_id=request.song_id,
-                rating=request.rating,
-                user_id=request.user_id,
-                metadata=get_metadata_context(request.song_id)
-            )
-            result["rating"] = request.rating
-
-        # 5. Gamification
-        if request.user_id and request.user_id != "anonymous":
-            points_awarded = False
-            if request.mood_current:
-                state.mongo_client.award_points(request.user_id, "mood_vote", song_id=request.song_id)
-                points_awarded = True
-            if request.rating:
-                 state.mongo_client.award_points(request.user_id, "rating", song_id=request.song_id)
-                 points_awarded = True
-            
-            if points_awarded:
-                result["gamification"] = {"points_awarded": True}
-
-    else:
-        result["warning"] = "Database not connected - vote not persisted"
-
-    return result
-
-@app.get("/mood-stats")
-async def get_mood_stats():
-    """
-    Get aggregated mood statistics for the live voting widget.
-    
-    Returns:
-        votes: Dict of mood -> count for current song
-        total: Total number of votes
-        dominant: Most voted mood
-    """
-    if not state.mongo_client:
-        return {
-            "votes": {"energy": 0, "chill": 0, "dark": 0, "euphoric": 0},
-            "total": 0,
-            "dominant": None,
-            "error": "Database not connected"
-        }
-    
-    # Get current song ID from now_playing
-    current_song_id = state.now_playing.get("id") if state.now_playing else None
-    
-    # Get mood counts for current song
-    votes = {"energy": 0, "chill": 0, "dark": 0, "euphoric": 0}
-    total = 0
-    dominant = None
-    
-    
-    if current_song_id:
+    # Initialize AzuraCast
+    azura_url = os.getenv("AZURACAST_URL")
+    azura_key = os.getenv("AZURACAST_API_KEY")
+    if azura_url and azura_key:
         try:
-            mood_data = state.mongo_client.get_song_moods(current_song_id)
-            if mood_data:
-                mood_counts = mood_data.get("mood_counts", {})
-                # Merge with defaults but keep ALL dynamic moods
-                votes.update(mood_counts) 
-                
-                # Fetch Dislikes (Rating = 1)
-                rating_data = state.mongo_client.get_track_rating(song_id=current_song_id)
-                if rating_data and "distribution" in rating_data:
-                    # '1' key in distribution holds count of 1-star ratings
-                    dislikes = rating_data["distribution"].get("1.0", 0) + rating_data["distribution"].get("1", 0)
-                    if dislikes > 0:
-                        votes["dislike"] = dislikes
-
-                total = sum(votes.values())
-                dominant = mood_data.get("top_mood")
+            state.azura_client = AzuraCastClient(azura_url, azura_key, 1)
+            logger.info("Global AzuraCast Client initialized.")
         except Exception as e:
-            logger.error(f"Error fetching mood stats for song {current_song_id}: {e}")
+            logger.error(f"Failed to init AzuraCast client: {e}")
+
+    logger.info(f"Feature Flags: MOOD_VOTES={FEATURE_MOOD_VOTES}, MOOD_AUTODJ={FEATURE_MOOD_AUTODJ}")
     
-    # Also get the "next mood" votes for DJ steering
-    dominant_next = None
+    # Start Polling
+    asyncio.create_task(public_status_loop())
+
+    # Initialize Mongo
     try:
-        dominant_next = state.mongo_client.get_dominant_next_mood(time_window_minutes=10)
+        mongo_uri = os.getenv("MONGO_URI")
+        if not mongo_uri:
+            user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
+            pwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "")
+            host = os.getenv("MONGO_HOST", "localhost")
+            port = os.getenv("MONGO_PORT", "27017")
+            if user and pwd:
+                mongo_uri = f"mongodb://{user}:{pwd}@{host}:{port}/"
+            else:
+                mongo_uri = f"mongodb://{host}:{port}/"
+        
+        state.mongo_client = MongoDatabaseClient(mongo_uri)
+        state.track_matcher = TrackMatcher(state.mongo_client)
+        state.library_service = get_library_service(state.mongo_client)
+        
+        # Initialize Playlist Service (requires both)
+        if state.azura_client:
+            state.playlist_service = PlaylistService(state.mongo_client, state.azura_client)
+        
+        logger.info("Connected to MongoDB & Services Initialized.")
     except Exception as e:
-        logger.error(f"Error fetching next mood: {e}")
-    
-    return {
-        "votes": votes,
-        "total": total,
-        "dominant": dominant,
-        "dominant_next": dominant_next,
-        "song_id": current_song_id,
-        "genre": state.now_playing.get("genre") if state.now_playing else None,
-        "feature_flags": {
-            "FEATURE_MOOD_VOTES": FEATURE_MOOD_VOTES,
-            "FEATURE_MOOD_AUTODJ": FEATURE_MOOD_AUTODJ
-        }
-    }
+        logger.error(f"Failed to connect to Mongo: {e}")
 
-@app.get("/history")
-async def get_history():
-    """Return recently played tracks."""
-    # Mock history for now since we don't have a DB of history yet
-    return [
-        {"title": "Sandstorm", "artist": "Darude", "time": "12:00", "art": "https://placehold.co/100"},
-        {"title": "Level", "artist": "Avicii", "time": "11:55", "art": "https://placehold.co/100"}
-    ]
-
-@app.get("/moods")
-async def get_moods(song_id: Optional[str] = None):
-    """Get moods. If song_id provided, for that song. Else all."""
-    if not state.mongo_client:
-         return {}
-
-    if song_id:
-        # Fetch real specific moods if implemented, or return empty
-        return {} 
-    
-    return state.mongo_client.get_all_moods()
-
-@app.get("/ratings")
-async def get_ratings(song_id: Optional[str] = None):
-    """Get ratings. If song_id provided, for that song. Else all."""
-    if not state.mongo_client:
-        return {}
-
-    if song_id:
-         return state.mongo_client.get_track_rating(song_id)
-
-    # Return All for Dashboard
-    tracks = state.mongo_client.get_all_rated_tracks()
-    return {
-        t['song_id']: {
-            "average": t['rating']['average'], 
-            "total": t['rating']['total'], 
-            "title": t.get('metadata', {}).get('title', 'Unknown'), 
-            "artist": t.get('metadata', {}).get('artist', 'Unknown'),
-            "path": t.get('path', '')
-        } 
-        for t in tracks 
-        if 'song_id' in t
-    }
-
-@app.get("/history")
-async def get_history():
-    """
-    Get playback history.
-    Currently returns recently rated tracks as a proxy.
-    """
-    if not state.mongo_client:
-        return []
-        
-    # Get last 10 rated tracks as 'history'
-    tracks = state.mongo_client.get_all_rated_tracks(min_rating=0.0)
-    # Sort by 'added_at' or similar if available, or just take top
-    
-    history_items = []
-    import time
-    for t in tracks[:10]:
-        history_items.append({
-            "song": t,
-            "played_at": time.time() - 3600 # Mock time relative to now is okay for display
-        })
-    return history_items
-
-# --- STEERING CONTROL ---
-class SteeringRequest(BaseModel):
-    mode: str = "auto" # auto, mood
-    target: Optional[str] = None # e.g. "energetic"
-
-@app.get("/control/steer")
-async def get_steering():
-    """Get current steering status."""
-    return state.steering_status
-
-@app.post("/control/steer")
-async def set_steering(request: SteeringRequest):
-    """Set steering mode."""
-    state.steering_status = {
-        "mode": request.mode,
-        "target": request.target,
-        "updated_at": datetime.utcnow().isoformat()
-    }
-    logger.info(f"Steering updated: {state.steering_status}")
-    return state.steering_status
-
-class VoteNextRequest(BaseModel):
-    vote: str # energetic, chill, etc.
-
-# ========== MTV-STYLE TRACK VOTING ==========
-# Global state for track voting
-class VotingState:
-    def __init__(self):
-        self.candidates = []  # List of 3 track candidates
-        self.votes = {}  # {track_id: vote_count}
-        self.last_refresh = None
-
-voting_state = VotingState()
-
-@app.get("/vote-next-candidates")
-async def get_vote_candidates():
-    """
-    Returns 3 random track candidates for voting.
-    Uses AzuraCast history API to get real tracks.
-    Refreshes every 3 minutes.
-    """
-    import random
-    from datetime import datetime, timedelta
-    
-    # Refresh candidates if needed
-    now = datetime.now()
-    should_refresh = (
-        not voting_state.candidates or
-        not voting_state.last_refresh or
-        (now - voting_state.last_refresh) > timedelta(minutes=3)
-    )
-    
-    if should_refresh:
-        logger.info("Refreshing track candidates...")
-        
-        candidates = []
-        
-        # 1. Try Local MongoDB Library (Best Source)
-        if state.mongo_client:
-            try:
-                raw_tracks = state.mongo_client.get_random_tracks(limit=3)
-                for t in raw_tracks:
-                    meta = t.get('metadata', {})
-                    candidates.append({
-                        "id": str(t.get('song_id')), # Use AzuraCast unique_id (hash) stored in song_id
-                        "title": meta.get('title', 'Unknown Title'),
-                        "artist": meta.get('artist', 'Unknown Artist'),
-                        "cover_art": meta.get('art', ''), # Use metadata art if available
-                        "media_id": str(t.get('song_id')) # Use song_id as media_id identifier
-                    })
-                logger.info(f"Loaded {len(candidates)} candidates from Local MongoDB.")
-            except Exception as e:
-                logger.error(f"Error fetching from MongoDB: {e}")
-
-        # 2. Fallback to AzuraCast History (if Mongo empty)
-        if len(candidates) < 3:
-            logger.info("Not enough local tracks, trying AzuraCast History...")
-            # Get tracks from AzuraCast history
-            azura_base = os.getenv("AZURACAST_URL")
-            azura_key = os.getenv("AZURACAST_API_KEY", "")
-            
-            if azura_base:
-                try:
-                    async with httpx.AsyncClient(verify=AZURACAST_VERIFY_SSL) as client:
-                        # Fetch history from AzuraCast
-                        headers = {"X-API-Key": azura_key} if azura_key else {}
-                        resp = await client.get(
-                            f"{azura_base}/api/station/1/history",
-                            headers=headers,
-                            timeout=10.0
-                        )
-                        
-                        if resp.status_code == 200:
-                            history = resp.json()
-                            seen = set([c['title'] for c in candidates])
-                            
-                            for item in history:
-                                song = item.get("song", {})
-                                if not song.get("title") or song.get("title") in seen:
-                                    continue
-                                    
-                                seen.add(song.get("title"))
-                                candidates.append({
-                                    "id": str(song.get("id", item.get("sh_id"))),
-                                    "title": song.get("title", "Unknown"),
-                                    "artist": song.get("artist", "Unknown"),
-                                    "cover_art": song.get("art", ""),
-                                    "media_id": str(song.get("id", ""))
-                                })
-                                if len(candidates) >= 3:
-                                    break
-                except Exception as e:
-                    logger.error(f"Error fetching candidates from AzuraCast: {e}")
-
-        # 3. Final Fallback (Mock)
-        if not candidates:
-             logger.warning("No candidates found anywhere. Using mocks.")
-             candidates = [
-                {"id": "mock1", "title": "Track A", "artist": "Artist A", "cover_art": "", "media_id": "1"},
-                {"id": "mock2", "title": "Track B", "artist": "Artist B", "cover_art": "", "media_id": "2"},
-                {"id": "mock3", "title": "Track C", "artist": "Artist C", "cover_art": "", "media_id": "3"}
-            ]
-
-        # Update State
-        voting_state.candidates = candidates
-        voting_state.votes = {c["id"]: 0 for c in candidates}
-        voting_state.last_refresh = now
-        logger.info(f"Final Candidates: {[c['title'] for c in candidates]}")
-    
-    return {
-        "candidates": voting_state.candidates,
-        "votes": voting_state.votes,
-        "expires_at": (voting_state.last_refresh + timedelta(minutes=3)).isoformat() if voting_state.last_refresh else None
-    }
-
-
-class MoodNextVoteRequest(BaseModel):
-    song_id: str
-    mood_next: str # e.g. "energy", "chill"
-
-@app.post("/vote-next-mood")
-async def vote_next_mood(request: MoodNextVoteRequest, state: AppState = Depends(get_state)):
-    """
-    Vote for the VIBE of the NEXT track.
-    This influences the Auto-DJ's selection for the upcoming slot.
-    """
-    if not state.mongo_client:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-    
-    result = state.mongo_client.submit_mood_next_vote(
-        song_id=request.song_id,
-        mood_next=request.mood_next,
-        user_id="anonymous" # TODO: Session ID
-    )
-    
-    return result
-
-class TrackVoteRequest(BaseModel):
-    track_id: str
-    user_id: str = "anonymous"
-
-@app.post("/vote-next-track")
-async def vote_for_track(request: TrackVoteRequest):
-    """
-    Submit a vote for one of the candidate tracks.
-    """
-    if request.track_id not in voting_state.votes:
-        raise HTTPException(status_code=400, detail="Invalid track_id")
-    
-    # Increment vote count
-    voting_state.votes[request.track_id] += 1
-    
-    logger.info(f"Vote received for track {request.track_id}. Current votes: {voting_state.votes}")
-    
-    # Broadcast vote update to all clients
-    await manager.broadcast({
-        "type": "vote_update",
-        "data": {
-            "track_id": request.track_id,
-            "votes": voting_state.votes
-        }
-    })
-    
-    return {
-        "success": True,
-        "track_id": request.track_id,
-        "current_votes": voting_state.votes
-    }
-
-@app.get("/vote-next-winner")
-async def get_vote_winner():
-    """
-    Returns the winning track based on votes.
-    Called by n8n workflow to queue the winner.
-    """
-    if not voting_state.votes:
-        raise HTTPException(status_code=404, detail="No active voting session")
-    
-    # Find winner
-    winner_id = max(voting_state.votes, key=voting_state.votes.get)
-    winner_track = next((c for c in voting_state.candidates if c["id"] == winner_id), None)
-    
-    if not winner_track:
-        raise HTTPException(status_code=404, detail="Winner track not found")
-    
-    logger.info(f"Winner: {winner_track['title']} with {voting_state.votes[winner_id]} votes")
-    
-    # Reset voting state for next round
-    voting_state.candidates = []
-    voting_state.votes = {}
-    voting_state.last_refresh = None
-    
-    return {
-        "winner": winner_track,
-        "votes": voting_state.votes.get(winner_id, 0),
-        "media_id": winner_track.get("media_id", "")
-    }
-
-@app.post("/vote-next")
-async def vote_next(request: VoteNextRequest):
-    """
-    Vote for the next vibe.
-    """
-    # In a real app, store this in a 'VotingManager'
-    logger.info(f"Received Vibe Vote: {request.vote}")
-    
-    # Simple persistence in-memory for now to show impact
-    state.steering_status['target'] = request.vote
-    state.steering_status['mode'] = 'manual'
-    
-    # Broadcast to all clients
-    await manager.broadcast({
-        "type": "vibe",
-        "data": {
-            "vote": request.vote,
-            "trend": request.vote.upper(),
-            "status": "Vibe Shift Detected!"
-        }
-    })
-    
-    # Also broadcast steering status update for dashboard
-    await manager.broadcast({
-        "type": "steering",
-        "data": state.steering_status
-    })
-
-    # TRIGGER AUTO-DJ IMMEDIATELY
-    try:
-        from mood_scheduler import mood_queue_worker_iteration
-        asyncio.create_task(mood_queue_worker_iteration(
-            state.mongo_client, 
-            state.azura_client,
-            steering_callback=lambda: state.steering_status
-        ))
-        logger.info(f"Triggered immediate Auto-DJ for {request.vote}")
-    except Exception as e:
-        logger.error(f"Failed to trigger immediate Auto-DJ: {e}")
-    
-    return {"status": "accepted", "vote": request.vote, "trend": request.vote.upper(), "prediction": {"title": f"Upcoming {request.vote.capitalize()} Track"}}
-
-@app.post("/tasks/recalc-playlists")
-async def recalc_playlists_task(bg_tasks: BackgroundTasks):
-    """
-    Beta: Recalculate AzuraCast playlists based on ratings.
-    """
-    bg_tasks.add_task(run_playlist_sync)
-    return {"status": "started"}
-
-async def run_playlist_sync():
-    logger.info("Starting Playlist Sync...")
-    if not state.mongo_client:
-        logger.error("Mongo not connected.")
-        return
-
-    # 1. Fetch Top Rated Tracks (> 4 stars)
-    top_tracks = state.mongo_client.get_all_rated_tracks(min_rating=4.0)
-    logger.info(f"Found {len(top_tracks)} top rated tracks.")
-
-    if not top_tracks:
-        return
-
-    # 2. Connect to AzuraCast (requires explicit env configuration)
-    ac_url = os.getenv("AZURACAST_URL")
-    ac_key = os.getenv("AZURACAST_API_KEY")
-    station_id = 1 
-
-    if not ac_url or not ac_key:
-        logger.error("AZURACAST_URL or AZURACAST_API_KEY missing; cannot sync playlists.")
-        return
-
-    client = AzuraCastClient(ac_url, ac_key, station_id)
-    
-    # 3. Ensure 'Top Rated' Playlist exists
-    playlists = await client.get_playlists()
-    target_pl = next((p for p in playlists if p['name'] == "Top Rated"), None)
-    
-    if not target_pl:
-        logger.info("Creating 'Top Rated' playlist...")
-        target_pl = client.create_playlist("Top Rated", weight=5)
-    
-    if not target_pl:
-        logger.error("Could not create/find playlist.")
-        return
-
-    # 4. Map Mongo Tracks to AzuraCast Media IDs
-    logger.info("Fetching AzuraCast Media Library for matching...")
-    ac_media = client.get_station_media()
-    
-    # Check if ac_media is a list or dict wrapper (AzuraCast API varies)
-    if isinstance(ac_media, dict) and 'files' in ac_media:
-        # Some versions return pages, or a wrapper
-        media_list = ac_media['files']
-    elif isinstance(ac_media, list):
-        media_list = ac_media
-    else:
-        logger.error(f"Unexpected AzuraCast media response: {type(ac_media)}")
-        return
-
-    logger.info(f"AzuraCast has {len(media_list)} files.")
-
-    # Create a Lookup Map: Filename -> Media ID
-    # We clean the paths to matched filenames
-    media_map = {}
-    for item in media_list:
-        # Item usually has 'path', 'id', 'text', 'artist', 'title'
-        # Path example: "Music/DeepHouse/song.mp3"
-        f_path = item.get('path', '')
-        f_name = os.path.basename(f_path) 
-        media_map[f_name] = item.get('id')
-    
-    matched_ids = []
-    matched_count = 0
-    
-    for t in top_tracks:
-        # Mongo: /var/radio/music/library/Genre/Song.mp3
-        m_path = t.get('path', '')
-        m_name = os.path.basename(m_path)
-        
-        if m_name in media_map:
-            matched_ids.append(media_map[m_name])
-            matched_count += 1
-        else:
-            # logger.debug(f"Could not match Mongo track {m_name} to AzuraCast.")
-            pass
-            
-    logger.info(f"Matched {matched_count} / {len(top_tracks)} tracks to AzuraCast Media IDs.")
-    
-    if matched_ids:
-        # 5. Assign to Playlist
-        success = client.replace_playlist_content(target_pl['id'], matched_ids)
-        if success:
-            logger.info("SUCCESS: 'Top Rated' Playlist updated in AzuraCast!")
-            # Use socket manager if available to broadcast success?
-        else:
-            logger.error("FAILED to update AzuraCast playlist.")
-    else:
-        logger.warning("No tracks matched. Check file paths or naming.")
-
-# ========== GAMIFICATION ENDPOINTS ==========
-
-@app.get("/leaderboard")
-async def get_leaderboard(limit: int = 10):
-    """Get the top users by total points."""
-    if not state.mongo_client:
-        return {"leaderboard": [], "error": "Database not connected"}
-    
-    leaderboard = state.mongo_client.get_leaderboard(limit=limit)
-    return {"leaderboard": leaderboard}
-
-@app.get("/user-stats/{user_id}")
-async def get_user_stats(user_id: str):
-    """Get gamification stats for a specific user."""
-    if not state.mongo_client:
-        return {"error": "Database not connected"}
-    
-    stats = state.mongo_client.get_user_stats(user_id)
-    return stats
-
-@app.post("/award-points")
-async def award_points_endpoint(user_id: str, action: str, song_id: str = None, bonus: float = 1.0):
-    """Award points to a user (internal/admin use)."""
-    if not state.mongo_client:
-        return {"error": "Database not connected"}
-    
-    result = state.mongo_client.award_points(
-        user_id=user_id,
-        action=action,
-        bonus_multiplier=bonus,
-        song_id=song_id
-    )
-    return result
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Start Mood Auto-DJ
+    if FEATURE_MOOD_AUTODJ and state.mongo_client and state.azura_client:
+        try:
+            logger.info(f"Starting Mood Auto-DJ (cycle: {MOOD_CYCLE_SECONDS}s)...")
+            asyncio.create_task(schedule_mood_queue_worker(
+                state.mongo_client, 
+                state.azura_client,
+                steering_callback=lambda: state.steering_status
+            ))
+        except Exception as e:
+            logger.error(f"Failed to start Mood Auto-DJ: {e}")

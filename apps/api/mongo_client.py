@@ -445,6 +445,104 @@ class MongoDatabaseClient:
             logger.error(f"Error getting tracks by mood: {e}")
             return []
 
+    def get_tracks_for_playlist(self, mood: str = None, min_rating: float = 0, limit: int = 500) -> List[int]:
+        """
+        Get AzuraCast Media IDs for tracks matching criteria.
+        Used for checking playlist syncing.
+        """
+        try:
+            query = {}
+            if mood:
+                # Find song_ids with this mood first
+                if not hasattr(self, 'moods_collection'):
+                    self.moods_collection = self.db["moods"]
+                mood_docs = list(self.moods_collection.find({"mood": mood}, {"song_id": 1}))
+                song_ids = list(set([d["song_id"] for d in mood_docs if d.get("song_id")]))
+                query["song_id"] = {"$in": song_ids}
+            
+            # Add Rating Filter (Complex because rating is aggregated)
+            # For simplicity in V1, we just filter by mood and existence of azuracast_id
+            # If min_rating > 0, we might need a join or pre-aggregation.
+            # Let's trust the mood tag for now, or filter in Python if list is small.
+            
+            query["azuracast_id"] = {"$exists": True, "$ne": None}
+            
+            tracks = list(self.tracks_collection.find(query, {"azuracast_id": 1}).limit(limit))
+            return [int(t["azuracast_id"]) for t in tracks if t.get("azuracast_id")]
+        except Exception as e:
+            logger.error(f"Error getting playlist tracks: {e}")
+            return []
+
+    # ========== NEXT TRACK VOTING ==========
+
+    def submit_next_track_vote(self, candidate_song_id: str, user_id: str = "anonymous") -> bool:
+        """Vote for a specific track to play next."""
+        try:
+            if not hasattr(self, 'next_track_votes_collection'):
+                self.next_track_votes_collection = self.db["next_track_votes"]
+                self.next_track_votes_collection.create_index("candidate_song_id")
+                self.next_track_votes_collection.create_index("timestamp")
+            
+            # Simple vote document
+            self.next_track_votes_collection.insert_one({
+                "candidate_song_id": candidate_song_id,
+                "user_id": user_id,
+                "timestamp": datetime.utcnow()
+            })
+            return True
+        except Exception as e:
+            logger.error(f"Error submitting next track vote: {e}")
+            return False
+
+    def get_next_track_vote_counts(self, candidate_ids: List[str]) -> Dict[str, int]:
+        """Get vote counts for specific candidates in the last 15 minutes."""
+        try:
+            if not hasattr(self, 'next_track_votes_collection'):
+                 return {cid: 0 for cid in candidate_ids}
+
+            # Only count recent votes (current voting window)
+            cutoff = datetime.utcnow() - timedelta(minutes=10)
+            
+            pipeline = [
+                {"$match": {
+                    "candidate_song_id": {"$in": candidate_ids},
+                    "timestamp": {"$gte": cutoff}
+                }},
+                {"$group": {"_id": "$candidate_song_id", "count": {"$sum": 1}}}
+            ]
+            
+            results = list(self.next_track_votes_collection.aggregate(pipeline))
+            counts = {r["_id"]: r["count"] for r in results}
+            
+            # Ensure all requested IDs are present
+            return {cid: counts.get(cid, 0) for cid in candidate_ids}
+        except Exception as e:
+            logger.error(f"Error getting next track vote counts: {e}")
+            return {cid: 0 for cid in candidate_ids}
+
+    def get_top_voted_track(self, time_window_minutes: int = 15) -> Optional[str]:
+        """Get the song_id with the most votes in the window."""
+        try:
+            if not hasattr(self, 'next_track_votes_collection'):
+                return None
+            
+            cutoff = datetime.utcnow() - timedelta(minutes=time_window_minutes)
+            pipeline = [
+                {"$match": {"timestamp": {"$gte": cutoff}}},
+                {"$group": {"_id": "$candidate_song_id", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 1}
+            ]
+            
+            results = list(self.next_track_votes_collection.aggregate(pipeline))
+            if results and results[0]["_id"]:
+                logger.info(f"Top voted track: {results[0]['_id']} ({results[0]['count']} votes)")
+                return results[0]["_id"]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting top voted track: {e}")
+            return None
+
     # ========== PLAYTIME MODE QUERIES ==========
     
     def get_untagged_tracks(self, genres: List[str] = None, limit: int = 50) -> List[Dict[str, Any]]:

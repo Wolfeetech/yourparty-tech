@@ -1,11 +1,20 @@
 import os
 import shutil
 import logging
+import hashlib
 from pathlib import Path
 from typing import Dict, Any, List
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_file_hash(file_path):
+    """Calculates SHA256 hash to detect duplicates."""
+    hasher = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        for block in iter(lambda: f.read(4096), b""):
+            hasher.update(block)
+    return hasher.hexdigest()
 
 class GenreOrganizer:
     def __init__(self, base_path: str):
@@ -50,11 +59,25 @@ class GenreOrganizer:
         target_dir = target_base / safe_genre / safe_artist / safe_album
         target_path = target_dir / f"{safe_filename}{source_path.suffix}"
 
-        # Handle duplicates
-        counter = 1
-        while target_path.exists() and target_path != source_path:
-            target_path = target_dir / f"{safe_filename} ({counter}){source_path.suffix}"
-            counter += 1
+        # Handle duplicates with Hash Check
+        if target_path.exists():
+            if target_path != source_path: # Don't check hash if it's the same file
+                src_hash = get_file_hash(source_path)
+                tgt_hash = get_file_hash(target_path)
+                
+                if src_hash == tgt_hash:
+                    return {
+                        "success": True, 
+                        "message": "Exact duplicate exists (Skipped)",
+                        "destination": str(target_path),
+                        "skipped": True
+                    }
+                
+                # Name collision but different content - rename
+                counter = 1
+                while target_path.exists():
+                    target_path = target_dir / f"{safe_filename} ({counter}){source_path.suffix}"
+                    counter += 1
 
         result = {
             "source": str(source_path),
