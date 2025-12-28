@@ -12,6 +12,7 @@ from state import state
 from tag_writer import write_metadata_to_file
 from auth import get_current_active_user, User
 from fastapi import Depends
+from routers import realtime
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -149,6 +150,11 @@ async def vote_mood(request: Request, mood_request: MoodVoteRequest):
             
         if request.rating:
             state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
+            
+            state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
+            
+    # Broadcast 'Pulse' to refresh dashboards
+    await realtime.manager.broadcast({"type": "pulse", "target": "moods"})
             
     return result
 
@@ -366,6 +372,13 @@ async def set_steering(request: Request, steering_request: SteeringRequest, curr
     state.steering_status[sid]["target"] = steering_request.target
     from datetime import datetime
     state.steering_status[sid]["updated_at"] = datetime.now().isoformat()
+    
+    # Broadcast Steering Update
+    await realtime.manager.broadcast({
+        "type": "steer", 
+        "data": state.steering_status[sid]
+    }, station_id=str(sid))
+    
     return state.steering_status[sid]
 
 @router.post("/shoutout")

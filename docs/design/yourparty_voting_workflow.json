@@ -1,0 +1,79 @@
+{
+    "name": "YourParty Voting Workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "vote",
+                "options": {}
+            },
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "collection": "votes",
+                "query": "={ \"song_id\": \"{{$json[\"body\"][\"song_id\"]}}\", \"user_id\": \"{{$json[\"body\"][\"user_id\"]}}\" }",
+                "updateKey": "={ \"$set\": { \"vote\": \"{{$json[\"body\"][\"vote\"]}}\", \"timestamp\": new Date() } }",
+                "options": {
+                    "upsert": true
+                }
+            },
+            "name": "MongoDB Upsert",
+            "type": "n8n-nodes-base.mongoDb",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ],
+            "credentials": {
+                "mongoDb": {
+                    "id": "1",
+                    "name": "MongoDB Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "command": "python3 /opt/yourparty-tech/apps/api/sync_ratings_to_id3.py"
+            },
+            "name": "Trigger Tag Sync",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "MongoDB Upsert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "MongoDB Upsert": {
+            "main": [
+                [
+                    {
+                        "node": "Trigger Tag Sync",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

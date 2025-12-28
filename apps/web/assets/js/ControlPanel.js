@@ -29,6 +29,23 @@ class ControlPanel {
         console.log("🚀 CONTROL PANEL: Systems Online");
         this.startPolling();
         this.bindSteering();
+        this.bindRealtime();
+    }
+
+    bindRealtime() {
+        console.log("🔌 Binding Realtime Events...");
+
+        // Listen for Steering Updates
+        window.addEventListener('steerChange', (e) => {
+            this.updateSteering(e.detail);
+        });
+
+        // Listen for 'Pulse' (Data Refresh Signals)
+        window.addEventListener('pulse', (e) => {
+            if (e.detail === 'moods') {
+                this.fetchPulse(); // Refresh Moods immediately
+            }
+        });
     }
 
     startPolling() {

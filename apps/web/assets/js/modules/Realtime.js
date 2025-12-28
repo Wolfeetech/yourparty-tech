@@ -92,6 +92,21 @@ export default class RealtimeModule {
                 detail: { song: songData }
             }));
         }
+
+        if (msg.type === 'steer') {
+            console.log('[Realtime] Steer Update:', msg.data);
+            window.dispatchEvent(new CustomEvent('steerChange', {
+                detail: msg.data
+            }));
+        }
+
+        if (msg.type === 'pulse') {
+            // "Pulse" signal means "Go fetch fresh data for X"
+            console.log('[Realtime] Pulse:', msg.target);
+            window.dispatchEvent(new CustomEvent('pulse', {
+                detail: msg.target
+            }));
+        }
     }
 
     /**

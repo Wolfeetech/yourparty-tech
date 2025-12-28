@@ -1,8 +1,8 @@
 import os
 import time
 import logging
-from mongo_client import MongoDatabaseClient
-from tag_writer import write_metadata_to_file
+from apps.api.mongo_client import MongoDatabaseClient
+from apps.api.tag_writer import write_metadata_to_file
 
 # Setup Logging
 logging.basicConfig(
@@ -84,7 +84,7 @@ def sync_db_to_files():
                 
                 # JIT Client Init for fallback
                 try:
-                    from azuracast_client import AzuraCastClient
+                    from apps.api.azuracast_client import AzuraCastClient
                     ac_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
                     ac_key = os.getenv("AZURACAST_API_KEY", "9199dc63da6223190:c9f8c3a22e25932753dd3f4d57fa0d9c")
                     client = AzuraCastClient(ac_url, ac_key, 1) # Station 1
