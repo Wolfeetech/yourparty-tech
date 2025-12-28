@@ -132,8 +132,8 @@ class AzuraCastClient:
         res = await self._put(url, json=payload)
         return bool(res)
 
-    async def queue_track(self, media_id: int, station_id: Optional[int] = None) -> bool:
-        """Queue a specific track ID to play next."""
+    async def queue_track(self, media_id, station_id: Optional[int] = None) -> bool:
+        """Queue a specific track by numeric ID or unique_id (hash) to play next."""
         sid = station_id if station_id is not None else self.station_id
         url = f"{self.base_url}/api/station/{sid}/request/{media_id}"
         # Requests don't return JSON body always, just 204 or 200

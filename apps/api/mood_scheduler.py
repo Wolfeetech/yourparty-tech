@@ -223,18 +223,20 @@ async def queue_track_in_azuracast(azura_client, track: Dict[str, Any], station_
     Queue a track in AzuraCast.
     """
     try:
-        song_id = track.get("song_id")
-        if not song_id:
-            logger.warning("Track has no song_id")
+        # Try media_id first (numeric), fallback to song_id (hash string)
+        media_id = track.get("media_id") or track.get("song_id")
+        if not media_id:
+            logger.warning("Track has no media_id or song_id")
             return False
         
         # Add small delay to avoid hammering AzuraCast
         await asyncio.sleep(0.5)
         
-        success = await azura_client.queue_track(int(song_id), station_id=station_id)
+        # AzuraCast queue_track accepts both numeric ID and unique_id (hash)
+        success = await azura_client.queue_track(media_id, station_id=station_id)
         
         if success:
-            logger.info(f"[STATION {station_id}] Successfully queued track: {track.get('metadata', {}).get('title', song_id)}")
+            logger.info(f"[STATION {station_id}] Successfully queued track: {track.get('metadata', {}).get('title', media_id)}")
             MOOD_QUEUE_TRIGGERED.inc()
         
         return success

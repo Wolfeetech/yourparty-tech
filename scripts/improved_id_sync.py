@@ -85,6 +85,9 @@ class ImprovedIDSync:
         logger.info("Step 3: Matching and updating...")
         updates = []
         matched = 0
+        match_by_filename = 0
+        match_by_path = 0
+        match_by_songid = 0
         
         for media in az_media:
             az_id = media.get('id')
@@ -94,24 +97,23 @@ class ImprovedIDSync:
             az_rel = self.normalize_to_relative(az_path).lower()
             
             mongo_id = None
-            match_type = None
             
-            # Strategy 1: song_id match
-            if az_song_id and az_song_id in by_song_id:
-                mongo_id = by_song_id[az_song_id]
-                match_type = "song_id"
+            # Strategy 1: filename match (most reliable for this case)
+            if az_filename in by_filename:
+                candidates = by_filename[az_filename]
+                if len(candidates) == 1:
+                    mongo_id = candidates[0]
+                    match_by_filename += 1
             
             # Strategy 2: relative path match
             if not mongo_id and az_rel in by_rel_path:
                 mongo_id = by_rel_path[az_rel]
-                match_type = "rel_path"
+                match_by_path += 1
             
-            # Strategy 3: filename match (only if unique)
-            if not mongo_id and az_filename in by_filename:
-                candidates = by_filename[az_filename]
-                if len(candidates) == 1:
-                    mongo_id = candidates[0]
-                    match_type = "filename"
+            # Strategy 3: song_id match (unlikely to work for this DB)
+            if not mongo_id and az_song_id and az_song_id in by_song_id:
+                mongo_id = by_song_id[az_song_id]
+                match_by_songid += 1
             
             if mongo_id:
                 updates.append(UpdateOne(
@@ -119,6 +121,8 @@ class ImprovedIDSync:
                     {"$set": {"azuracast_id": az_id, "azuracast_path": az_path}}
                 ))
                 matched += 1
+        
+        logger.info(f"Match breakdown: filename={match_by_filename}, path={match_by_path}, song_id={match_by_songid}")
         
         # 4. Execute updates
         if updates:
