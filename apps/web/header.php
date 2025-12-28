@@ -52,6 +52,8 @@
         ?>
         <link rel="icon" href="<?php echo esc_attr($yourparty_fallback_icon); ?>" sizes="any">
     <?php endif; ?>
+    <link rel="manifest" href="<?php echo get_template_directory_uri(); ?>/manifest.json">
+    <meta name="theme-color" content="#2E8B57">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <?php wp_head(); ?>
 </head>

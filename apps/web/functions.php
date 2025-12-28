@@ -160,6 +160,15 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    // Service Worker Registration
+    wp_enqueue_script(
+        'yourparty-sw-init',
+        get_template_directory_uri() . '/assets/sw-init.js',
+        [],
+        YOURPARTY_VERSION,
+        true
+    );
+
     // Live Voting Widget CSS
     $live_voting_css_ver = file_exists(get_template_directory() . '/assets/live-voting.css')
         ? filemtime(get_template_directory() . '/assets/live-voting.css')
