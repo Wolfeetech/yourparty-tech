@@ -36,6 +36,24 @@ LIBRARY_ROOT_LINUX = os.getenv(
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin")
 
 # 4. AzuraCast (Radio)
-AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "http://192.168.178.210/api") # Updated to match .env
+AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "https://radio.yourparty.tech/api")
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY", "b67d671461fd35d0:9ba6fc04467491f28c29caf8895a5ca7")
 AZURACAST_STATION_ID = int(os.getenv("AZURACAST_STATION_ID", 1))
+
+# 5. Smart Tagging Rules (Dynamic Genre Mapping)
+# Maps partial genre/folder names to Vibes
+MOOD_RULES = {
+    "Energy": [
+        "Tech House", "Techno", "Drum & Bass", "Dubstep", "Peak Time", 
+        "Driving", "Hard Techno", "Bass House", "Electro", "Big Room"
+    ],
+    "Euphoric": [
+        "Melodic House & Techno", "Trance", "Progressive House", "Indie Dance", 
+        "Disco", "Nu Disco", "Future House", "Mainstage", "Anthem"
+    ],
+    "Chill": [
+        "Deep House", "Afro House", "Organic House", "Minimal", "Deep Tech", 
+        "Downtempo", "Lounge", "Electronica", "Ambient", "R&B", "Soul"
+    ]
+}
+AZURACAST_VERIFY_SSL = os.getenv("AZURACAST_VERIFY_SSL", "true").lower() == "true"

@@ -46,6 +46,49 @@ class ControlPanel {
                 this.fetchPulse(); // Refresh Moods immediately
             }
         });
+
+        // Bind Tag Button
+        const tagBtn = document.getElementById('mood-tag-button');
+        if (tagBtn) {
+            tagBtn.addEventListener('click', async () => {
+                const modal = document.getElementById('vibe-tag-modal');
+                if (modal) {
+                    // Update Modal Title
+                    const trackTitle = document.getElementById('track-title')?.textContent;
+                    const modalTitle = document.getElementById('modal-track-title');
+                    if (modalTitle) modalTitle.textContent = trackTitle || 'Unknown Track';
+
+                    // Reset Status
+                    const status = document.getElementById('tag-status');
+                    if (status) status.textContent = 'Loading Genre...';
+
+                    modal.showModal();
+
+                    // Fetch Smart Genre
+                    if (this.currentSongId) {
+                        try {
+                            const res = await fetch(`${this.apiBase}/track-metadata?song_id=${this.currentSongId}`);
+                            const data = await res.json();
+                            if (data.success && data.genre) {
+                                // Display Genre
+                                // Check if we have a genre element, if not create/append
+                                let genreEl = document.getElementById('modal-track-genre');
+                                if (!genreEl) {
+                                    genreEl = document.createElement('div');
+                                    genreEl.id = 'modal-track-genre';
+                                    genreEl.style.cssText = "color: var(--emerald); font-size: 12px; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;";
+                                    modalTitle.parentNode.appendChild(genreEl);
+                                }
+                                genreEl.textContent = `[ ${data.genre} ]`;
+                                if (status) status.textContent = '';
+                            } else {
+                                if (status) status.textContent = '';
+                            }
+                        } catch (e) { console.error(e); if (status) status.textContent = ''; }
+                    }
+                }
+            });
+        }
     }
 
     startPolling() {
@@ -55,25 +98,83 @@ class ControlPanel {
 
     async fetchPulse() {
         try {
-            // Fetch Moods
-            const moodsRes = await fetch(`${this.apiBase}/moods`);
-            const moodsData = await moodsRes.json();
-            this.updateMoods(moodsData);
+            // 1. Fetch Moods & Steering (Backend)
+            const [moodsRes, steerRes] = await Promise.all([
+                fetch(`${this.apiBase}/moods`),
+                fetch(`${this.apiBase}/control/steer`)
+            ]);
 
-            // Fetch Queue (via internal proxy if needed, or direct if CORS allowed)
-            // Using WP AJAX Proxy for queue to keep API keys hidden if not public
-            // But for now, let's try direct API if available, or just rely on page refresh for queue?
-            // The User requested "Real-time", so we should update queue.
-            // We can fetch from local proxy endpoint if available.
-            // For PoC, let's poll the steering status at least.
+            this.updateMoods(await moodsRes.json());
+            this.updateSteering(await steerRes.json());
 
-            // Fetch Steering
-            const steerRes = await fetch(`${this.apiBase}/control/steer`);
-            const steerData = await steerRes.json();
-            this.updateSteering(steerData);
+            // 2. Fetch Now Playing (AzuraCast Public JSON)
+            // Using static JSON for performance/reliability
+            const npRes = await fetch('https://radio.yourparty.tech/api/nowplaying_static/radio.yourparty.json');
+            const npData = await npRes.json();
+            this.updateNowPlaying(npData);
 
         } catch (e) {
             console.error("❌ Control Pulse Failed:", e);
+        }
+    }
+
+    updateNowPlaying(data) {
+        if (!data || !data.now_playing || !data.now_playing.song) return;
+
+        const song = data.now_playing.song;
+        this.currentSongId = song.id; // Store for tagging
+
+        // Update Footer
+        const titleEl = document.getElementById('track-title');
+        const artistEl = document.getElementById('track-artist');
+
+        if (titleEl) {
+            titleEl.textContent = song.title;
+            titleEl.classList.remove('skeleton');
+        }
+        if (artistEl) {
+            artistEl.textContent = song.artist;
+            artistEl.style.display = 'inline';
+        }
+
+        // Update Visualizer State?
+        // (Visualizer usually handles itself via audio context, but we can sync state if needed)
+    }
+
+    async submitTag(mood) {
+        if (!this.currentSongId) {
+            alert("No song playing to tag!");
+            return;
+        }
+
+        const statusEl = document.getElementById('tag-status');
+        if (statusEl) statusEl.textContent = `Tagging as ${mood}...`;
+
+        try {
+            const res = await fetch(`${this.apiBase}/mood-tag`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    song_id: this.currentSongId,
+                    mood: mood,
+                    station_id: 1
+                })
+            });
+
+            const result = await res.json();
+
+            if (result.success || result.status === 'ok') { // Robust check
+                if (statusEl) statusEl.textContent = "✅ Tag Saved!";
+                setTimeout(() => {
+                    document.getElementById('vibe-tag-modal').close();
+                    if (statusEl) statusEl.textContent = "";
+                }, 1000);
+            } else {
+                if (statusEl) statusEl.textContent = "❌ Save Failed";
+            }
+        } catch (e) {
+            console.error("Tag error:", e);
+            if (statusEl) statusEl.textContent = "❌ Connection Error";
         }
     }
 

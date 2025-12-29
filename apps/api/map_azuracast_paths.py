@@ -32,7 +32,7 @@ LIBRARY_ROOT_LINUX = (
     or "/var/radio/music/yourparty_Libary"
 )
 
-AC_URL = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+AC_URL = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech")
 AC_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
 

@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("MoodSync")
 
 # Configuration - SECURITY: No hardcoded defaults for sensitive values
-AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "http://192.168.178.210")
+AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "https://radio.yourparty.tech")
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
 

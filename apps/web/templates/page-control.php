@@ -97,15 +97,15 @@ $api_public = 'https://api.yourparty.tech'; // Client-side accessible
 // PHP Fetches use Internal
 $api_base = $api_internal; 
 
-$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => false, 'timeout' => 5]));
+$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => true, 'timeout' => 5]));
 $ratings_data = json_decode($ratings_body, true);
 if (!is_array($ratings_data)) $ratings_data = [];
 
-$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base/moods", ['sslverify' => false, 'timeout' => 5]));
+$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base/moods", ['sslverify' => true, 'timeout' => 5]));
 $moods_data = json_decode($moods_body, true);
 if (!is_array($moods_data)) $moods_data = [];
 
-$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", ['sslverify' => false, 'timeout' => 5]));
+$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", ['sslverify' => true, 'timeout' => 5]));
 $steering_status = json_decode($steer_body, true);
 if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' => null];
 
@@ -429,7 +429,95 @@ get_header();
     </div>
 </div>
 
+    <!-- VIBE TAGGING MODAL -->
+    <dialog id="vibe-tag-modal" class="glass-modal">
+        <div class="modal-head">
+            <h3>🏷️ TAG CURRENT VIBE</h3>
+            <button onclick="document.getElementById('vibe-tag-modal').close()" class="close-btn">✕</button>
+        </div>
+        <div class="modal-body">
+            <p class="track-preview">
+                Target: <span id="modal-track-title" class="highlight">Unknown Track</span>
+            </p>
+            <div class="mood-grid">
+                <button class="mood-option energy" onclick="window.controlPanel.submitTag('Energy')">
+                    <span class="icon">⚡</span>
+                    <span class="label">ENERGY</span>
+                </button>
+                <button class="mood-option chill" onclick="window.controlPanel.submitTag('Chill')">
+                    <span class="icon">🧊</span>
+                    <span class="label">CHILL</span>
+                </button>
+                <button class="mood-option euphoric" onclick="window.controlPanel.submitTag('Euphoric')">
+                    <span class="icon">✨</span>
+                    <span class="label">EUPHORIC</span>
+                </button>
+            </div>
+            <div id="tag-status" class="status-msg"></div>
+        </div>
+    </dialog>
+
+</div>
+
+<style>
+/* MODAL CSS */
+.glass-modal {
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 0;
+    width: 90%;
+    max-width: 400px;
+    color: #fff;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    position: fixed; /* Ensure valid positioning */
+    inset: 0; margin: auto; /* Center native dialog */
+}
+.glass-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+.modal-head {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.modal-head h3 { margin: 0; font-size: 14px; letter-spacing: 0.1em; color: var(--emerald); }
+.close-btn { background: none; border: none; color: #666; cursor: pointer; font-size: 18px; }
+.close-btn:hover { color: #fff; }
+
+.modal-body { padding: 30px 20px; text-align: center; }
+.track-preview { margin-bottom: 30px; font-size: 13px; color: #888; }
+.track-preview .highlight { color: #fff; font-weight: bold; display: block; margin-top: 5px; font-size: 16px; }
+
+.mood-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+.mood-option {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.mood-option:hover { transform: translateY(-5px); background: rgba(255,255,255,0.1); }
+.mood-option .icon { font-size: 24px; }
+.mood-option .label { font-size: 10px; font-weight: bold; letter-spacing: 0.1em; }
+
+.mood-option.energy:hover { border-color: #ffaa00; box-shadow: 0 0 20px rgba(255,170,0,0.3); }
+.mood-option.chill:hover { border-color: #00aaff; box-shadow: 0 0 20px rgba(0,170,255,0.3); }
+.mood-option.euphoric:hover { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255,0,255,0.3); }
+
+.status-msg { margin-top: 20px; font-size: 12px; height: 15px; color: var(--emerald); }
+</style>
+
 <!-- STICKY MONITOR FOOTER (GLOBAL) -->
+
 <!-- REFACTORED TO MATCH USER CSS CLASS NAMES -->
 <div class="control-footer">
     <div class="footer-left">

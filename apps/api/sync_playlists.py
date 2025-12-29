@@ -14,7 +14,7 @@ load_dotenv()
 # Configuration
 MONGO_URI = os.getenv("MONGO_URI")
 # Fallback to local IP if not set
-AZURACAST_API_URL = os.getenv("AZURACAST_URL", "https://192.168.178.210/api").rstrip('/')
+AZURACAST_API_URL = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech/api").rstrip('/')
 if AZURACAST_API_URL.startswith('http:'):
     AZURACAST_API_URL = AZURACAST_API_URL.replace('http:', 'https:')
 

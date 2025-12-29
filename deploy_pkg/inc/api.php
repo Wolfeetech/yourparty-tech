@@ -33,7 +33,7 @@ function yourparty_http_defaults(): array
     return [
         'timeout' => 10,
         'headers' => $headers,
-        'sslverify' => false,
+        'sslverify' => true,
     ];
 }
 

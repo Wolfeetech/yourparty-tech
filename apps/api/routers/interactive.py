@@ -429,3 +429,67 @@ async def get_shoutouts(limit: int = 50, current_user: User = Depends(get_curren
         results.append(doc)
     
     return results
+
+@router.get("/track-metadata")
+async def get_track_metadata(song_id: str):
+    """
+    Fetch authoritative metadata (Smart Genre, Mood) from Mongo
+    for the given AzuraCast Song ID.
+    """
+    if not state.mongo_client:
+        return {"error": "DB Unavailable", "genre": "Unknown", "mood": None}
+    
+    # Try to find track by AzuraCast Song ID (usually 'azuracast_unique_id' or mapped via title)
+    # However, AzuraCast 'song_id' is cryptic hash.
+    # We might need to match by title/artist from the 'current' track in memory?
+    # Or assuming song_id passed here is the 'id' field from AzuraCast NP JSON
+    
+    # Let's search by string match on song_id if it's stored?
+    # Actually, we don't reliably store AzuraCast 'sh_id' or 'song_id' in Mongo yet.
+    # We rely on TrackMatcher.
+    
+    # Better approach: Pass Title/Artist to be safe?
+    # Or just return what we have in state.now_playing if available?
+    
+    # For now, let's try to match by 'azuracast_id' (integer) if provided,
+    # or falls back to fuzzy title match.
+    
+    try:
+        if not state.mongo_client:
+            return {"error": "DB Unavailable", "genre": "Unknown", "mood": None}
+        
+        track = None
+        
+        # 1. Try Integer ID
+        if song_id and song_id.isdigit():
+            # DIRECT CALL - NO AWAIT
+            track = state.mongo_client.tracks_collection.find_one({"azuracast_id": int(song_id)})
+        
+        # 2. If not found, look at Global Now Playing state
+        if not track:
+            # Check if this ID matches current NP
+            np = state.now_playing.get(1, {}) # Station 1
+            if np and str(np.get('id')) == str(song_id):
+                 title = np.get('title')
+                 if title:
+                     # DIRECT CALL - NO AWAIT
+                     track = state.mongo_client.tracks_collection.find_one({"title": title})
+
+        if track:
+            return {
+                "success": True,
+                "genre": track.get("genre", "Unknown"),
+                "mood": track.get("mood"),
+                "title": track.get("title")
+            }
+            
+        return {"success": False, "genre": "Unknown", "mood": None}
+
+    except Exception as e:
+        import traceback
+        return {
+            "success": False,
+            "error": "Crash", 
+            "details": str(e), 
+            "trace": traceback.format_exc()
+        }

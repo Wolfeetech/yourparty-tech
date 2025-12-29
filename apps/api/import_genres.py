@@ -13,7 +13,7 @@ load_dotenv()
 # Config
 MONGO_URI = os.getenv("MONGO_URI")
 # Force HTTPS
-AZURACAST_API_URL = os.getenv("AZURACAST_URL", "https://192.168.178.210/api").replace('http:', 'https:').rstrip('/')
+AZURACAST_API_URL = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech/api").replace('http:', 'https:').rstrip('/')
 if not AZURACAST_API_URL.endswith('/api'): AZURACAST_API_URL += '/api'
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 HEADERS = {"Authorization": f"Bearer {AZURACAST_API_KEY}"}

@@ -8,7 +8,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
     resp = requests.get(
-        'https://192.168.178.210/api/stations', 
+        'https://radio.yourparty.tech/api/stations', 
         headers={'Authorization': 'Bearer 19dc63da6223190:c9f8cc3a22e25932753dd3f4d57fa0d9'}, 
         verify=False
     )

@@ -85,7 +85,7 @@ def sync_db_to_files():
                 # JIT Client Init for fallback
                 try:
                     from apps.api.azuracast_client import AzuraCastClient
-                    ac_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+                    ac_url = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech")
                     ac_key = os.getenv("AZURACAST_API_KEY")
                     client = AzuraCastClient(ac_url, ac_key, 1) # Station 1
                     

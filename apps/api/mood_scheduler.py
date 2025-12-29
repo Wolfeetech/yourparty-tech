@@ -54,7 +54,7 @@ DISCOVERY_GENRES = ["Techno", "House", "Trance", "DeepHouse", "Minimal", "Disco"
 # Configuration from environment
 FEATURE_MOOD_AUTODJ = os.getenv("FEATURE_MOOD_AUTODJ", "false").lower() == "true"
 MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
-AZURACAST_URL = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+AZURACAST_URL = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech")
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
 

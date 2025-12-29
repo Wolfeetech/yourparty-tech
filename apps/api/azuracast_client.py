@@ -1,27 +1,35 @@
 import httpx
 import logging
+import os
 import urllib3
 from typing import Dict, Any, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Suppress InsecureRequestWarning
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
 
 class AzuraCastClient:
-    def __init__(self, base_url: str, api_key: str, station_id: int):
+    def __init__(self, base_url: str, api_key: str, station_id: int, verify_ssl: Optional[bool] = None):
         self.base_url = base_url.rstrip('/').rstrip('/api')
         self.api_key = api_key
         self.station_id = station_id
+        self.verify_ssl = _env_bool("AZURACAST_VERIFY_SSL", False) if verify_ssl is None else bool(verify_ssl)
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         self.timeout = 10.0
+        if not self.verify_ssl:
+            # Suppress InsecureRequestWarning when SSL verification is intentionally disabled.
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     async def _get(self, url: str) -> Any:
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.get(url, headers=self.headers)
                 resp.raise_for_status()
@@ -31,7 +39,7 @@ class AzuraCastClient:
                 return {}
 
     async def _post(self, url: str, json: Optional[Dict] = None) -> Any:
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.post(url, headers=self.headers, json=json)
                 resp.raise_for_status()
@@ -41,7 +49,7 @@ class AzuraCastClient:
                 return None
 
     async def _put(self, url: str, json: Optional[Dict] = None) -> Any:
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.put(url, headers=self.headers, json=json)
                 resp.raise_for_status()
@@ -56,7 +64,7 @@ class AzuraCastClient:
         """
         sid = station_id if station_id is not None else self.station_id
         url = f"{self.base_url}/api/station/{sid}/status"
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.get(url, headers=self.headers)
                 resp.raise_for_status()
@@ -100,7 +108,7 @@ class AzuraCastClient:
         try:
             # Fallback to sync requests because httpx is acting up on this env
             import requests
-            resp = requests.get(url, headers=self.headers, verify=False, timeout=30)
+            resp = requests.get(url, headers=self.headers, verify=self.verify_ssl, timeout=30)
             resp.raise_for_status()
             res = resp.json()
         except Exception as e:
@@ -137,7 +145,7 @@ class AzuraCastClient:
         sid = station_id if station_id is not None else self.station_id
         url = f"{self.base_url}/api/station/{sid}/request/{media_id}"
         # Requests don't return JSON body always, just 204 or 200
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.post(url, headers=self.headers)
                 resp.raise_for_status()
@@ -151,7 +159,7 @@ class AzuraCastClient:
         """Skip the currently playing song."""
         sid = station_id if station_id is not None else self.station_id
         url = f"{self.base_url}/api/station/{sid}/backend/skip"
-        async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
             try:
                 resp = await client.post(url, headers=self.headers)
                 resp.raise_for_status()

@@ -65,17 +65,17 @@ class PlaylistService:
             
             # 2. Add to AzuraCast Playlist
             # Check if playlist exists, create if not
-            playlists = self.azura.get_playlists()
+            playlists = await self.azura.get_playlists()
             target_pl = next((p for p in playlists if p['name'].lower() == name.lower()), None)
             
             if not target_pl:
                 logger.info(f"Creating missing playlist: {name}")
-                target_pl = self.azura.create_playlist(name)
+                target_pl = await self.azura.create_playlist(name)
                 
             if target_pl:
                 pl_id = target_pl['id']
                 # Replace content
-                success = self.azura.replace_playlist_content(pl_id, media_ids)
+                success = await self.azura.replace_playlist_content(pl_id, media_ids)
                 
                 return {
                     "playlist": name,

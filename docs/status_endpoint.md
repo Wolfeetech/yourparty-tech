@@ -89,7 +89,7 @@ setInterval(fetchStatus, 10000);
 
 ### WordPress (`wp-config.php`)
 ```php
-define('YOURPARTY_AZURACAST_URL', 'https://192.168.178.210');
+define('YOURPARTY_AZURACAST_URL', 'https://radio.yourparty.tech');
 define('YOURPARTY_AZURACAST_API_KEY', 'your-key-here');
 ```
 

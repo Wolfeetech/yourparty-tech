@@ -47,7 +47,7 @@ function yourparty_http_defaults(): array
     return [
         'timeout' => 10,
         'headers' => $headers,
-        'sslverify' => false,
+        'sslverify' => true,
     ];
 }
 
@@ -723,7 +723,7 @@ add_action('rest_api_init', function () {
                 
                 $response = wp_remote_get($api_url, [
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -783,7 +783,7 @@ add_action('rest_api_init', function () {
                         'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
                     ]),
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -824,7 +824,7 @@ add_action('rest_api_init', function () {
                         'mood_next' => $mood_next
                     ]),
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -901,7 +901,7 @@ add_action('rest_api_init', function () {
                 $api_url = yourparty_api_base_url() . '/library/all';
                 $response = wp_remote_get($api_url, [
                     'timeout' => 30, // Library might look big
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -968,7 +968,7 @@ add_action('rest_api_init', function () {
                 
                 $response = wp_remote_get($api_url, [
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -996,7 +996,7 @@ add_action('rest_api_init', function () {
                 
                 $response = wp_remote_get($api_url, [
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -1337,7 +1337,7 @@ add_action('rest_api_init', function () {
                         'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
                     ]),
                     'timeout' => 5,
-                    'sslverify' => false
+                    'sslverify' => true
                 ]);
 
                 if (is_wp_error($response)) {
@@ -1415,7 +1415,7 @@ function yourparty_proxy_request($method, $path, $body = null) {
     $args = [
         'method' => $method,
         'timeout' => 5,
-        'sslverify' => false,
+        'sslverify' => true,
         'headers' => ['Content-Type' => 'application/json']
     ];
     if ($body) {

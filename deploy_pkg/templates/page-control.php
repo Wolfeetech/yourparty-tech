@@ -69,15 +69,15 @@ if ($is_admin && isset($_POST['set_steering']) && wp_verify_nonce($_POST['_wpnon
 // --- DATA FETCH ---
 $api_base = 'http://192.168.178.211:8000'; 
 
-$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => false, 'timeout' => 5]));
+$ratings_body = wp_remote_retrieve_body(wp_remote_get("$api_base/ratings", ['sslverify' => true, 'timeout' => 5]));
 $ratings_data = json_decode($ratings_body, true);
 if (!is_array($ratings_data)) $ratings_data = [];
 
-$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base/moods", ['sslverify' => false, 'timeout' => 5]));
+$moods_body = wp_remote_retrieve_body(wp_remote_get("$api_base/moods", ['sslverify' => true, 'timeout' => 5]));
 $moods_data = json_decode($moods_body, true);
 if (!is_array($moods_data)) $moods_data = [];
 
-$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", ['sslverify' => false, 'timeout' => 5]));
+$steer_body = wp_remote_retrieve_body(wp_remote_get("$api_base/control/steer", ['sslverify' => true, 'timeout' => 5]));
 $steering_status = json_decode($steer_body, true);
 if (!is_array($steering_status)) $steering_status = ['mode' => 'auto', 'target' => null];
 

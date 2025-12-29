@@ -474,7 +474,7 @@ class MongoDatabaseClient:
             logger.error(f"Error getting dominant next mood: {e}")
             return None
     
-    def get_tracks_by_mood(self, mood: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_tracks_by_mood(self, mood: str, limit: int = 50, station_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get tracks tagged with a specific mood.
         Used for auto-DJ track selection.
@@ -482,6 +482,7 @@ class MongoDatabaseClient:
         Args:
             mood: Target mood
             limit: Maximum tracks to return
+            station_id: Optional station identifier to filter votes
             
         Returns:
             List of track documents with that mood
@@ -490,9 +491,13 @@ class MongoDatabaseClient:
             if not hasattr(self, 'moods_collection'):
                 self.moods_collection = self.db["moods"]
             
+            query = {"mood": mood}
+            if station_id is not None:
+                query["station_id"] = station_id
+
             # Get all song_ids with this mood
             mood_docs = list(self.moods_collection.find(
-                {"mood": mood},
+                query,
                 {"song_id": 1}
             ).limit(limit * 2))  # Get more to filter
             
@@ -524,12 +529,8 @@ class MongoDatabaseClient:
         try:
             query = {}
             if mood:
-                # Find song_ids with this mood first
-                if not hasattr(self, 'moods_collection'):
-                    self.moods_collection = self.db["moods"]
-                mood_docs = list(self.moods_collection.find({"mood": mood}, {"song_id": 1}))
-                song_ids = list(set([d["song_id"] for d in mood_docs if d.get("song_id")]))
-                query["song_id"] = {"$in": song_ids}
+                # Query mood directly on tracks (V2 fix)
+                query["mood"] = mood
             
             # Add Rating Filter (Complex because rating is aggregated)
             # For simplicity in V1, we just filter by mood and existence of azuracast_id
@@ -621,13 +622,14 @@ class MongoDatabaseClient:
 
     # ========== PLAYTIME MODE QUERIES ==========
     
-    def get_untagged_tracks(self, genres: List[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_untagged_tracks(self, genres: List[str] = None, limit: int = 50, station_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         DISCOVERY MODE: Get tracks with no/few mood votes for tagging.
         
         Args:
             genres: Optional list of genres to filter by
             limit: Maximum tracks to return
+            station_id: Optional station identifier to filter votes
             
         Returns:
             List of tracks needing mood tags
@@ -637,7 +639,8 @@ class MongoDatabaseClient:
                 self.moods_collection = self.db["moods"]
             
             # Get all song_ids that have mood entries
-            tagged_song_ids = self.moods_collection.distinct("song_id")
+            mood_filter = {"station_id": station_id} if station_id is not None else {}
+            tagged_song_ids = self.moods_collection.distinct("song_id", mood_filter)
             
             # Query for tracks NOT in the tagged list
             query = {"song_id": {"$nin": list(tagged_song_ids)}}
@@ -666,12 +669,13 @@ class MongoDatabaseClient:
             logger.error(f"Error getting untagged tracks: {e}")
             return []
     
-    def get_tagged_tracks(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_tagged_tracks(self, limit: int = 50, station_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get tracks that have at least one mood tag.
         
         Args:
             limit: Maximum tracks to return
+            station_id: Optional station identifier to filter votes
             
         Returns:
             List of tagged tracks
@@ -681,7 +685,8 @@ class MongoDatabaseClient:
                 self.moods_collection = self.db["moods"]
             
             # Get distinct song_ids with mood tags
-            tagged_song_ids = list(self.moods_collection.distinct("song_id"))[:limit]
+            mood_filter = {"station_id": station_id} if station_id is not None else {}
+            tagged_song_ids = list(self.moods_collection.distinct("song_id", mood_filter))[:limit]
             
             result = []
             for song_id in tagged_song_ids:
@@ -703,7 +708,13 @@ class MongoDatabaseClient:
             logger.error(f"Error getting tagged tracks: {e}")
             return []
     
-    def get_tracks_needing_refinement(self, min_votes: int = 1, max_votes: int = 10, limit: int = 30) -> List[Dict[str, Any]]:
+    def get_tracks_needing_refinement(
+        self,
+        min_votes: int = 1,
+        max_votes: int = 10,
+        limit: int = 30,
+        station_id: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
         """
         REFINEMENT MODE: Get tracks with some tags but needing more verification.
         
@@ -711,6 +722,7 @@ class MongoDatabaseClient:
             min_votes: Minimum mood votes required
             max_votes: Maximum mood votes (tracks with more are "verified")
             limit: Maximum tracks to return
+            station_id: Optional station identifier to filter votes
             
         Returns:
             List of tracks needing more community input
@@ -720,7 +732,10 @@ class MongoDatabaseClient:
                 self.moods_collection = self.db["moods"]
             
             # Aggregate to find song_ids with vote counts in range
-            pipeline = [
+            pipeline = []
+            if station_id is not None:
+                pipeline.append({"$match": {"station_id": station_id}})
+            pipeline += [
                 {"$group": {"_id": "$song_id", "vote_count": {"$sum": 1}}},
                 {"$match": {"vote_count": {"$gte": min_votes, "$lte": max_votes}}},
                 {"$sort": {"vote_count": 1}},  # Prioritize lowest vote counts
@@ -786,13 +801,16 @@ class MongoDatabaseClient:
             logger.error(f"Error syncing metadata: {e}")
             return {"success": False, "error": str(e)}
 
-    def get_all_rated_tracks(self, min_rating: float = 0.0) -> List[Dict[str, Any]]:
+    def get_all_rated_tracks(self, min_rating: float = 0.0, station_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get all tracks with ratings above a threshold.
         """
         try:
             # Aggregate ratings
-            pipeline = [
+            pipeline = []
+            if station_id is not None:
+                pipeline.append({"$match": {"station_id": station_id}})
+            pipeline += [
                 {"$group": {
                     "_id": "$song_id",
                     "average": {"$avg": "$rating"},

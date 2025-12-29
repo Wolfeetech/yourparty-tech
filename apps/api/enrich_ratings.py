@@ -28,7 +28,7 @@ async def enrich_metadata():
     )
 
     # 2. Connect to AzuraCast
-    ac_url = os.getenv("AZURACAST_URL", "http://192.168.178.210")
+    ac_url = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech")
     ac_key = os.getenv("AZURACAST_API_KEY", "")
     ac_station = int(os.getenv("AZURACAST_STATION_ID", "1"))
     

@@ -57,7 +57,7 @@ if (!defined('YOURPARTY_STREAM_URL')) {
     $stream_url_option = get_option('yourparty_stream_url');
     define(
         'YOURPARTY_STREAM_URL',
-        $stream_url_option ?: 'https://yourparty.tech/radio-stream'
+        $stream_url_option ?: 'https://radio.yourparty.tech/listen/radio.yourparty/radio.mp3'
     );
 }
 
