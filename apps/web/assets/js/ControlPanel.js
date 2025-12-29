@@ -71,7 +71,6 @@ class ControlPanel {
                             const data = await res.json();
                             if (data.success && data.genre) {
                                 // Display Genre
-                                // Check if we have a genre element, if not create/append
                                 let genreEl = document.getElementById('modal-track-genre');
                                 if (!genreEl) {
                                     genreEl = document.createElement('div');
@@ -86,6 +85,28 @@ class ControlPanel {
                             }
                         } catch (e) { console.error(e); if (status) status.textContent = ''; }
                     }
+                }
+            });
+        }
+
+        // Bind Library Button
+        const browseBtn = document.getElementById('open-library-btn');
+        if (browseBtn) {
+            browseBtn.addEventListener('click', () => {
+                const modal = document.getElementById('library-modal');
+                if (modal) modal.showModal();
+            });
+        }
+
+        // Bind Library Search Input
+        const searchInput = document.getElementById('lib-search-input');
+        if (searchInput) {
+            let timeout;
+            searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                clearTimeout(timeout);
+                if (val.length > 2) {
+                    timeout = setTimeout(() => this.searchLibrary(val), 500);
                 }
             });
         }
@@ -376,6 +397,85 @@ class ControlPanel {
             }
         } catch (e) {
             console.error("Delete failed", e);
+        }
+    }
+
+    async searchLibrary(query) {
+        const resultsEl = document.getElementById('lib-search-results');
+        if (!resultsEl) return;
+
+        resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Searching...</div>';
+
+        try {
+            const res = await fetch(`${this.apiBase}/control/library/search?q=${encodeURIComponent(query)}`);
+            const items = await res.json();
+
+            resultsEl.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No results found.</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const song = item.song || {};
+                const row = document.createElement('div');
+                row.className = 'lib-result-item';
+                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);";
+
+                row.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; color:#fff; font-size:13px;">${song.title}</div>
+                        <div style="font-size:11px; color:#aaa;">${song.artist}</div>
+                    </div>
+                    <div>
+                        <button class="cyber-btn small btn-queue" style="padding:4px 8px; font-size:10px; background:var(--emerald); color:#000; border:none; cursor:pointer;">+ ADD</button>
+                    </div>
+                `;
+
+                row.querySelector('.btn-queue').addEventListener('click', () => {
+                    // request_id is usually what we need, which is item.request_id or item.song.id?
+                    // AzuraCast Search Request returns row.request_id usually.
+                    // The endpoint expects media_id (song_id or unique_id).
+                    // AzuraCast Search API returns: { song: {...}, request_id: "...", request_url: "..." }
+                    // We need to use `item.request_song_id` or `item.song.id`?
+                    // Let's use `item.request_song_id` or `item.song.id`.
+                    // Actually based on `azuracast_client.search_requests`, it returns rows.
+                    // Each row usually has `song_id` string or `row.song.id`.
+                    // Let's use `item.song.id`.
+                    this.queueTrack(item.song.id, song.title);
+                });
+
+                resultsEl.appendChild(row);
+            });
+
+        } catch (e) {
+            console.error("Search error", e);
+            resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4444;">Search failed.</div>';
+        }
+    }
+
+    async queueTrack(mediaId, title) {
+        if (!confirm(`Add "${title}" to Queue?`)) return;
+
+        try {
+            const res = await fetch(`${this.apiBase}/control/queue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ media_id: mediaId })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                alert("Track queued successfully!");
+                document.getElementById('library-modal').close();
+                this.fetchQueue(); // Refresh queue
+            } else {
+                alert("Failed to queue track. It might be on cooldown.");
+            }
+        } catch (e) {
+            console.error("Queue error", e);
+            alert("Error queuing track.");
         }
     }
 }

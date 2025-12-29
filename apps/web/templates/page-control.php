@@ -269,7 +269,10 @@ get_header();
     <section class="deck-panel queue-panel">
         <div class="panel-head">
             <h3>📻 RADIO QUEUE</h3>
-            <span class="live-tag">LIVE</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="open-library-btn" class="cyber-btn small" style="padding:5px 10px; font-size:10px; background:#222; border:1px solid #444; color:#fff; cursor:pointer;">🔍 BROWSE</button>
+                <span class="live-tag">LIVE</span>
+            </div>
         </div>
         <div class="queue-content">
             <?php if ($now_playing): ?>
@@ -438,8 +441,10 @@ get_header();
         <div class="modal-body">
             <p class="track-preview">
                 Target: <span id="modal-track-title" class="highlight">Unknown Track</span>
+                <div id="modal-track-genre" style="display:none;"></div>
             </p>
             <div class="mood-grid">
+                <!-- Row 1 -->
                 <button class="mood-option energy" onclick="window.controlPanel.submitTag('Energy')">
                     <span class="icon">⚡</span>
                     <span class="label">ENERGY</span>
@@ -452,8 +457,39 @@ get_header();
                     <span class="icon">✨</span>
                     <span class="label">EUPHORIC</span>
                 </button>
+                
+                <!-- Row 2 -->
+                <button class="mood-option dark" onclick="window.controlPanel.submitTag('Dark')">
+                    <span class="icon">🌑</span>
+                    <span class="label">DARK</span>
+                </button>
+                <button class="mood-option groovy" onclick="window.controlPanel.submitTag('Groovy')">
+                    <span class="icon">🌊</span>
+                    <span class="label">GROOVY</span>
+                </button>
+                <button class="mood-option hypnotic" onclick="window.controlPanel.submitTag('Hypnotic')">
+                    <span class="icon">🌀</span>
+                    <span class="label">HYPNOTIC</span>
+                </button>
             </div>
             <div id="tag-status" class="status-msg"></div>
+        </div>
+    </dialog>
+
+    <!-- LIBRARY BROWSER MODAL -->
+    <dialog id="library-modal" class="glass-modal library-modal">
+        <div class="modal-head">
+            <h3>📂 LIBRARY BROWSER</h3>
+            <button onclick="document.getElementById('library-modal').close()" class="close-btn">✕</button>
+        </div>
+        <div class="modal-body" style="text-align:left;">
+            <div class="search-box" style="margin-bottom:20px;">
+                <input type="text" id="lib-search-input" placeholder="Search Title or Artist..." class="cyber-input" style="width:100%; border-color:#333;">
+            </div>
+            <div id="lib-search-results" class="results-grid" style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                <!-- Results go here -->
+                <div style="text-align:center; color:#666; font-size:11px; padding:20px;">Type query to search tracks...</div>
+            </div>
         </div>
     </dialog>
 
@@ -469,13 +505,14 @@ get_header();
     border-radius: 16px;
     padding: 0;
     width: 90%;
-    max-width: 400px;
+    max-width: 500px; /* Slight increase for better grid */
     color: #fff;
     box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-    position: fixed; /* Ensure valid positioning */
-    inset: 0; margin: auto; /* Center native dialog */
+    position: fixed; 
+    inset: 0; margin: auto; 
+    z-index: 2000;
 }
-.glass-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+.glass-modal::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
 .modal-head {
     padding: 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -496,7 +533,7 @@ get_header();
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
-    padding: 20px 10px;
+    padding: 15px 10px;
     cursor: pointer;
     transition: all 0.2s;
     color: #fff;
@@ -509,9 +546,13 @@ get_header();
 .mood-option .icon { font-size: 24px; }
 .mood-option .label { font-size: 10px; font-weight: bold; letter-spacing: 0.1em; }
 
+/* Colors */
 .mood-option.energy:hover { border-color: #ffaa00; box-shadow: 0 0 20px rgba(255,170,0,0.3); }
 .mood-option.chill:hover { border-color: #00aaff; box-shadow: 0 0 20px rgba(0,170,255,0.3); }
 .mood-option.euphoric:hover { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255,0,255,0.3); }
+.mood-option.dark:hover { border-color: #555; box-shadow: 0 0 20px rgba(100,100,100,0.3); }
+.mood-option.groovy:hover { border-color: #00ffaa; box-shadow: 0 0 20px rgba(0,255,170,0.3); }
+.mood-option.hypnotic:hover { border-color: #4400ff; box-shadow: 0 0 20px rgba(68,0,255,0.3); }
 
 .status-msg { margin-top: 20px; font-size: 12px; height: 15px; color: var(--emerald); }
 </style>

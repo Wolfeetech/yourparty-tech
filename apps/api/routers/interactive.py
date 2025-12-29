@@ -615,3 +615,25 @@ async def remove_queue_item(item_id: int, station_id: int = 1):
         return {"success": True}
     else:
         raise HTTPException(status_code=500, detail="Failed to remove item")
+
+@router.get("/control/library/search")
+async def search_library_handler(q: str, station_id: int = 1):
+    """Search for tracks in the library (via AzuraCast Requests API)."""
+    if not state.azura_client: 
+        return []
+    return await state.azura_client.search_requests(q, station_id)
+
+@router.post("/control/queue")
+async def add_to_queue_handler(payload: dict):
+    """Add a track to the queue via Request API."""
+    if not state.azura_client: 
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    mid = payload.get("media_id") or payload.get("song_id") # Accept either
+    sid = payload.get("station_id", 1)
+    
+    if not mid: 
+        raise HTTPException(status_code=400, detail="media_id required")
+    
+    success = await state.azura_client.queue_track(mid, sid)
+    return {"success": success}

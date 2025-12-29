@@ -231,6 +231,27 @@ class AzuraCastClient:
                 logger.error(f"Failed to delete queue item {item_id}: {e}")
                 return False
 
+    async def search_requests(self, query: str, station_id: Optional[int] = None) -> List[Dict]:
+        """Search for requestable songs."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/requests"
+        params = {"searchPhrase": query, "rowCount": 20}
+        
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
+            try:
+                resp = await client.get(url, headers=self.headers, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                # AzuraCast usually returns {"rows": [...], "total": ...} or just [...]
+                if isinstance(data, dict) and "rows" in data:
+                    return data["rows"]
+                elif isinstance(data, list):
+                    return data
+                return []
+            except Exception as e:
+                logger.error(f"Search requests failed: {e}")
+                return []
+
 if __name__ == "__main__":
     pass
 

@@ -21,7 +21,9 @@ $API_FILES = @(
 
 $WEB_FILES = @(
     "assets/app.js",
-    "inc/api.php"
+    "assets/js/ControlPanel.js",
+    "inc/api.php",
+    "templates/page-control.php"
 )
 
 Write-Host "=== YourParty Full Stack Deployment ===" -ForegroundColor Cyan

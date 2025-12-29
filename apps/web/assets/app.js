@@ -123,6 +123,11 @@ const initApp = () => {
   const moodTagButton = document.getElementById("mood-tag-button");
   if (moodTagButton) {
     moodTagButton.addEventListener("click", () => {
+      // Prevent double handling on Control Panel where ControlPanel.js handles it
+      if (window.controlPanel || document.body.classList.contains('page-template-page-control')) {
+        return;
+      }
+
       const titleEl = document.getElementById("track-title");
       const artistEl = document.getElementById("track-artist");
       const coverEl = document.getElementById("player-cover");
