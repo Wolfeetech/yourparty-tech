@@ -116,45 +116,102 @@ async def get_moods(song_id: Optional[str] = None):
 async def vote_mood(request: Request, mood_request: MoodVoteRequest):
     if not FEATURE_MOOD_VOTES:
         raise HTTPException(status_code=503, detail="Mood voting disabled")
-    if not any([request.mood_current, request.mood_next, request.rating, request.vote]):
+    if not any([mood_request.mood_current, mood_request.mood_next, mood_request.rating, mood_request.vote]):
         raise HTTPException(status_code=400, detail="Vote type required")
     
-    result = {"success": True, "song_id": request.song_id, "message": "Vote recorded"}
+    result = {"success": True, "song_id": mood_request.song_id, "message": "Vote recorded"}
 
     if state.mongo_client:
-        if request.vote:
-            counts = state.mongo_client.submit_vote(request.song_id, request.vote, request.user_id)
+        if mood_request.vote:
+            counts = state.mongo_client.submit_vote(mood_request.song_id, mood_request.vote, mood_request.user_id)
             result["vote_counts"] = counts
-            if request.vote == "dislike" and counts.get("dislike", 0) >= counts.get("like", 0) + 3:
+            if mood_request.vote == "dislike" and counts.get("dislike", 0) >= counts.get("like", 0) + 3:
                  if state.azura_client:
                      await state.azura_client.skip_current_song()
                      result["action_taken"] = "skip"
-            if request.vote == "like" and counts.get("like", 0) >= 3:
+            if mood_request.vote == "like" and counts.get("like", 0) >= 3:
                  if state.azura_client:
                      try:
-                         mid = int(request.song_id) if request.song_id.isdigit() else None
+                         mid = int(mood_request.song_id) if mood_request.song_id.isdigit() else None
                          if mid:
                              await state.azura_client.add_to_playlist(mid, "Starlight")
                              result["action_taken"] = "playlist_add"
                      except Exception as e:
                          logger.error(f"Playlist add failed: {e}")
 
-        if request.mood_current:
-            state.mongo_client.submit_mood(song_id=request.song_id, mood=request.mood_current, vote_type="community_vote")
-            result["mood_current"] = "recorded"
+        if mood_request.mood_current:
+            try:
+                state.mongo_client.submit_mood(song_id=mood_request.song_id, mood=mood_request.mood_current, vote_type="community_vote")
+                result["mood_current"] = "recorded"
+            except Exception as e:
+                logger.error(f"Error submitting mood: {e}")
+                result["mood_current_error"] = str(e)
             
-        if request.mood_next:
-            state.mongo_client.submit_next_mood_vote(song_id=request.song_id, mood=request.mood_next, user_id=request.user_id)
-            result["mood_next"] = "recorded"
+        if mood_request.mood_next:
+            try:
+                state.mongo_client.submit_mood_next_vote(song_id=mood_request.song_id, mood=mood_request.mood_next, user_id=mood_request.user_id)
+                result["mood_next"] = "recorded"
+            except Exception as e:
+                 logger.error(f"Error submitting mood_next: {e}")
+                 result["mood_next_error"] = str(e)
             
-        if request.rating:
-            state.mongo_client.submit_rating(song_id=request.song_id, rating=request.rating, user_id=request.user_id)
+        if mood_request.rating:
+            try:
+                state.mongo_client.submit_rating(song_id=mood_request.song_id, rating=mood_request.rating, user_id=mood_request.user_id)
+            except Exception as e:
+                logger.error(f"Error submitting rating: {e}")
+                result["rating_error"] = str(e)
             
     # Broadcast 'Pulse' to refresh dashboards
-    from routers import realtime
-    await realtime.manager.broadcast({"type": "pulse", "target": "moods"})
+    try:
+        from . import realtime
+        await realtime.manager.broadcast({"type": "pulse", "target": "moods"})
+    except Exception as e:
+        logger.error(f"Failed to broadcast pulse: {e}")
             
     return result
+
+@router.post("/shoutout")
+@limiter.limit("5/minute")
+async def send_shoutout(request: Request, shoutout_request: ShoutoutRequest):
+    """Send a shoutout message."""
+    if not state.mongo_client:
+        return {"success": True, "warning": "Mock Success - DB Missing"}
+    
+    # 1. Validation
+    msg = shoutout_request.message.strip()
+    if not msg or len(msg) > 280:
+         raise HTTPException(status_code=400, detail="Invalid message length")
+
+    # 2. Persist
+    result = state.mongo_client.submit_shoutout(
+        message=msg,
+        sender=shoutout_request.sender,
+        user_id=shoutout_request.user_id,
+        station_id=shoutout_request.station_id
+    )
+
+    # 3. Broadcast
+    if result.get("success"):
+        try:
+            from . import realtime
+            await realtime.manager.broadcast({
+                "type": "shoutout", 
+                "data": result["shoutout"]
+            })
+        except Exception as e:
+            logger.error(f"Failed to broadcast shoutout: {e}")
+
+    return result
+
+@router.get("/shoutouts")
+async def get_shoutouts(station_id: int = 1):
+    """Get recent shoutouts."""
+    if not state.mongo_client:
+        return {"shoutouts": []}
+    
+    shoutouts = state.mongo_client.get_recent_shoutouts(limit=20, station_id=station_id)
+    return {"shoutouts": shoutouts}
 
 @router.post("/vote-next-mood")
 @limiter.limit("5/minute")

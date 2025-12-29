@@ -1383,6 +1383,28 @@ add_action('rest_api_init', function () {
             'permission_callback' => '__return_true',
         ]
     );
+
+    // SHOUTOUT HISTORY PROXY
+    register_rest_route(
+        'yourparty/v1',
+        '/shoutouts',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $response = wp_remote_get(yourparty_api_base_url() . '/shoutouts', ['timeout' => 5, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return [];
+                }
+                
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                
+                return rest_ensure_response($data['shoutouts'] ?? []);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
 });
 
 /**

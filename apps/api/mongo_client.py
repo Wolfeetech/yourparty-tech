@@ -1154,6 +1154,53 @@ class MongoDatabaseClient:
             return {"like": 0, "dislike": 0}
 
 
+    # ========== SHOUTOUTS ==========
+
+    def submit_shoutout(self, message: str, sender: str, user_id: str = "anonymous", station_id: int = 1) -> Dict[str, Any]:
+        """Submit a shoutout/message."""
+        try:
+            if not hasattr(self, 'shoutouts_collection'):
+                self.shoutouts_collection = self.db["shoutouts"]
+                self.shoutouts_collection.create_index([("timestamp", -1)])
+            
+            doc = {
+                "message": message[:280], # Enforce limit
+                "sender": sender[:50],
+                "user_id": user_id,
+                "station_id": station_id,
+                "timestamp": datetime.utcnow()
+            }
+            
+            result = self.shoutouts_collection.insert_one(doc)
+            
+            # Return full doc with string ID
+            doc["_id"] = str(result.inserted_id)
+            return {"success": True, "shoutout": doc}
+            
+        except Exception as e:
+            logger.error(f"Error submitting shoutout: {e}")
+            return {"success": False, "error": str(e)}
+
+    def get_recent_shoutouts(self, limit: int = 20, station_id: int = 1) -> List[Dict[str, Any]]:
+        """Get recent shoutouts."""
+        try:
+            if not hasattr(self, 'shoutouts_collection'):
+                return []
+                
+            cursor = self.shoutouts_collection.find(
+                {"station_id": station_id}
+            ).sort("timestamp", -1).limit(limit)
+            
+            results = []
+            for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                results.append(doc)
+            
+            return results
+        except Exception as e:
+            logger.error(f"Error getting shoutouts: {e}")
+            return []
+
 if __name__ == "__main__":
     # Test connection
     client = MongoDatabaseClient()
