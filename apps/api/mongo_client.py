@@ -99,6 +99,8 @@ class MongoDatabaseClient:
             r"M:\Library",
             "/var/azuracast/stations/yourparty/media",
             "/var/azuracast/stations/radio4yourparty/media",
+            f"/var/azuracast/music_storage/{library_subdir}",
+            "/var/azuracast/music_storage",
             "/var/radio/music",
             "/mnt/music_hdd",
         ]
