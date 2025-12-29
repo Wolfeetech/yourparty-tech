@@ -8,12 +8,14 @@ $ScriptDir = Split-Path $MyInvocation.MyCommand.Path
 $API_FILES = @(
     "azuracast_client.py",
     "mood_scheduler.py",
+    "audio_science.py",
     "library_service.py",
     "playlist_service.py",
     "enrich_ratings.py",
     "manager.py",
     "mongo_client.py",
-    "routers/interactive.py"
+    "routers/interactive.py",
+    "requirements.txt"
 )
 
 $WEB_FILES = @(
@@ -75,6 +77,11 @@ foreach ($file in $WEB_FILES) {
 
 # --- Restart Services ---
 Write-Host "`n[3/3] Restarting Services..." -ForegroundColor Yellow
+
+# Install dependencies first
+Write-Host "  Installing dependencies..."
+ssh $SSH_OPTS "${SSH_USER}@${PVE_HOST}" "pct exec $CT_API_ID -- pip install -r $REMOTE_API_PATH/apps/api/requirements.txt"
+
 ssh $SSH_OPTS "${SSH_USER}@${PVE_HOST}" "pct exec $CT_API_ID -- systemctl restart radio-api"
 Write-Host "  radio-api restarted."
 

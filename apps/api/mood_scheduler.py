@@ -24,6 +24,7 @@ import random
 from datetime import datetime, time
 from typing import Optional, Dict, Any, List
 from enum import Enum
+from audio_science import CamelotWheel
 
 logger = logging.getLogger("MoodScheduler")
 
@@ -57,6 +58,33 @@ MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
 AZURACAST_URL = os.getenv("AZURACAST_URL", "https://radio.yourparty.tech")
 AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY")
 STATION_ID = 1
+
+# Time-Based Mood Curve (The Vibe)
+# Hour -> Mood
+MOOD_CURVE = {
+    6: "energetic",    # Morning Energy
+    12: "chill",       # Day Chill / Flow
+    18: "euphoric",    # Evening Ramp-up
+    21: "energetic",   # Prime Time
+    3: "atmospheric"   # Late Night / Comedown
+}
+
+def get_curve_mood() -> Optional[str]:
+    """Get the target mood based on the current time curve."""
+    now = datetime.now()
+    h = now.hour
+    
+    target = None
+    # Find most recent scheduled mood
+    for hour, mood in sorted(MOOD_CURVE.items()):
+        if h >= hour:
+            target = mood
+            
+    # Wrap around
+    if not target:
+        target = MOOD_CURVE[max(MOOD_CURVE.keys())]
+    
+    return target
 
 # Current state
 current_mode = PlaytimeMode.AUTO
@@ -207,15 +235,33 @@ async def select_live_vote_track(mongo_client, azura_client, station_id: int = 1
         return None
 
 
-async def select_next_track_by_mood(mongo_client, dominant_mood: str, station_id: int = 1) -> Optional[Dict[str, Any]]:
+async def select_next_track_by_mood(mongo_client, dominant_mood: str, station_id: int = 1, current_key: str = None) -> Optional[Dict[str, Any]]:
     """
     Select a track matching the dominant mood from the database.
+    Prioritizes Harmonic Mixing if current_key is provided.
     """
     if not mongo_client:
         logger.warning("MongoDB client not available")
         return None
     
     try:
+        # 1. Try Harmonic Mixing first
+        if current_key:
+            compatible_keys = CamelotWheel.get_compatible_keys(current_key)
+            if compatible_keys:
+                logger.info(f"Harmonic Mixing: Looking for {dominant_mood} in keys {compatible_keys} (from {current_key})")
+                harmonic_tracks = mongo_client.get_tracks_by_mood(
+                    dominant_mood, 
+                    limit=20, 
+                    station_id=station_id,
+                    allowed_keys=compatible_keys
+                )
+                if harmonic_tracks:
+                    selected = random.choice(harmonic_tracks)
+                    logger.info(f"HARMONIC MATCH! {selected.get('metadata', {}).get('title')} ({selected.get('metadata', {}).get('initial_key')})")
+                    return selected
+        
+        # 2. Fallback to standard Mood selection
         tracks = mongo_client.get_tracks_by_mood(dominant_mood, limit=20, station_id=station_id)
         
         if not tracks:
@@ -223,7 +269,7 @@ async def select_next_track_by_mood(mongo_client, dominant_mood: str, station_id
             return None
         
         selected = random.choice(tracks)
-        logger.info(f"[STATION {station_id}] Selected track for mood '{dominant_mood}': {selected.get('metadata', {}).get('title', 'Unknown')}")
+        logger.info(f"[STATION {station_id}] Selected track for mood '{dominant_mood}' (Non-Harmonic): {selected.get('metadata', {}).get('title', 'Unknown')}")
         return selected
         
     except Exception as e:
@@ -300,6 +346,34 @@ async def mood_queue_worker_iteration(mongo_client, azura_client, station_id: in
         except Exception as e:
             logger.warning(f"[STATION {station_id}] Failed to check AzuraCast queue: {e}")
 
+        # Get Current Context (Key) for Harmonic Mixing
+        current_key = None
+        try:
+            now_playing = await azura_client.get_now_playing(station_id=station_id)
+            if now_playing and 'now_playing' in now_playing:
+                current_song_id = now_playing['now_playing']['song']['id']
+                # Look up in DB for Key
+                # We need to find by AzuraCast ID (hash)
+                # But our tracks might store media_id or unique_id as song_id? 
+                # AzuraCast 'id' in 'song' object is the unique hash.
+                
+                # Check mapping. mongo_client.tracks usually stores 'song_id' as MD5 hash
+                # AzuraCast.get_now_playing returns 'id' which is also hash.
+                db_track = mongo_client.tracks_collection.find_one({"song_id": current_song_id})
+                if not db_track:
+                    # Try azuracast_id (numeric) if stored?
+                    # But AzuraCast API often returns custom_fields too.
+                    # Let's check custom_fields directly if available in API response?
+                     pass
+                     
+                if db_track and 'metadata' in db_track:
+                    current_key = db_track['metadata'].get('initial_key')
+                    if current_key:
+                        logger.info(f"[STATION {station_id}] Current Key: {current_key}")
+                        
+        except Exception as e:
+            logger.warning(f"Failed to get current key context: {e}")
+
         # 0. Check Manual Override first
         track = None
         manual_target = None
@@ -308,7 +382,7 @@ async def mood_queue_worker_iteration(mongo_client, azura_client, station_id: in
 
         if manual_target:
             logger.info(f"=== [STATION {station_id}] MANUAL STEERING ACTIVE: {manual_target.upper()} ===")
-            track = await select_next_track_by_mood(mongo_client, manual_target, station_id=station_id)
+            track = await select_next_track_by_mood(mongo_client, manual_target, station_id=station_id, current_key=current_key)
 
         # If no manual target or manual selection failed, verify standard mode
         if not track:
@@ -324,11 +398,22 @@ async def mood_queue_worker_iteration(mongo_client, azura_client, station_id: in
             elif mode == PlaytimeMode.LIVE_VOTE:
                 track = await select_live_vote_track(mongo_client, azura_client, station_id=station_id)
             else:  # AUTO mode
+                # 1. User Votes (Dominant Mood)
                 dominant_mood = mongo_client.get_dominant_next_mood(time_window_minutes=10, station_id=station_id)
                 if dominant_mood:
-                    track = await select_next_track_by_mood(mongo_client, dominant_mood, station_id=station_id)
-                else:
-                    if random.random() < 0.3:  # 30% discovery, 70% refinement
+                    logger.info(f"[AUTO] Using User Voted Mood: {dominant_mood}")
+                    track = await select_next_track_by_mood(mongo_client, dominant_mood, station_id=station_id, current_key=current_key)
+                
+                # 2. The Vibe Curve (Time-based)
+                if not track:
+                    curve_mood = get_curve_mood()
+                    if curve_mood:
+                        logger.info(f"[AUTO] Using Vibe Curve Mood: {curve_mood}")
+                        track = await select_next_track_by_mood(mongo_client, curve_mood, station_id=station_id, current_key=current_key)
+                    
+                # 3. Random Discovery/Refinement Fallback
+                if not track:
+                    if random.random() < 0.3:  # 30% discovery
                         track = await select_discovery_track(mongo_client, station_id=station_id)
                     else:
                         track = await select_refinement_track(mongo_client, station_id=station_id)

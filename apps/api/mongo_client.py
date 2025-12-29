@@ -69,6 +69,10 @@ class MongoDatabaseClient:
                 )
                 self.tracks_collection.create_index("file_path") # Legacy support
                 self.tracks_collection.create_index("song_id")
+                
+                # Metadata indexes for Audio Science
+                self.tracks_collection.create_index("metadata.initial_key")
+                self.tracks_collection.create_index("metadata.bpm")
             except Exception as ie:
                 logger.warning(f"Index creation warning: {ie}")
             
@@ -474,15 +478,16 @@ class MongoDatabaseClient:
             logger.error(f"Error getting dominant next mood: {e}")
             return None
     
-    def get_tracks_by_mood(self, mood: str, limit: int = 50, station_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_tracks_by_mood(self, mood: str, limit: int = 50, station_id: Optional[int] = None, allowed_keys: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Get tracks tagged with a specific mood.
+        Get tracks tagged with a specific mood, optionally filtering by Harmonic Key.
         Used for auto-DJ track selection.
         
         Args:
             mood: Target mood
             limit: Maximum tracks to return
             station_id: Optional station identifier to filter votes
+            allowed_keys: List of allowed Camelot keys (e.g. ['8A', '9A'])
             
         Returns:
             List of track documents with that mood
@@ -496,17 +501,27 @@ class MongoDatabaseClient:
                 query["station_id"] = station_id
 
             # Get all song_ids with this mood
+            # Fetch more if we are filtering by key to ensure we find enough matches
+            fetch_limit = limit * 4 if allowed_keys else limit * 2
+            
             mood_docs = list(self.moods_collection.find(
                 query,
                 {"song_id": 1}
-            ).limit(limit * 2))  # Get more to filter
+            ).limit(fetch_limit))
             
             song_ids = list(set(doc["song_id"] for doc in mood_docs if doc.get("song_id")))
             
-            # Enrich with track metadata
+            # Enrich with track metadata and filter by key
             tracks = []
-            for song_id in song_ids[:limit]:
-                track = self.tracks_collection.find_one({"song_id": song_id})
+            for song_id in song_ids:
+                if len(tracks) >= limit:
+                    break
+                    
+                track_query = {"song_id": song_id}
+                if allowed_keys:
+                    track_query["metadata.initial_key"] = {"$in": allowed_keys}
+                
+                track = self.tracks_collection.find_one(track_query)
                 if track:
                     tracks.append({
                         "song_id": song_id,
@@ -515,7 +530,7 @@ class MongoDatabaseClient:
                         "mood": mood
                     })
             
-            logger.info(f"Found {len(tracks)} tracks with mood: {mood}")
+            logger.info(f"Found {len(tracks)} tracks with mood: {mood} (Keys: {allowed_keys if allowed_keys else 'All'})")
             return tracks
         except Exception as e:
             logger.error(f"Error getting tracks by mood: {e}")

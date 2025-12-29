@@ -62,7 +62,9 @@ class MusicScanner:
             "album": "",
             "genre": "",
             "year": "",
-            "duration": 0
+            "duration": 0,
+            "initial_key": "",
+            "bpm": 0
         }
 
         try:
@@ -130,12 +132,29 @@ class MusicScanner:
     def _extract_mp3_tags(self, audio, metadata):
         # EasyID3 is easier for standard tags
         try:
-            tags = EasyID3(audio.filename)
-            metadata['title'] = tags.get('title', [''])[0]
-            metadata['artist'] = tags.get('artist', [''])[0]
-            metadata['album'] = tags.get('album', [''])[0]
-            metadata['genre'] = tags.get('genre', [''])[0]
-            metadata['year'] = tags.get('date', [''])[0]
+            from mutagen.easyid3 import EasyID3
+            try:
+                tags = EasyID3(audio.filename)
+                metadata['title'] = tags.get('title', [''])[0]
+                metadata['artist'] = tags.get('artist', [''])[0]
+                metadata['album'] = tags.get('album', [''])[0]
+                metadata['genre'] = tags.get('genre', [''])[0]
+                metadata['year'] = tags.get('date', [''])[0]
+                metadata['bpm'] = tags.get('bpm', [0])[0]
+                metadata['initial_key'] = tags.get('initialkey', [''])[0]
+            except Exception:
+                pass
+            
+            # 2. Raw ID3 fallback for Key/BPM if missing
+            if not metadata['initial_key'] or not metadata['bpm']:
+                 if hasattr(audio, 'tags'):
+                    # TKEY = Initial Key, TBPM = BPM
+                    if 'TKEY' in audio.tags:
+                        metadata['initial_key'] = str(audio.tags['TKEY'].text[0])
+                    if 'TBPM' in audio.tags:
+                        try:
+                            metadata['bpm'] = int(str(audio.tags['TBPM'].text[0]))
+                        except: pass
         except Exception:
             pass # Fallback to standard mutagen
 
@@ -146,6 +165,12 @@ class MusicScanner:
             metadata['album'] = audio.tags.get('album', [''])[0]
             metadata['genre'] = audio.tags.get('genre', [''])[0]
             metadata['year'] = audio.tags.get('date', [''])[0]
+            
+            # FLAC usually uses 'INITIAL_KEY' or 'KEY', and 'BPM'
+            metadata['bpm'] = audio.tags.get('bpm', [0])[0]
+            metadata['initial_key'] = audio.tags.get('initial_key', [''])[0]
+            if not metadata['initial_key']:
+                 metadata['initial_key'] = audio.tags.get('key', [''])[0]
 
     def _extract_m4a_tags(self, audio, metadata):
         if hasattr(audio, 'tags'):
@@ -155,6 +180,10 @@ class MusicScanner:
             metadata['album'] = audio.tags.get('\xa9alb', [''])[0]
             metadata['genre'] = audio.tags.get('\xa9gen', [''])[0]
             metadata['year'] = audio.tags.get('\xa9day', [''])[0]
+            if 'tmpo' in audio.tags:
+                 try:
+                     metadata['bpm'] = int(audio.tags['tmpo'][0])
+                 except: pass
 
 if __name__ == "__main__":
     # Test run
