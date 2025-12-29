@@ -124,6 +124,7 @@ class LibraryService:
         for track_data in self.scanner.scan_directory(self.library_path):
             file_path = track_data['path']
             metadata = track_data['metadata']
+            rel_path = self.mongo.normalize_path(file_path)
             
             # Upsert to Mongo
             try:
@@ -137,6 +138,7 @@ class LibraryService:
                 
                 doc = {
                     "file_path": file_path,
+                    "relative_path": rel_path,
                     "filename": track_data['filename'],
                     "metadata": metadata,
                     "last_scanned": time.time()

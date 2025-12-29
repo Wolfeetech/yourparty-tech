@@ -1,4 +1,4 @@
-$Server = "192.168.178.120"
+$Server = "192.168.178.25"
 $User = "root" 
 $Pass = "yourparty"
 $Drive = "Z:"

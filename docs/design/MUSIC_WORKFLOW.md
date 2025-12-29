@@ -4,7 +4,7 @@ This document defines the architecture for a centralized, automated music system
 
 ## Core Philosophy
 1.  **One Database**: Metadata, ratings, and moods live in MongoDB.
-2.  **One Storage**: Files live on the NAS (`\\192.168.178.120\music`).
+2.  **One Storage**: Files live on the NAS (`\\192.168.178.25\music`).
 3.  **Automated Sync**: Changes in DB automatically propagate to file tags (portability) and radio playlists (AzuraCast).
 
 ## Architecture

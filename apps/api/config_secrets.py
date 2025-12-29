@@ -14,8 +14,8 @@ MASS_TOKEN = os.getenv("MASS_TOKEN", "RXq_nQKdsyk1Z0DIj0_MXUs_OEp_cN7Wjt2kPX_e8m
 MASS_URL = os.getenv("MASS_URL", "http://192.168.178.179:8123") # Updated to correct HA IP
 
 # 2. NAS / File Server (SMB)
-# Credentials to mount \\192.168.178.120\music (or correct share)
-SMB_SERVER = os.getenv("SMB_SERVER", "192.168.178.120")
+# Credentials to mount \\192.168.178.25\music (or correct share)
+SMB_SERVER = os.getenv("SMB_SERVER", "192.168.178.25")
 SMB_SHARE = os.getenv("SMB_SHARE", "music") # Change if 'public', 'share' etc.
 SMB_USERNAME = os.getenv("SMB_USERNAME", "wolf")
 SMB_PASSWORD = os.getenv("SMB_PASSWORD", "YpWolf2024!")

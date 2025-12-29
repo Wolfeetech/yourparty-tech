@@ -1,5 +1,5 @@
 # Mount AzuraCast Music Folder to Drive M:
-$Server = "192.168.178.120"
+$Server = "192.168.178.25"
 $Share = "music"
 $Drive = "M:"
 $Path = "\\$Server\$Share"

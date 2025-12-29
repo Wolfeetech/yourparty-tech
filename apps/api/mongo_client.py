@@ -61,7 +61,12 @@ class MongoDatabaseClient:
                 self.ratings_collection.create_index("user_id")
                 
                 # Use relative_path for cross-platform consistency (SSOT requirement)
-                self.tracks_collection.create_index("relative_path", unique=True)
+                # Partial index avoids duplicate nulls during backfills/migrations.
+                self.tracks_collection.create_index(
+                    "relative_path",
+                    unique=True,
+                    partialFilterExpression={"relative_path": {"$type": "string"}},
+                )
                 self.tracks_collection.create_index("file_path") # Legacy support
                 self.tracks_collection.create_index("song_id")
             except Exception as ie:
@@ -86,7 +91,7 @@ class MongoDatabaseClient:
         )
         library_unc = os.getenv(
             "LIBRARY_UNC",
-            rf"\\192.168.178.120\music\{library_subdir}"
+            rf"\\192.168.178.25\music\{library_subdir}"
         )
 
         # Common library roots (new + legacy fallbacks)
