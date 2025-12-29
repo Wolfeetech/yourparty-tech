@@ -27,8 +27,6 @@ def test_tagging():
         print(f"Tagging Error: {e}")
 
 if __name__ == "__main__":
-    with open("verification_results.txt", "w") as f:
-        sys.stdout = f
-        test_rating()
-        test_tagging()
+    test_rating()
+    test_tagging()
 
