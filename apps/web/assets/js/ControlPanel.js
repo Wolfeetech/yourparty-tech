@@ -104,6 +104,8 @@ class ControlPanel {
                 fetch(`${this.apiBase}/control/steer`)
             ]);
 
+            this.fetchQueue(); // Poll Queue separately (non-blocking)
+
             this.updateMoods(await moodsRes.json());
             this.updateSteering(await steerRes.json());
 
@@ -133,7 +135,11 @@ class ControlPanel {
             titleEl.classList.remove('skeleton');
         }
         if (artistEl) {
-            artistEl.textContent = song.artist;
+            let meta = '';
+            if (song.initial_key) meta += ` <span class="badge" style="background:#333; padding:2px 6px; border-radius:4px; font-size:0.8em;">🔑 ${song.initial_key}</span>`;
+            if (song.bpm) meta += ` <span class="badge" style="background:#333; padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:4px;">🥁 ${song.bpm}</span>`;
+
+            artistEl.innerHTML = song.artist + meta;
             artistEl.style.display = 'inline';
         }
 
@@ -281,8 +287,83 @@ class ControlPanel {
             } catch (err) {
                 console.error("Steering failed", err);
                 alert("Steering command failed. Check connection.");
+                alert("Steering command failed. Check connection.");
             }
         });
+    }
+
+    async fetchQueue() {
+        if (!this.els.queueList) return;
+        try {
+            const res = await fetch(`${this.apiBase}/control/queue`);
+            const data = await res.json();
+            this.updateQueue(data);
+        } catch (e) {
+            console.error("Queue fetch error:", e);
+        }
+    }
+
+    updateQueue(items) {
+        if (!this.els.queueList) return;
+
+        if (!items || items.length === 0) {
+            this.els.queueList.innerHTML = '<div class="empty-state">Queue is empty</div>';
+            return;
+        }
+
+        this.els.queueList.innerHTML = '';
+
+        items.forEach(item => {
+            const song = item.song || {};
+            const mood = item.mood_top;
+            const key = item.initial_key;
+            const bpm = item.bpm;
+            const rating = item.rating ? item.rating.average : 0;
+
+            const el = document.createElement('div');
+            el.className = 'queue-item';
+            el.innerHTML = `
+                <div class="queue-info">
+                    <div class="queue-title">${song.title || 'Unknown'}</div>
+                    <div class="queue-meta">
+                        ${song.artist || 'Unknown'} 
+                        ${key ? `<span class="badge key-badge">🔑 ${key}</span>` : ''}
+                        ${bpm ? `<span class="badge bpm-badge">🥁 ${bpm}</span>` : ''}
+                    </div>
+                </div>
+                <div class="queue-stats">
+                    ${mood ? `<span class="badge mood-badge">${mood}</span>` : ''}
+                    <div class="mini-rating">★ ${rating ? rating.toFixed(1) : '-'}</div>
+                </div>
+                <div class="queue-actions">
+                    <button class="btn-delete" title="Remove from Queue">✕</button>
+                </div>
+            `;
+
+            // Bind Delete
+            el.querySelector('.btn-delete').addEventListener('click', () => {
+                if (confirm("Remove this track from queue?")) {
+                    this.deleteQueueItem(item.id);
+                }
+            });
+
+            this.els.queueList.appendChild(el);
+        });
+    }
+
+    async deleteQueueItem(id) {
+        try {
+            const res = await fetch(`${this.apiBase}/control/queue/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                this.fetchQueue(); // Refresh immediately
+                // Also refresh Pulse to update other clients
+                fetch(`${this.apiBase}/control/queue`);
+            } else {
+                alert("Failed to delete item");
+            }
+        } catch (e) {
+            console.error("Delete failed", e);
+        }
     }
 }
 

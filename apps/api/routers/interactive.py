@@ -550,3 +550,68 @@ async def get_track_metadata(song_id: str):
             "details": str(e), 
             "trace": traceback.format_exc()
         }
+@router.get("/control/queue")
+async def get_control_queue(station_id: int = 1):
+    """
+    Get enriched queue for Control Panel.
+    Includes technical metadata (Key/BPM), Moods, and Ratings.
+    """
+    if not state.azura_client:
+        return []
+
+    # 1. Fetch raw queue from AzuraCast
+    raw_queue = await state.azura_client.get_station_queue(station_id)
+    enriched_queue = []
+
+    for item in raw_queue:
+        song = item.get("song", {})
+        song_id = song.get("id")
+        
+        # Base Item
+        queue_item = {
+            "id": item.get("id"), # Queue Item ID (needed for deletion)
+            "cued_at": item.get("cued_at"),
+            "is_request": item.get("is_request"),
+            "song": {
+                "id": song_id,
+                "title": song.get("title"),
+                "artist": song.get("artist"),
+                "art": song.get("art"),
+                "custom_fields": song.get("custom_fields", {})
+            }
+        }
+
+        # Enrichment
+        if state.mongo_client and song_id:
+            # Moods
+            mood_data = state.mongo_client.get_song_moods(str(song_id))
+            queue_item["mood_top"] = mood_data.get("top_mood")
+            
+            # Rating
+            rating_data = state.mongo_client.get_track_rating(song_id=str(song_id))
+            queue_item["rating"] = rating_data
+            
+            # Key / BPM / Genre
+            meta = state.mongo_client.get_track_metadata(str(song_id))
+            queue_item["bpm"] = meta.get("bpm")
+            queue_item["initial_key"] = meta.get("initial_key")
+            
+            # Fallback Genre from Azura if not in Mongo
+            if not queue_item.get("genre"):
+                queue_item["genre"] = song.get("genre")
+
+        enriched_queue.append(queue_item)
+
+    return enriched_queue
+
+@router.delete("/control/queue/{item_id}")
+async def remove_queue_item(item_id: int, station_id: int = 1):
+    """Remove an item from the playlist queue."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+        
+    success = await state.azura_client.delete_queue_item(item_id, station_id)
+    if success:
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to remove item")

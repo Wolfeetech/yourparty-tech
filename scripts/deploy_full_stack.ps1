@@ -7,6 +7,7 @@ $ScriptDir = Split-Path $MyInvocation.MyCommand.Path
 # Files changed in this session that need deployment
 $API_FILES = @(
     "azuracast_client.py",
+    "api.py",
     "mood_scheduler.py",
     "audio_science.py",
     "library_service.py",

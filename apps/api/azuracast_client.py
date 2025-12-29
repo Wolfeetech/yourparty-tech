@@ -207,7 +207,29 @@ class AzuraCastClient:
         res = await self._put(url, json=payload)
         if res:
             logger.info(f"Added media {media_id} to playlist {playlist_name}")
+        if res:
+            logger.info(f"Added media {media_id} to playlist {playlist_name}")
         return bool(res)
+
+    async def get_station_queue(self, station_id: Optional[int] = None) -> List[Dict]:
+        """Fetch the current upcoming queue for the station."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/queue"
+        res = await self._get(url)
+        return res if isinstance(res, list) else []
+
+    async def delete_queue_item(self, item_id: int, station_id: Optional[int] = None) -> bool:
+        """Remove an item from the queue."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/queue/{item_id}"
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
+            try:
+                resp = await client.delete(url, headers=self.headers)
+                resp.raise_for_status()
+                return True
+            except Exception as e:
+                logger.error(f"Failed to delete queue item {item_id}: {e}")
+                return False
 
 if __name__ == "__main__":
     pass

@@ -577,6 +577,17 @@ const initApp = () => {
       } else {
         moodTagDisplay.innerHTML = '<span class="mood-badge mood-empty">+ Tag hinzufügen</span>';
       }
+
+      // Display Key & BPM if available
+      const initialKey = song.initial_key;
+      const bpm = song.bpm;
+
+      if (initialKey || bpm) {
+        let metaHtml = '';
+        if (initialKey) metaHtml += `<span class="mood-badge meta-badge" title="Musical Key">🔑 ${initialKey}</span>`;
+        if (bpm) metaHtml += `<span class="mood-badge meta-badge" title="BPM">🥁 ${bpm}</span>`;
+        moodTagDisplay.innerHTML += metaHtml;
+      }
     }
 
     if (voteFeedback) {

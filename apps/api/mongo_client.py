@@ -438,6 +438,22 @@ class MongoDatabaseClient:
             logger.error(f"Error submitting mood_next vote: {e}")
             return {"success": False, "error": str(e)}
     
+    def get_track_metadata(self, song_id: str) -> Dict[str, Any]:
+        """
+        Get basic metadata (Key, BPM) for a track by Song ID.
+        """
+        try:
+            track = self.tracks_collection.find_one({"song_id": song_id}, {"metadata": 1})
+            if track and "metadata" in track:
+                return {
+                    "initial_key": track["metadata"].get("initial_key"),
+                    "bpm": track["metadata"].get("bpm")
+                }
+            return {}
+        except Exception as e:
+            logger.error(f"Error fetching track metadata for {song_id}: {e}")
+            return {}
+
     def get_dominant_next_mood(self, time_window_minutes: int = 10, station_id: int = 1) -> Optional[str]:
         """
         Get the dominant mood preference from recent votes.

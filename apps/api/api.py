@@ -195,6 +195,11 @@ async def public_status_loop():
                                  mood_data = state.mongo_client.get_song_moods(song_id)
                                  current_track['top_mood'] = mood_data.get('top_mood')
 
+                                 # Metadata (Key/BPM)
+                                 meta_data = state.mongo_client.get_track_metadata(song_id)
+                                 current_track['initial_key'] = meta_data.get('initial_key')
+                                 current_track['bpm'] = meta_data.get('bpm')
+
                             state.now_playing[sid] = current_track
                             
                             # Broadcast to WS for this station

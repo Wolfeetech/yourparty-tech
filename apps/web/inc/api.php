@@ -395,16 +395,39 @@ function yourparty_attach_rating_to_now_playing(array $data): array
     return $data;
 }
 
-function yourparty_rest_get_status(WP_REST_Request $request)
+function yourparty_fetch_radio_api(string $endpoint)
 {
-    $data = yourparty_fetch_azuracast('/api/nowplaying_static/radio.yourparty.json');
+    $url = yourparty_api_base_url() . '/' . ltrim($endpoint, '/');
+    $response = wp_remote_get($url, yourparty_http_defaults());
 
-    if (is_wp_error($data)) {
-        return $data;
+    if (is_wp_error($response)) {
+        return $response;
     }
 
-    $data = yourparty_attach_rating_to_now_playing($data);
+    $code = (int) wp_remote_retrieve_response_code($response);
+    if ($code < 200 || $code >= 300) {
+        return new WP_Error('api_error', 'Radio API error ' . $code);
+    }
 
+    $body = wp_remote_retrieve_body($response);
+    return json_decode($body, true);
+}
+
+function yourparty_rest_get_status(WP_REST_Request $request)
+{
+    // Fetch from Python Radio API (Enriched with Key/BPM/Mood)
+    $data = yourparty_fetch_radio_api('/status');
+
+    if (is_wp_error($data)) {
+        // Fallback to AzuraCast if Python API fails
+        $data = yourparty_fetch_azuracast('/api/nowplaying_static/radio.yourparty.json');
+        if (!is_wp_error($data)) {
+            $data = yourparty_attach_rating_to_now_playing($data);
+        }
+        return rest_ensure_response($data);
+    }
+    
+    // Structure from Radio API matches needed format
     return rest_ensure_response($data);
 }
 
