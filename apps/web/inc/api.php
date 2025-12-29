@@ -1124,7 +1124,31 @@ add_action('rest_api_init', function () {
 
     // --- CONTROL PANEL PROXY ENDPOINTS ---
 
-    // Ratings
+    // Submit Rating
+    register_rest_route(
+        'yourparty/v1',
+        '/rate',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $song_id = sanitize_text_field($request->get_param('song_id'));
+                $rating = (int) $request->get_param('rating');
+
+                if (!$song_id || !$rating) {
+                    return new WP_Error('missing_params', 'Song ID and Rating required', ['status' => 400]);
+                }
+
+                // Proxy to FastAPI POST /rate
+                return yourparty_proxy_request('POST', '/rate', [
+                    'song_id' => $song_id,
+                    'rating' => $rating
+                ]);
+            },
+            'permission_callback' => '__return_true', // Public voting allowed (rate limited by IP on backend if implemented, or here)
+        ]
+    );
+
+    // Ratings (Get)
     register_rest_route('yourparty/v1', '/control/ratings', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {

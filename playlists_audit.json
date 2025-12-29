@@ -1,0 +1,240 @@
+[
+  {
+    "id": 23,
+    "name": "Deep & Cozy",
+    "count": 82,
+    "status": "CUSTOM",
+    "action": "REVIEW"
+  },
+  {
+    "id": 21,
+    "name": "Deep House",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 20,
+    "name": "Disco / Specials ",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 39,
+    "name": "High Voltage",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 11,
+    "name": "House",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 13,
+    "name": "Indie Dance ",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 51,
+    "name": "Mo:CHILL",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 52,
+    "name": "Mo:DARK",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 50,
+    "name": "Mo:ENERGY",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 54,
+    "name": "Mo:EUPHORIC",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 53,
+    "name": "Mo:GROOVE",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 45,
+    "name": "Mood: Hypnotic",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 40,
+    "name": "Mood: Melancholic",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 44,
+    "name": "Mood: Trippy",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 48,
+    "name": "Morning Glory",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 43,
+    "name": "Nocturnals",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 41,
+    "name": "Pocket Logic",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 58,
+    "name": "Power Hour",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 25,
+    "name": "progressive house",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 16,
+    "name": "Rotation",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 42,
+    "name": "Slow Burn",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 49,
+    "name": "Starlight",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 7,
+    "name": "Tech House",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 46,
+    "name": "Top Rated",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 8,
+    "name": "Trance",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 28,
+    "name": "uk garage",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 18,
+    "name": "Wolfavorites",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 38,
+    "name": "YourParty Best Of",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 36,
+    "name": "YourParty Favorites",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 37,
+    "name": "YourParty Favorites",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 33,
+    "name": "\ud83d\udd25 Community Favorites",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 34,
+    "name": "\ud83c\udfb2 Discovery Mix",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 35,
+    "name": "\ud83c\udd95 Fresh Tracks",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  },
+  {
+    "id": 32,
+    "name": "\ud83c\udf1f Top Rated",
+    "count": 0,
+    "status": "CANDIDATE",
+    "action": "DELETE"
+  }
+]
