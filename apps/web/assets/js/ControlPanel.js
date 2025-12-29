@@ -306,14 +306,19 @@ class ControlPanel {
     updateQueue(items) {
         if (!this.els.queueList) return;
 
-        if (!items || items.length === 0) {
-            this.els.queueList.innerHTML = '<div class="empty-state">Queue is empty</div>';
+        // Remove 'empty-state' if present and items exist
+        if (items && items.length > 0) {
+            const empty = this.els.queueList.querySelector('.empty-state');
+            if (empty) empty.remove();
+        } else {
+            // Keep user message if empty
+            this.els.queueList.innerHTML = '<div class="empty-state" style="padding:20px; text-align:center; color:#666;">Queue empty or AutoDJ active</div>';
             return;
         }
 
         this.els.queueList.innerHTML = '';
 
-        items.forEach(item => {
+        items.forEach((item, i) => {
             const song = item.song || {};
             const mood = item.mood_top;
             const key = item.initial_key;
@@ -322,27 +327,35 @@ class ControlPanel {
 
             const el = document.createElement('div');
             el.className = 'queue-item';
+            el.dataset.id = item.id;
+
+            // Replicate PHP Style Structure + Metadata
+            // Structure: queue-pos, queue-track (title+artist), actions
+
+            let metaHtml = '';
+            if (key) metaHtml += `<span class="badge key-badge" style="background:#333; color:#aaa; font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px;">🔑 ${key}</span>`;
+            if (bpm) metaHtml += `<span class="badge bpm-badge" style="background:#333; color:#aaa; font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px;">🥁 ${bpm}</span>`;
+            if (mood) metaHtml += `<span class="badge mood-badge" style="background:#222; color:var(--emerald); font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px; border:1px solid #333;">${mood}</span>`;
+
             el.innerHTML = `
-                <div class="queue-info">
-                    <div class="queue-title">${song.title || 'Unknown'}</div>
-                    <div class="queue-meta">
-                        ${song.artist || 'Unknown'} 
-                        ${key ? `<span class="badge key-badge">🔑 ${key}</span>` : ''}
-                        ${bpm ? `<span class="badge bpm-badge">🥁 ${bpm}</span>` : ''}
-                    </div>
-                </div>
-                <div class="queue-stats">
-                    ${mood ? `<span class="badge mood-badge">${mood}</span>` : ''}
-                    <div class="mini-rating">★ ${rating ? rating.toFixed(1) : '-'}</div>
+                <span class="queue-pos" style="font-family:monospace; color:#666; width:30px; text-align:center;">${i + 1}</span>
+                <div class="queue-track" style="flex:1;">
+                    <span class="queue-title" style="display:block; font-weight:600; color:#fff;">${song.title || 'Unknown'} ${metaHtml}</span>
+                    <span class="queue-artist" style="display:block; font-size:11px; color:var(--emerald); opacity:0.8;">${song.artist || ''}</span>
                 </div>
                 <div class="queue-actions">
-                    <button class="btn-delete" title="Remove from Queue">✕</button>
+                    <button class="queue-btn move-up" title="Move Up (Coming Soon)" disabled style="opacity:0.3; cursor:not-allowed; border:none; background:none; color:#666;">▲</button>
+                    <button class="queue-btn move-down" title="Move Down (Coming Soon)" disabled style="opacity:0.3; cursor:not-allowed; border:none; background:none; color:#666;">▼</button>
+                    <button class="queue-btn remove btn-delete" title="Remove Track" style="border:none; background:none; color:#ff4444; font-size:14px; cursor:pointer;">✕</button>
                 </div>
             `;
 
             // Bind Delete
-            el.querySelector('.btn-delete').addEventListener('click', () => {
-                if (confirm("Remove this track from queue?")) {
+            el.querySelector('.btn-delete').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm(`Remove "${song.title}" from queue?`)) {
+                    // Optimistic UI Removal
+                    el.style.opacity = '0.5';
                     this.deleteQueueItem(item.id);
                 }
             });
