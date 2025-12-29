@@ -8,7 +8,9 @@ $API_FILES = @(
     "library_service.py",
     "playlist_service.py",
     "enrich_ratings.py",
-    "manager.py"
+    "manager.py",
+    "mongo_client.py",
+    "routers/interactive.py"
 )
 
 $WEB_FILES = @(
@@ -26,7 +28,8 @@ foreach ($file in $API_FILES) {
         Write-Host "  Uploading $file..."
         scp -o BatchMode=yes $localPath root@${PVE_HOST}:/tmp/$file
         ssh root@$PVE_HOST "pct push 211 /tmp/$file /opt/radio-api/$file && rm /tmp/$file"
-    } else {
+    }
+    else {
         Write-Host "  [SKIP] $file not found locally" -ForegroundColor DarkGray
     }
 }
@@ -36,12 +39,13 @@ Write-Host "`n[2/3] Deploying Frontend files to CT 207..." -ForegroundColor Yell
 
 foreach ($file in $WEB_FILES) {
     $localPath = "apps/web/$file"
-    $remotePath = "/var/www/html/wp-content/themes/yourparty/$file"
+    $remotePath = "/var/www/html/wp-content/themes/yourparty-tech/$file"
     if (Test-Path $localPath) {
         Write-Host "  Uploading $file..."
         scp -o BatchMode=yes $localPath root@${PVE_HOST}:/tmp/$(Split-Path $file -Leaf)
         ssh root@$PVE_HOST "pct push 207 /tmp/$(Split-Path $file -Leaf) $remotePath && rm /tmp/$(Split-Path $file -Leaf)"
-    } else {
+    }
+    else {
         Write-Host "  [SKIP] $file not found locally" -ForegroundColor DarkGray
     }
 }
