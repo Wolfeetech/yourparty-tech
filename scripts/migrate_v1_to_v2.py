@@ -54,21 +54,38 @@ class Config:
     # Directus (Target)
     DIRECTUS_URL = os.getenv("DIRECTUS_URL", "http://localhost:8055")
     DIRECTUS_TOKEN = os.getenv("DIRECTUS_STATIC_TOKEN") or os.getenv("DIRECTUS_TOKEN")
+    DIRECTUS_EMAIL = os.getenv("DIRECTUS_ADMIN_EMAIL")
+    DIRECTUS_PASSWORD = os.getenv("DIRECTUS_ADMIN_PASSWORD")
     
     # Migration settings
-    BATCH_SIZE = 100
+    BATCH_SIZE = 50
     DRY_RUN = False
 
 
 class DirectusClient:
     """Wrapper for Directus REST API"""
     
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str = None):
         self.base_url = base_url.rstrip('/')
-        self.headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
+        self.headers = {"Content-Type": "application/json"}
+        if token:
+            self.headers["Authorization"] = f"Bearer {token}"
+            
+    def login(self, email, password) -> bool:
+        """Login to get token"""
+        try:
+            resp = requests.post(f"{self.base_url}/auth/login", json={
+                "email": email, "password": password
+            })
+            if resp.status_code == 200:
+                token = resp.json()['data']['access_token']
+                self.headers["Authorization"] = f"Bearer {token}"
+                return True
+            logger.error(f"Login failed: {resp.text}")
+            return False
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            return False
     
     def check_connection(self) -> bool:
         """Verify Directus is reachable"""
@@ -107,21 +124,33 @@ class DirectusClient:
             return False
     
     def bulk_insert(self, collection: str, items: List[Dict]) -> int:
-        """Insert multiple items into a collection"""
+        """Insert multiple items into a collection with retry logic"""
         if not items:
             return 0
         
-        resp = requests.post(
-            f"{self.base_url}/items/{collection}",
-            headers=self.headers,
-            json=items
-        )
+        import time
+        max_retries = 3
+        retry_delay = 2
         
-        if resp.status_code in (200, 201):
-            return len(items)
-        else:
-            logger.error(f"Bulk insert to '{collection}' failed: {resp.text}")
-            return 0
+        for attempt in range(max_retries):
+            resp = requests.post(
+                f"{self.base_url}/items/{collection}",
+                headers=self.headers,
+                json=items
+            )
+            
+            if resp.status_code in (200, 201):
+                return len(items)
+            elif resp.status_code == 429:
+                wait = retry_delay * (attempt + 1)
+                logger.warning(f"Rate limited on '{collection}'. Waiting {wait}s... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(wait)
+            else:
+                logger.error(f"Bulk insert to '{collection}' failed: {resp.text}")
+                return 0
+                
+        logger.error(f"Failed to insert batch to '{collection}' after {max_retries} retries")
+        return 0
     
     def get_count(self, collection: str) -> int:
         """Get item count in a collection"""
@@ -155,7 +184,7 @@ class MongoMigrator:
         """Create Directus collections with proper schema"""
         collections = {
             "ratings": [
-                {"field": "id", "type": "integer", "meta": {"primary": True}, "schema": {"is_primary_key": True}},
+                {"field": "id", "type": "integer", "meta": {"primary": True, "unique": True}, "schema": {"is_primary_key": True, "has_auto_increment": True}},
                 {"field": "song_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "user_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "station_id", "type": "integer", "schema": {"default_value": 1}},
@@ -167,7 +196,7 @@ class MongoMigrator:
                 {"field": "mongo_id", "type": "string", "schema": {"max_length": 50}}
             ],
             "mood_votes": [
-                {"field": "id", "type": "integer", "meta": {"primary": True}, "schema": {"is_primary_key": True}},
+                {"field": "id", "type": "integer", "meta": {"primary": True, "unique": True}, "schema": {"is_primary_key": True, "has_auto_increment": True}},
                 {"field": "song_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "user_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "station_id", "type": "integer", "schema": {"default_value": 1}},
@@ -177,7 +206,7 @@ class MongoMigrator:
                 {"field": "mongo_id", "type": "string", "schema": {"max_length": 50}}
             ],
             "song_metadata": [
-                {"field": "id", "type": "integer", "meta": {"primary": True}, "schema": {"is_primary_key": True}},
+                {"field": "id", "type": "integer", "meta": {"primary": True, "unique": True}, "schema": {"is_primary_key": True, "has_auto_increment": True}},
                 {"field": "song_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "title", "type": "string", "schema": {"max_length": 512}},
                 {"field": "artist", "type": "string", "schema": {"max_length": 512}},
@@ -194,7 +223,7 @@ class MongoMigrator:
                 {"field": "mongo_id", "type": "string", "schema": {"max_length": 50}}
             ],
             "user_stats": [
-                {"field": "id", "type": "integer", "meta": {"primary": True}, "schema": {"is_primary_key": True}},
+                {"field": "id", "type": "integer", "meta": {"primary": True, "unique": True}, "schema": {"is_primary_key": True, "has_auto_increment": True}},
                 {"field": "user_id", "type": "string", "schema": {"max_length": 255}},
                 {"field": "total_points", "type": "integer", "schema": {"default_value": 0}},
                 {"field": "streak_days", "type": "integer", "schema": {"default_value": 0}},
@@ -203,7 +232,7 @@ class MongoMigrator:
                 {"field": "mongo_id", "type": "string", "schema": {"max_length": 50}}
             ],
             "shoutouts": [
-                {"field": "id", "type": "integer", "meta": {"primary": True}, "schema": {"is_primary_key": True}},
+                {"field": "id", "type": "integer", "meta": {"primary": True, "unique": True}, "schema": {"is_primary_key": True, "has_auto_increment": True}},
                 {"field": "message", "type": "text", "schema": {}},
                 {"field": "sender", "type": "string", "schema": {"max_length": 255}},
                 {"field": "user_id", "type": "string", "schema": {"max_length": 255}},
@@ -220,12 +249,17 @@ class MongoMigrator:
         for name, fields in collections.items():
             self.directus.create_collection(name, fields)
     
+    # MongoDB source collection names
+    COLLECTION_RATINGS = "rating_events"
+    COLLECTION_MOODS = "moods"
+    COLLECTION_METADATA = "song_metadata"
+
     def migrate_ratings(self):
         """Migrate ratings collection"""
-        collection = self.db["ratings"]
+        collection = self.db[self.COLLECTION_RATINGS]
         count = collection.count_documents({})
         self.stats["ratings"]["source"] = count
-        logger.info(f"Migrating {count} ratings...")
+        logger.info(f"Migrating {count} ratings from '{self.COLLECTION_RATINGS}'...")
         
         if self.dry_run:
             return
@@ -258,11 +292,11 @@ class MongoMigrator:
         logger.info(f"Migrated {migrated}/{count} ratings")
     
     def migrate_mood_votes(self):
-        """Migrate mood_votes collection"""
-        collection = self.db["mood_votes"]
+        """Migrate moods collection"""
+        collection = self.db[self.COLLECTION_MOODS]
         count = collection.count_documents({})
         self.stats["moods"]["source"] = count
-        logger.info(f"Migrating {count} mood votes...")
+        logger.info(f"Migrating {count} mood votes from '{self.COLLECTION_MOODS}'...")
         
         if self.dry_run:
             return
@@ -271,11 +305,14 @@ class MongoMigrator:
         migrated = 0
         
         for doc in collection.find({}):
+            # Handle both 'mood' and 'mood_current' fields from different V1 iterations
+            mood = doc.get("mood") or doc.get("mood_current") or ""
+            
             item = {
                 "song_id": doc.get("song_id", ""),
                 "user_id": doc.get("user_id", "anonymous"),
                 "station_id": doc.get("station_id", 1),
-                "mood_current": doc.get("mood_current") or doc.get("mood", ""),
+                "mood_current": mood,
                 "mood_next": doc.get("mood_next", ""),
                 "created_at": doc.get("timestamp", datetime.now()).isoformat() if doc.get("timestamp") else None,
                 "mongo_id": str(doc.get("_id", ""))
@@ -294,7 +331,7 @@ class MongoMigrator:
     
     def migrate_metadata(self):
         """Migrate song_metadata collection"""
-        collection = self.db["song_metadata"]
+        collection = self.db[self.COLLECTION_METADATA]
         count = collection.count_documents({})
         self.stats["metadata"]["source"] = count
         logger.info(f"Migrating {count} song metadata records...")
@@ -306,17 +343,20 @@ class MongoMigrator:
         migrated = 0
         
         for doc in collection.find({}):
+            # Unpack nested V1 metadata
+            meta = doc.get("metadata", {})
+            
             item = {
                 "song_id": doc.get("song_id", ""),
-                "title": doc.get("title", ""),
-                "artist": doc.get("artist", ""),
-                "album": doc.get("album", ""),
-                "genre": doc.get("genre", ""),
-                "bpm": doc.get("bpm"),
-                "initial_key": doc.get("initial_key", ""),
-                "art_url": doc.get("art", ""),
-                "bandcamp_url": doc.get("bandcamp_url", ""),
-                "discogs_url": doc.get("discogs_url", ""),
+                "title": meta.get("title") or doc.get("title", ""),
+                "artist": meta.get("artist") or doc.get("artist", ""),
+                "album": meta.get("album") or doc.get("album", ""),
+                "genre": meta.get("genre") or doc.get("genre", ""),
+                "bpm": meta.get("bpm") or doc.get("bpm"),
+                "initial_key": meta.get("initial_key") or doc.get("initial_key", ""),
+                "art_url": meta.get("art") or doc.get("art", ""),
+                "bandcamp_url": meta.get("bandcamp_url") or doc.get("bandcamp_url", ""),
+                "discogs_url": meta.get("discogs_url") or doc.get("discogs_url", ""),
                 "file_path": doc.get("file_path", ""),
                 "created_at": doc.get("created_at", datetime.now()).isoformat() if doc.get("created_at") else None,
                 "updated_at": doc.get("updated_at", datetime.now()).isoformat() if doc.get("updated_at") else None,
@@ -451,12 +491,18 @@ def main():
         logger.error("MONGO_URI not set. Use --mongo-uri or set environment variable.")
         sys.exit(1)
     
-    if not Config.DIRECTUS_TOKEN:
-        logger.error("DIRECTUS_TOKEN not set. Use environment variable DIRECTUS_STATIC_TOKEN.")
-        sys.exit(1)
-    
     # Initialize clients
     directus = DirectusClient(Config.DIRECTUS_URL, Config.DIRECTUS_TOKEN)
+    
+    # Try login if no token
+    if not Config.DIRECTUS_TOKEN:
+        if Config.DIRECTUS_EMAIL and Config.DIRECTUS_PASSWORD:
+            logger.info(f"Authenticating as {Config.DIRECTUS_EMAIL}...")
+            if not directus.login(Config.DIRECTUS_EMAIL, Config.DIRECTUS_PASSWORD):
+                sys.exit(1)
+        else:
+            logger.error("No token or credentials provided.")
+            sys.exit(1)
     
     if not directus.check_connection():
         logger.error(f"Cannot connect to Directus at {Config.DIRECTUS_URL}")

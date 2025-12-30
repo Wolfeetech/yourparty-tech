@@ -3,7 +3,7 @@ version: '3.8'
 # ============================================================
 # YOURPARTY.TECH V2 STACK
 # "NTS-Style" Decoupled Architecture
-# 
+#
 # Components:
 #   - Directus (Headless CMS / Master DB)
 #   - Meilisearch (Search Engine)
@@ -18,7 +18,7 @@ services:
   # ========================================
   # CORE DATABASES
   # ========================================
-  
+
   # MariaDB - WordPress DB
   db:
     image: mariadb:10.11
@@ -34,7 +34,7 @@ services:
     networks:
       - radio-net
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mariadb-admin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,11 +48,11 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-changeme}
     volumes:
-      - mongo_data:/data/db:ro  # READ-ONLY during migration!
+      - mongo_data:/data/db:ro # READ-ONLY during migration!
     networks:
       - radio-net
     profiles:
-      - migration  # Only starts with --profile migration
+      - migration # Only starts with --profile migration
 
   # PostgreSQL - Directus Database
   postgres:
@@ -68,7 +68,7 @@ services:
     networks:
       - radio-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DIRECTUS_DB_USER:-directus}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DIRECTUS_DB_USER:-directus}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +84,7 @@ services:
     networks:
       - radio-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -113,26 +113,29 @@ services:
       - DB_DATABASE=${DIRECTUS_DB_NAME:-directus}
       - DB_USER=${DIRECTUS_DB_USER:-directus}
       - DB_PASSWORD=${DIRECTUS_DB_PASSWORD:-directus_secret}
-      
+
       # Auth
       - KEY=${DIRECTUS_KEY:-yourparty-key-change-me}
       - SECRET=${DIRECTUS_SECRET:-yourparty-secret-change-me}
       - ADMIN_EMAIL=${DIRECTUS_ADMIN_EMAIL:-admin@yourparty.tech}
       - ADMIN_PASSWORD=${DIRECTUS_ADMIN_PASSWORD:-admin_secret}
-      
+
       # Redis Cache
       - CACHE_ENABLED=true
       - CACHE_STORE=redis
-      - CACHE_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
-      
+      - CACHE_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@yourparty-redis:6379
+
       # CORS
       - CORS_ENABLED=true
       - CORS_ORIGIN=https://yourparty.tech,https://control.yourparty.tech,http://localhost:3000
-      
+
       # Rate Limiting
-      - RATE_LIMITER_ENABLED=true
+      - RATE_LIMITER_ENABLED=false
       - RATE_LIMITER_STORE=redis
-      - RATE_LIMITER_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      - RATE_LIMITER_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@yourparty-redis:6379
+      - REDIS_HOST=yourparty-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_secret}
     volumes:
       - directus_uploads:/directus/uploads
       - directus_extensions:/directus/extensions
@@ -155,7 +158,7 @@ services:
     networks:
       - radio-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:7700/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -185,13 +188,13 @@ services:
   # APPLICATION LAYER
   # ========================================
 
-  # FastAPI Backend V2
+  # FastAPI Backend V2 (runs on 8001 to parallel with V1)
   backend:
     build: ../../apps/api
-    container_name: yourparty-api
+    container_name: yourparty-api-v2
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8001:8000" # V2 on port 8001, V1 stays on 8000
     environment:
       # V2 Services
       - DIRECTUS_URL=http://directus:8055
@@ -199,26 +202,26 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
       - MEILI_URL=http://meilisearch:7700
       - MEILI_KEY=${MEILI_MASTER_KEY:-meili_master_key_change_me}
-      
+
       # Legacy (for migration/fallback)
       - MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-changeme}@mongo-legacy:27017/?authSource=admin
-      
+
       # AzuraCast
       - AZURACAST_URL=${AZURACAST_URL:-https://radio.yourparty.tech}
       - AZURACAST_API_KEY=${AZURACAST_API_KEY}
       - AZURACAST_VERIFY_SSL=${AZURACAST_VERIFY_SSL:-true}
-      
+
       # Feature Flags
       - FEATURE_V2_DIRECTUS=${FEATURE_V2_DIRECTUS:-false}
       - FEATURE_V2_REDIS=${FEATURE_V2_REDIS:-false}
       - FEATURE_MOOD_VOTES=true
       - FEATURE_MOOD_AUTODJ=true
-      
+
       # Paths
       - MUSIC_DIR=/var/radio/music
       - INBOX_DIR=/var/radio/inbox
     volumes:
-      - ${LIBRARY_PATH:-./library}:/var/radio/music:ro
+      - ${LIBRARY_PATH:-./library}:/var/radio/music
       - ${INBOX_PATH:-./inbox}:/var/radio/inbox
     depends_on:
       - redis
@@ -227,7 +230,7 @@ services:
     networks:
       - radio-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -291,9 +294,9 @@ volumes:
   meili_data:
   wp_data:
 
-# ========================================
-# NETWORKS
-# ========================================
+    # ========================================
+    # NETWORKS
+    # ========================================
 networks:
   radio-net:
     driver: bridge

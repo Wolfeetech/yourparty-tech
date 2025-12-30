@@ -12,6 +12,11 @@ const YPWebSocket = (function () {
     'use strict';
 
     // Configuration
+    // Dynamic API Base for V2 Testing (Port 8001)
+    const API_BASE = (window.location.port === '8001')
+        ? 'http://localhost:8001' // V2 Backend Direct
+        : ''; // Relative (V1 via Nginx)
+
     const CONFIG = {
         wsUrl: window.location.protocol === 'https:'
             ? `wss://${window.location.host}/ws/`
@@ -253,7 +258,7 @@ const YPWebSocket = (function () {
             rating: '/api/rate'
         };
 
-        const url = endpoints[voteType] || endpoints.mood_current;
+        const url = API_BASE + (endpoints[voteType] || endpoints.mood_current);
 
         const response = await fetch(url, {
             method: 'POST',

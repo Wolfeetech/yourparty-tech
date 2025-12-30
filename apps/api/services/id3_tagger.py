@@ -376,8 +376,11 @@ class AsyncTaggerService:
             # Extract relative path
             for prefix in [
                 "Z:/yourparty_Libary/",
+                "Z:/radio_library/",
                 "/mnt/music_hdd/",
                 "/var/radio/music/",
+                "/var/azuracast/stations/yourparty/media/",
+                "/var/azuracast/music_storage/",
                 "Music/"
             ]:
                 if prefix in normalized:
