@@ -119,28 +119,28 @@ const initApp = () => {
     });
   });
 
-  // Mood Tag Button
-  const moodTagButton = document.getElementById("mood-tag-button");
-  if (moodTagButton) {
-    moodTagButton.addEventListener("click", () => {
-      // Prevent double handling on Control Panel where ControlPanel.js handles it
-      if (window.controlPanel || document.body.classList.contains('page-template-page-control')) {
-        return;
-      }
-
-      const titleEl = document.getElementById("track-title");
-      const artistEl = document.getElementById("track-artist");
-      const coverEl = document.getElementById("player-cover");
-
-      if (typeof window.openMoodDialog === "function") {
-        window.openMoodDialog({
-          id: window.currentSongId || null,
-          title: titleEl ? titleEl.textContent : "Unknown Title",
-          artist: artistEl ? artistEl.textContent : "Unknown Artist"
-        });
-      }
-    });
-  }
+  // Mood Tag Button (DISABLED FOR SAFE MODE)
+  // const moodTagButton = document.getElementById("mood-tag-button");
+  // if (moodTagButton) {
+  //   moodTagButton.addEventListener("click", () => {
+  //     // Prevent double handling on Control Panel where ControlPanel.js handles it
+  //     if (window.controlPanel || document.body.classList.contains('page-template-page-control')) {
+  //       return;
+  //     }
+  //
+  //     const titleEl = document.getElementById("track-title");
+  //     const artistEl = document.getElementById("track-artist");
+  //     const coverEl = document.getElementById("player-cover");
+  //
+  //     if (typeof window.openMoodDialog === "function") {
+  //       window.openMoodDialog({
+  //         id: window.currentSongId || null,
+  //         title: titleEl ? titleEl.textContent : "Unknown Title",
+  //         artist: artistEl ? artistEl.textContent : "Unknown Artist"
+  //       });
+  //     }
+  //   });
+  // }
 
   const contactForm = document.getElementById("contact-form");
   const contactFeedback = document.getElementById("contact-feedback");
@@ -795,6 +795,9 @@ const initApp = () => {
   };
 
   const submitRating = async (value) => {
+    // DISABLED FOR SAFE MODE
+    return;
+    /*
     const ratingValue = Number(value);
     if (!ratingValue || ratingValue < 1 || ratingValue > 5) return;
 
@@ -869,9 +872,12 @@ const initApp = () => {
     } finally {
       isSendingVote = false;
     }
+    */
   };
 
   ratingStars.forEach((star) => {
+    // DISABLED FOR SAFE MODE
+    /*
     const value = Number(star.dataset.value);
     star.addEventListener("mouseenter", () => setStarHighlight(value));
     star.addEventListener("focus", () => setStarHighlight(value));
@@ -901,6 +907,7 @@ const initApp = () => {
         if (nextStar) nextStar.focus();
       }
     });
+    */
   });
 
   if (historyRefresh) {
@@ -913,8 +920,9 @@ const initApp = () => {
   setInterval(fetchStatus, 10000);
   setInterval(fetchHistory, 30000);
   setInterval(fetchSchedule, 60000);
-  // History Rating Listener (Delegation)
+  // History Rating Listener (Delegation) (DISABLED FOR SAFE MODE)
   if (historyList) {
+    /*
     historyList.addEventListener('click', async (e) => {
       if (e.target.classList.contains('history-star')) {
         const star = e.target;
@@ -950,6 +958,7 @@ const initApp = () => {
         }
       }
     });
+    */
   }
 
   // Modal Logic

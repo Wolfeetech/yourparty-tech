@@ -117,14 +117,14 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
-    // Mood Dialog JS - defines window.openMoodDialog
-    wp_enqueue_script(
-        'yourparty-mood-dialog',
-        get_template_directory_uri() . '/assets/mood-dialog.js',
-        ['yourparty-app-bundle'], // depends on app.js for track info
-        YOURPARTY_VERSION,
-        true
-    );
+    // Mood Dialog JS - defines window.openMoodDialog (DISABLED FOR SAFE MODE)
+    // wp_enqueue_script(
+    //    'yourparty-mood-dialog',
+    //    get_template_directory_uri() . '/assets/mood-dialog.js',
+    //    ['yourparty-app-bundle'], // depends on app.js for track info
+    //    YOURPARTY_VERSION,
+    //    true
+    // );
 
     // Load CSS (if any was extracted by Vite, usually style.css handles it, but check dist)
     if (file_exists(get_template_directory() . '/assets/dist/style.css')) {
@@ -148,17 +148,17 @@ add_action('wp_enqueue_scripts', function () {
         $mood_css_ver
     );
 
-    // Live Voting Widget JS
-    $live_voting_js_ver = file_exists(get_template_directory() . '/assets/live-voting.js')
-        ? filemtime(get_template_directory() . '/assets/live-voting.js')
-        : YOURPARTY_VERSION;
-    wp_enqueue_script(
-        'yourparty-live-voting',
-        get_template_directory_uri() . '/assets/live-voting.js',
-        ['yourparty-app-bundle'],
-        $live_voting_js_ver,
-        true
-    );
+    // Live Voting Widget JS (DISABLED FOR SAFE MODE)
+    // $live_voting_js_ver = file_exists(get_template_directory() . '/assets/live-voting.js')
+    //     ? filemtime(get_template_directory() . '/assets/live-voting.js')
+    //     : YOURPARTY_VERSION;
+    // wp_enqueue_script(
+    //     'yourparty-live-voting',
+    //     get_template_directory_uri() . '/assets/live-voting.js',
+    //     ['yourparty-app-bundle'],
+    //     $live_voting_js_ver,
+    //     true
+    // );
 
     // Control Panel Dashboard JS
     if (get_query_var('yourparty_control')) {

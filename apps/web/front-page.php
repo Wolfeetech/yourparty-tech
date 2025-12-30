@@ -33,6 +33,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                 </div>
                 
                 <!-- STATION SWITCHER -->
+                <!-- STATION SWITCHER (DISABLED FOR SAFE MODE)
                 <div class="station-switcher" role="tablist" aria-label="Select Radio Station">
                     <button class="station-btn active" data-station="1" role="tab" aria-selected="true" aria-controls="player-panel">
                         <span class="station-btn__icon">📻</span>
@@ -43,6 +44,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                         <span class="station-btn__label">Mixtapes</span>
                     </button>
                 </div>
+                -->
             </div>
 
             <!-- CENTER: THE GLASS PLAYER -->
@@ -64,6 +66,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                         <p id="track-artist" class="track-artist skeleton">Please wait</p>
                         
                         <!-- Rating Structure must match rating-module.js -->
+                        <!-- Rating Structure must match rating-module.js (DISABLED FOR SAFE MODE)
                         <div class="rating-strip rating-container">
                             <div class="rating-stars" id="rating-stars" role="radiogroup" aria-label="Rate this track">
                                 <button class="rating-star" data-value="1" aria-label="1 star">★</button>
@@ -74,9 +77,11 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                             </div>
                             <span id="rating-average" class="rating-score rating-average" aria-label="Average Rating">--</span>
                         </div>
+                        -->
                     </div>
 
                     <!-- Mood/Rating Actions - LARGER BUTTONS FOR VISIBILITY -->
+                    <!-- Mood/Rating Actions - LARGER BUTTONS FOR VISIBILITY (DISABLED FOR SAFE MODE)
                     <div class="player-actions" style="margin: 25px 0; display: flex; gap: 20px; justify-content: center; position: relative; z-index: 9999; pointer-events: auto;">
                          <button id="like-button" class="btn-reaction btn-reaction--like" title="Gefällt mir" aria-label="Like this track">
                             <span class="btn-reaction__icon">❤️</span>
@@ -87,14 +92,17 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                             <span class="btn-reaction__label">SKIP</span>
                          </button>
                     </div>
+                    -->
 
                     <!-- Vibe Tag Trigger -->
+                    <!-- Vibe Tag Trigger (DISABLED FOR SAFE MODE)
                     <div style="margin-top: 1rem; display: flex; justify-content: center;">
                         <button id="mood-tag-button" class="btn-glass-small" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <span style="font-size: 1.2em; line-height: 1;">✨</span>
                             <span style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; opacity: 0.8; font-weight: 600;">Vibe</span>
                         </button>
                     </div>
+                    -->
 
                     <!-- Controls -->
                     <div class="player-controls">
@@ -120,7 +128,8 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
             </div>
 
             <!-- BOTTOM: VIBE CONTROL DECK -->
-            <div class="vibe-deck" data-aos="fade-up">
+            <!-- BOTTOM: VIBE CONTROL DECK (DISABLED FOR SAFE MODE)
+            <div class="vibe-deck" data-aos="fade-up" style="display: none;">
                 <div class="vibe-deck-glass">
                     <div class="deck-header">
                         <div class="deck-icon">🎛️</div>
@@ -130,7 +139,6 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                         </div>
                     </div>
                     
-                    <!-- MTV-Style Voting Widget Container -->
                     <div class="live-voting-widget"></div>
                     
                     <div class="vibe-buttons-grid">
@@ -163,6 +171,7 @@ $stream_url = apply_filters('yourparty_stream_url', YOURPARTY_STREAM_URL);
                     </div>
                 </div>
             </div>
+            -->
 
         </div>
     </section>
