@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from models.schemas import (
     RatingRequest, MoodRequest, MoodVoteRequest,
     MoodNextVoteRequest, TrackVoteRequest, VoteNextRequest,
@@ -488,56 +488,55 @@ async def get_shoutouts(limit: int = 50, current_user: User = Depends(get_curren
     return results
 
 @router.get("/track-metadata")
-async def get_track_metadata(song_id: str):
+async def get_track_metadata(song_id: str = None, title: str = None, artist: str = None):
     """
-    Fetch authoritative metadata (Smart Genre, Mood) from Mongo
-    for the given AzuraCast Song ID.
+    Fetch authoritative metadata (Smart Genre, Mood) from Mongo.
+    Supports lookup by AzuraCast Song ID (if synced) OR fuzzy Title/Artist match.
     """
     if not state.mongo_client:
         return {"error": "DB Unavailable", "genre": "Unknown", "mood": None}
     
-    # Try to find track by AzuraCast Song ID (usually 'azuracast_unique_id' or mapped via title)
-    # However, AzuraCast 'song_id' is cryptic hash.
-    # We might need to match by title/artist from the 'current' track in memory?
-    # Or assuming song_id passed here is the 'id' field from AzuraCast NP JSON
-    
-    # Let's search by string match on song_id if it's stored?
-    # Actually, we don't reliably store AzuraCast 'sh_id' or 'song_id' in Mongo yet.
-    # We rely on TrackMatcher.
-    
-    # Better approach: Pass Title/Artist to be safe?
-    # Or just return what we have in state.now_playing if available?
-    
-    # For now, let's try to match by 'azuracast_id' (integer) if provided,
-    # or falls back to fuzzy title match.
-    
-    try:
-        if not state.mongo_client:
-            return {"error": "DB Unavailable", "genre": "Unknown", "mood": None}
-        
-        track = None
-        
-        # 1. Try Integer ID
-        if song_id and song_id.isdigit():
-            # DIRECT CALL - NO AWAIT
-            track = state.mongo_client.tracks_collection.find_one({"azuracast_id": int(song_id)})
-        
-        # 2. If not found, look at Global Now Playing state
-        if not track:
-            # Check if this ID matches current NP
-            np = state.now_playing.get(1, {}) # Station 1
-            if np and str(np.get('id')) == str(song_id):
-                 title = np.get('title')
-                 if title:
-                     # DIRECT CALL - NO AWAIT
-                     track = state.mongo_client.tracks_collection.find_one({"title": title})
+    # Needs at least one identifier
+    if not song_id and not (title and artist):
+        return {"error": "Missing params", "genre": "Unknown"}
 
+    try:
+        track = None
+        db = state.mongo_client.db
+
+        # 1. Try AzuraCast Song ID (Direct Match)
+        if song_id:
+            track = db.tracks.find_one({"song_id": song_id})
+            # Fallback: try as Mongo ObjectId
+            if not track and len(song_id) == 24:
+                try:
+                    from bson import ObjectId
+                    track = db.tracks.find_one({"_id": ObjectId(song_id)})
+                except:
+                    pass
+
+        # 2. Try Title + Artist (Case-Insensitive Match)
+        if not track and title and artist:
+            import re
+            t_reg = re.compile(f"^{re.escape(title)}$", re.IGNORECASE)
+            a_reg = re.compile(f"^{re.escape(artist)}$", re.IGNORECASE)
+            
+            track = db.tracks.find_one({
+                "metadata.title": t_reg,
+                "metadata.artist": a_reg
+            })
+            
+            # Looser fallback: title only
+            if not track:
+                track = db.tracks.find_one({"metadata.title": t_reg})
+
+        # 3. Return result
         if track:
             return {
                 "success": True,
                 "genre": track.get("genre", "Unknown"),
                 "mood": track.get("mood"),
-                "title": track.get("title")
+                "title": track.get("metadata", {}).get("title", track.get("title"))
             }
             
         return {"success": False, "genre": "Unknown", "mood": None}
@@ -637,3 +636,238 @@ async def add_to_queue_handler(payload: dict):
     
     success = await state.azura_client.queue_track(mid, sid)
     return {"success": success}
+
+
+# =============================================
+# CURATOR PLAYLIST MANAGEMENT (NTS-Lite)
+# =============================================
+
+@router.get("/curator/schedule")
+async def get_curator_schedule(station_id: int = 1):
+    """Get aggregated schedule for all playlists."""
+    if not state.azura_client:
+        return {"schedule": []}
+    
+    playlists = await state.azura_client.get_playlists(station_id)
+    schedule_items = []
+    
+    for pl in playlists:
+        # We need to fetch schedule for each, or rely on a bulk fetch if available?
+        # AzuraCast doesn't typically send schedule in list summary.
+        # But iterating all might be slow.
+        # For now, let's fetch schedule for active playlists only or all.
+        sched = await state.azura_client.get_playlist_schedule(pl["id"], station_id)
+        if sched:
+            for s in sched:
+                schedule_items.append({
+                    **s,
+                    "playlist_name": pl["name"],
+                    "playlist_id": pl["id"],
+                    "colour": pl.get("type", "default") # Use type/weight as color proxy
+                })
+                
+    return {"schedule": schedule_items}
+
+
+@router.get("/curator/playlists")
+async def get_curator_playlists(station_id: int = 1):
+    """Get all playlists for the curator dashboard (Decoupled/Cached)."""
+    
+    # 1. Try Fast Read (MongoDB)
+    if state.mongo_client:
+        cached = state.mongo_client.get_cached_playlists()
+        if cached:
+             return cached
+             
+    # 2. Fallback: Slow Read (Direct) + Trigger Sync
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    logger.warning("Cache miss for playlists. Fetching direct from AzuraCast...")
+    playlists = await state.azura_client.get_playlists(station_id)
+    
+    # Enrich with schedule info (Slow part)
+    enriched = []
+    for pl in playlists:
+        schedule = await state.azura_client.get_playlist_schedule(pl["id"], station_id)
+        enriched.append({
+            "id": pl.get("id"),
+            "name": pl.get("name"),
+            "is_enabled": pl.get("is_enabled"),
+            "weight": pl.get("weight"),
+            "type": pl.get("type"),
+            "num_songs": pl.get("num_songs", 0),
+            "total_length": pl.get("total_length", 0),
+            "schedule": schedule
+        })
+
+    # Saving to cache for next time
+    if state.mongo_client:
+        state.mongo_client.save_playlists(enriched)
+    
+    return enriched
+
+
+@router.post("/curator/playlists")
+async def create_curator_playlist(payload: Dict = Body(...), station_id: int = 1):
+    """Create a new playlist."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    name = payload.get("name")
+    if not name:
+        raise HTTPException(status_code=400, detail="Playlist name required")
+    
+    result = await state.azura_client.create_playlist(
+        name=name,
+        weight=payload.get("weight", 3),
+        station_id=station_id
+    )
+    
+    if result:
+        return {"success": True, "playlist": result}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to create playlist")
+
+
+@router.get("/curator/playlists/{playlist_id}")
+async def get_curator_playlist(playlist_id: int, station_id: int = 1):
+    """Get single playlist with tracks."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    playlist = await state.azura_client.get_playlist(playlist_id, station_id)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    
+    # Get tracks in this playlist
+    tracks = await state.azura_client.get_playlist_media(playlist_id, station_id)
+    
+    # Get schedule
+    schedule = await state.azura_client.get_playlist_schedule(playlist_id, station_id)
+    
+    return {
+        **playlist,
+        "tracks": tracks,
+        "schedule": schedule
+    }
+
+
+@router.put("/curator/playlists/{playlist_id}")
+async def update_curator_playlist(playlist_id: int, payload: Dict = Body(...), station_id: int = 1):
+    """Update playlist settings."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    result = await state.azura_client.update_playlist(playlist_id, payload, station_id)
+    return {"success": True, "playlist": result}
+
+
+@router.delete("/curator/playlists/{playlist_id}")
+async def delete_curator_playlist(playlist_id: int, station_id: int = 1):
+    """Delete a playlist."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    success = await state.azura_client.delete_playlist(playlist_id, station_id)
+    if success:
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete playlist")
+
+
+@router.post("/curator/playlists/{playlist_id}/tracks")
+async def add_track_to_playlist(playlist_id: int, payload: Dict = Body(...), station_id: int = 1):
+    """Add a track to a playlist."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    media_id = payload.get("media_id")
+    if not media_id:
+        raise HTTPException(status_code=400, detail="media_id required")
+    
+    # Get playlist name for logging
+    playlist = await state.azura_client.get_playlist(playlist_id, station_id)
+    playlist_name = playlist.get("name", "") if playlist else ""
+    
+    success = await state.azura_client.add_media_to_playlist(
+        media_id=media_id,
+        playlist_id=playlist_id,
+        playlist_name=playlist_name,
+        station_id=station_id
+    )
+    
+    return {"success": success}
+
+
+@router.post("/curator/playlists/{playlist_id}/schedule")
+async def schedule_playlist(playlist_id: int, payload: Dict = Body(...), station_id: int = 1):
+    """Schedule a playlist for specific time slots.
+    
+    Body: {
+        "start_time": "20:00",
+        "end_time": "22:00", 
+        "days": [4, 5]  // 0=Mon, 6=Sun
+    }
+    """
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    start_time = payload.get("start_time")
+    end_time = payload.get("end_time")
+    days = payload.get("days", [])
+    
+    if not start_time or not end_time:
+        raise HTTPException(status_code=400, detail="start_time and end_time required")
+    
+    result = await state.azura_client.add_playlist_schedule(
+        playlist_id=playlist_id,
+        start_time=start_time,
+        end_time=end_time,
+        days=days,
+        station_id=station_id
+    )
+    
+    return {"success": True, "schedule": result}
+
+
+@router.delete("/curator/playlists/{playlist_id}/schedule/{schedule_id}")
+async def delete_playlist_schedule(playlist_id: int, schedule_id: int, station_id: int = 1):
+    """Remove a schedule from a playlist."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    success = await state.azura_client.delete_playlist_schedule(playlist_id, schedule_id, station_id)
+    if success:
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete schedule")
+
+
+@router.get("/curator/schedule")
+async def get_curator_schedule(station_id: int = 1):
+    """Get full station schedule with all scheduled playlists."""
+    if not state.azura_client:
+        raise HTTPException(status_code=503, detail="Backend unavailable")
+    
+    playlists = await state.azura_client.get_playlists(station_id)
+    
+    schedule_items = []
+    for pl in playlists:
+        if not pl.get("is_enabled"):
+            continue
+        schedule = await state.azura_client.get_playlist_schedule(pl["id"], station_id)
+        for s in schedule:
+            schedule_items.append({
+                "playlist_id": pl["id"],
+                "playlist_name": pl["name"],
+                "start_time": s.get("start_time"),
+                "end_time": s.get("end_time"),
+                "days": s.get("days", []),
+                "schedule_id": s.get("id")
+            })
+    
+    # Sort by start time
+    schedule_items.sort(key=lambda x: x.get("start_time", ""))
+    
+    return {"schedule": schedule_items}

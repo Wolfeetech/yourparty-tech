@@ -252,6 +252,115 @@ class AzuraCastClient:
                 logger.error(f"Search requests failed: {e}")
                 return []
 
+    # ============================================
+    # PLAYLIST MANAGEMENT (NTS-Lite Curator Features)
+    # ============================================
+
+    async def get_playlist(self, playlist_id: int, station_id: Optional[int] = None) -> Dict:
+        """Get single playlist details."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}"
+        res = await self._get(url)
+        return res if isinstance(res, dict) else {}
+
+    async def update_playlist(self, playlist_id: int, data: Dict, station_id: Optional[int] = None) -> Dict:
+        """Update playlist settings."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}"
+        return await self._put(url, json=data) or {}
+
+    async def delete_playlist(self, playlist_id: int, station_id: Optional[int] = None) -> bool:
+        """Delete a playlist."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}"
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
+            try:
+                resp = await client.delete(url, headers=self.headers)
+                resp.raise_for_status()
+                return True
+            except Exception as e:
+                logger.error(f"Failed to delete playlist {playlist_id}: {e}")
+                return False
+
+    async def get_playlist_schedule(self, playlist_id: int, station_id: Optional[int] = None) -> List[Dict]:
+        """Get schedule items for a playlist."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}/schedule"
+        res = await self._get(url)
+        return res if isinstance(res, list) else []
+
+    async def add_playlist_schedule(
+        self, 
+        playlist_id: int, 
+        start_time: str,  # "HH:MM" format
+        end_time: str,    # "HH:MM" format
+        days: List[int],  # 0=Mon, 6=Sun
+        station_id: Optional[int] = None
+    ) -> Dict:
+        """Add a schedule item to a playlist.
+        
+        Args:
+            playlist_id: Playlist ID
+            start_time: Start time in HH:MM format (e.g., "20:00")
+            end_time: End time in HH:MM format (e.g., "22:00")
+            days: List of days (0=Monday, 6=Sunday)
+        """
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}/schedule"
+        payload = {
+            "start_time": start_time,
+            "end_time": end_time,
+            "days": days
+        }
+        return await self._post(url, json=payload) or {}
+
+    async def delete_playlist_schedule(self, playlist_id: int, schedule_id: int, station_id: Optional[int] = None) -> bool:
+        """Remove a schedule item from a playlist."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}/schedule/{schedule_id}"
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout, follow_redirects=True) as client:
+            try:
+                resp = await client.delete(url, headers=self.headers)
+                resp.raise_for_status()
+                return True
+            except Exception as e:
+                logger.error(f"Failed to delete schedule {schedule_id}: {e}")
+                return False
+
+    async def get_playlist_media(self, playlist_id: int, station_id: Optional[int] = None) -> List[Dict]:
+        """Get all media files in a playlist."""
+        sid = station_id if station_id is not None else self.station_id
+        # First get playlist to find its source type
+        playlist = await self.get_playlist(playlist_id, sid)
+        if not playlist:
+            return []
+        
+        # For song-based playlists, fetch files with playlist filter
+        url = f"{self.base_url}/api/station/{sid}/files"
+        params = {"searchPhrase": f"playlist:{playlist.get('name', '')}"}
+        
+        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=30, follow_redirects=True) as client:
+            try:
+                resp = await client.get(url, headers=self.headers, params=params)
+                resp.raise_for_status()
+                data = resp.json()
+                if isinstance(data, list):
+                    return data
+                elif isinstance(data, dict) and "rows" in data:
+                    return data["rows"]
+                return []
+            except Exception as e:
+                logger.error(f"Get playlist media failed: {e}")
+                return []
+
+    async def reorder_playlist(self, playlist_id: int, media_ids: List[str], station_id: Optional[int] = None) -> bool:
+        """Reorder tracks in a playlist."""
+        sid = station_id if station_id is not None else self.station_id
+        url = f"{self.base_url}/api/station/{sid}/playlist/{playlist_id}/order"
+        payload = {"order": media_ids}
+        result = await self._put(url, json=payload)
+        return result is not None
+
 if __name__ == "__main__":
     pass
 

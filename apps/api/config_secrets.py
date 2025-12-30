@@ -1,44 +1,53 @@
 """
 SECRETS FILE
 ------------
-Please fill in the values below to enable the automation scripts.
-This file is ignored by git (or should be).
+All secrets MUST be provided via environment variables.
+See .env.example for required variables.
+This file only reads from environment - no hardcoded secrets!
 """
 import os
 
+def _require_env(name: str) -> str:
+    """Get required environment variable or raise error."""
+    value = os.getenv(name)
+    if not value:
+        raise ValueError(f"Required environment variable '{name}' is not set. Check .env file.")
+    return value
+
+def _env(name: str, default: str = "") -> str:
+    """Get optional environment variable with default."""
+    return os.getenv(name, default)
+
 # 1. Music Assistant (Home Assistant)
-# Generate this in HA Profile -> Security -> Create Long-Lived Access Token
-# 1. Music Assistant (Home Assistant)
-# Generate this in HA Profile -> Security -> Create Long-Lived Access Token
-MASS_TOKEN = os.getenv("MASS_TOKEN", "RXq_nQKdsyk1Z0DIj0_MXUs_OEp_cN7Wjt2kPX_e8mREXPawY0ZITBuY0BBvNVKg")
-MASS_URL = os.getenv("MASS_URL", "http://192.168.178.179:8123") # Updated to correct HA IP
+MASS_TOKEN = _env("MASS_TOKEN")
+MASS_URL = _env("MASS_URL", "http://192.168.178.179:8123")
 
 # 2. NAS / File Server (SMB)
-# Credentials to mount \\192.168.178.25\music (or correct share)
-SMB_SERVER = os.getenv("SMB_SERVER", "192.168.178.25")
-SMB_SHARE = os.getenv("SMB_SHARE", "music") # Change if 'public', 'share' etc.
-SMB_USERNAME = os.getenv("SMB_USERNAME", "wolf")
-SMB_PASSWORD = os.getenv("SMB_PASSWORD", "YpWolf2024!")
+SMB_SERVER = _env("SMB_SERVER", "192.168.178.25")
+SMB_SHARE = _env("SMB_SHARE", "music")
+SMB_USERNAME = _env("SMB_USERNAME")
+SMB_PASSWORD = _env("SMB_PASSWORD")
 
 # Library Root (Single Source of Truth)
-LIBRARY_SUBDIR = os.getenv("LIBRARY_SUBDIR", "yourparty_Libary")
-LIBRARY_UNC = os.getenv(
+LIBRARY_SUBDIR = _env("LIBRARY_SUBDIR", "yourparty_Libary")
+LIBRARY_UNC = _env(
     "LIBRARY_UNC",
-    rf"\\{SMB_SERVER}\{SMB_SHARE}\{LIBRARY_SUBDIR}"
+    rf"\\{SMB_SERVER}\{SMB_SHARE}\{LIBRARY_SUBDIR}" if SMB_SERVER else ""
 )
-LIBRARY_ROOT_WIN = os.getenv("LIBRARY_ROOT_WIN", rf"Z:\{LIBRARY_SUBDIR}")
-LIBRARY_ROOT_LINUX = os.getenv(
+LIBRARY_ROOT_WIN = _env("LIBRARY_ROOT_WIN", rf"Z:\{LIBRARY_SUBDIR}")
+LIBRARY_ROOT_LINUX = _env(
     "LIBRARY_ROOT_LINUX",
     f"/var/radio/music/{LIBRARY_SUBDIR}"
 )
 
-# 3. MongoDB (Found in config, but good to keep here)
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://root:4f5cd00532af49b5941d6f6385b2e0bf@192.168.178.222:27017/?authSource=admin")
+# 3. MongoDB - REQUIRED
+MONGO_URI = _require_env("MONGO_URI")
 
-# 4. AzuraCast (Radio)
-AZURACAST_API_URL = os.getenv("AZURACAST_API_URL", "https://radio.yourparty.tech/api")
-AZURACAST_API_KEY = os.getenv("AZURACAST_API_KEY", "b67d671461fd35d0:9ba6fc04467491f28c29caf8895a5ca7")
-AZURACAST_STATION_ID = int(os.getenv("AZURACAST_STATION_ID", 1))
+# 4. AzuraCast (Radio) - REQUIRED
+AZURACAST_API_URL = _require_env("AZURACAST_API_URL")
+AZURACAST_API_KEY = _require_env("AZURACAST_API_KEY")
+AZURACAST_STATION_ID = int(_env("AZURACAST_STATION_ID", "1"))
+AZURACAST_VERIFY_SSL = _env("AZURACAST_VERIFY_SSL", "true").lower() == "true"
 
 # 5. Smart Tagging Rules (Dynamic Genre Mapping)
 # Maps partial genre/folder names to Vibes

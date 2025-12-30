@@ -4,7 +4,7 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.3.35');
+    define('YOURPARTY_VERSION', '3.3.36');
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
@@ -162,9 +162,7 @@ add_action('wp_enqueue_scripts', function () {
 
     // Control Panel Dashboard JS
     if (get_query_var('yourparty_control')) {
-        $cp_ver = file_exists(get_template_directory() . '/assets/js/ControlPanel.js')
-            ? filemtime(get_template_directory() . '/assets/js/ControlPanel.js')
-            : YOURPARTY_VERSION;
+        $cp_ver = time(); // FORCE CACHE BUST
 
         wp_enqueue_script(
             'yourparty-control-panel',

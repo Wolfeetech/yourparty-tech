@@ -197,16 +197,28 @@
   // ========== Initialize ==========
 
   function init() {
+    // Don't initialize on Control Panel page where ControlPanel.js handles tagging
+    if (window.location.pathname.includes('/control')) {
+      console.log('[Vibe] Skipped on Control Panel page');
+      return;
+    }
+
     panelElement = createVibePanel();
     setupEventListeners();
 
     // Global function for TAG VIBE button
     window.openMoodDialog = showVibePanel;
 
-    // Attach to trigger button
+    // Attach to trigger button (but not on Control Panel where ControlPanel.js handles it)
     const triggerBtn = document.getElementById('mood-tag-button');
     if (triggerBtn) {
-      triggerBtn.addEventListener('click', () => showVibePanel());
+      triggerBtn.addEventListener('click', () => {
+        // Skip if ControlPanel is managing the tag button
+        if (window.controlPanel || document.body.classList.contains('page-template-page-control')) {
+          return;
+        }
+        showVibePanel();
+      });
     }
 
     console.log('[Vibe] Quick Reactions initialized');

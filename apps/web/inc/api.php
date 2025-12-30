@@ -745,7 +745,7 @@ add_action('rest_api_init', function () {
                 $api_url = yourparty_api_base_url() . '/vote-next-candidates';
                 
                 $response = wp_remote_get($api_url, [
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -805,7 +805,7 @@ add_action('rest_api_init', function () {
                         'track_id' => $track_id,
                         'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
                     ]),
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -846,7 +846,7 @@ add_action('rest_api_init', function () {
                         'song_id' => $song_id,
                         'mood_next' => $mood_next
                     ]),
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -939,6 +939,416 @@ add_action('rest_api_init', function () {
         ]
     );
 
+    // =============================
+    // CONTROL PANEL ROUTES (Curator)
+    // =============================
+
+    // Library Search (proxied from Python backend)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/library/search',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $query = sanitize_text_field($request->get_param('q'));
+                if (empty($query)) {
+                    return rest_ensure_response([]);
+                }
+                
+                $api_url = yourparty_api_base_url() . '/control/library/search?q=' . urlencode($query);
+                $response = wp_remote_get($api_url, [
+                    'timeout' => 30,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] Library search failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Search failed', ['status' => 503]);
+                }
+                
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                return rest_ensure_response($data ?: []);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Queue with enriched metadata (proxied from Python backend)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/queue',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $api_url = yourparty_api_base_url() . '/control/queue';
+                $response = wp_remote_get($api_url, [
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] Control queue failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Queue fetch failed', ['status' => 503]);
+                }
+                
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                return rest_ensure_response($data ?: ['queue' => []]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Delete queue item (proxied from Python backend)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/queue/(?P<item_id>[a-zA-Z0-9_\-]+)',
+        [
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $item_id = sanitize_text_field($request->get_param('item_id'));
+                
+                $api_url = yourparty_api_base_url() . '/control/queue/' . $item_id;
+                $response = wp_remote_request($api_url, [
+                    'method' => 'DELETE',
+                    'timeout' => 30,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] Queue delete failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Delete failed', ['status' => 503]);
+                }
+                
+                $code = wp_remote_retrieve_response_code($response);
+                if ($code >= 400) {
+                    return new WP_Error('delete_failed', 'Could not delete item', ['status' => $code]);
+                }
+                
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                return rest_ensure_response($data ?: ['success' => true]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Add track to queue (proxied from Python backend)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/queue',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $media_id = sanitize_text_field($request->get_param('media_id'));
+                
+                if (empty($media_id)) {
+                    return new WP_Error('invalid_payload', 'media_id required', ['status' => 400]);
+                }
+                
+                $api_url = yourparty_api_base_url() . '/control/queue';
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode(['media_id' => $media_id]),
+                    'timeout' => 30,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    error_log('[YourParty] Queue add failed: ' . $response->get_error_message());
+                    return new WP_Error('api_error', 'Add failed', ['status' => 503]);
+                }
+                
+                $body = wp_remote_retrieve_body($response);
+                $data = json_decode($body, true);
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // =============================================
+    // CURATOR PLAYLIST MANAGEMENT (NTS-Lite)
+    // =============================================
+
+    // Get all playlists
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $api_url = yourparty_api_base_url() . '/curator/playlists';
+                $response = wp_remote_get($api_url, ['timeout' => 30, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed to fetch playlists', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: []);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Create playlist
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $api_url = yourparty_api_base_url() . '/curator/playlists';
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode([
+                        'name' => sanitize_text_field($request->get_param('name')),
+                        'weight' => intval($request->get_param('weight') ?: 3)
+                    ]),
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Get single playlist
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists/(?P<playlist_id>\d+)',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $pid = $request->get_param('playlist_id');
+                $api_url = yourparty_api_base_url() . '/curator/playlists/' . $pid;
+                $response = wp_remote_get($api_url, ['timeout' => 10, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: []);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // =============================================
+    // VIBE STEERING & MOODS (Missing Logic Restoration)
+    // =============================================
+
+    // VIBE STEERING (GET)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/steer',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $api_url = yourparty_api_base_url() . '/control/steer';
+                $response = wp_remote_get($api_url, ['timeout' => 10, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Steer fetch failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['mode' => 'auto', 'target' => null]);
+            },
+            'permission_callback' => function () {
+                return current_user_can('edit_posts');
+            },
+        ]
+    );
+
+    // VIBE STEERING (POST)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/steer',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $api_url = yourparty_api_base_url() . '/control/steer';
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode([
+                        'mode' => sanitize_text_field($request->get_param('mode')),
+                        'target' => sanitize_text_field($request->get_param('target')),
+                        'station_id' => intval($request->get_param('station_id') ?: 1)
+                    ]),
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Steer update failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => function () {
+                return current_user_can('edit_posts');
+            },
+        ]
+    );
+
+    // MOODS ENDPOINT (GET)
+    register_rest_route(
+        'yourparty/v1',
+        '/control/moods',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $api_url = yourparty_api_base_url() . '/moods';
+                $response = wp_remote_get($api_url, ['timeout' => 10, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return rest_ensure_response(['top_moods' => []]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['top_moods' => []]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists/(?P<playlist_id>\d+)',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $playlist_id = intval($request->get_param('playlist_id'));
+                $api_url = yourparty_api_base_url() . '/curator/playlists/' . $playlist_id;
+                $response = wp_remote_get($api_url, ['timeout' => 30, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: []);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Delete playlist
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists/(?P<playlist_id>\d+)',
+        [
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $playlist_id = intval($request->get_param('playlist_id'));
+                $api_url = yourparty_api_base_url() . '/curator/playlists/' . $playlist_id;
+                $response = wp_remote_request($api_url, [
+                    'method' => 'DELETE',
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['success' => true]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Add track to playlist
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists/(?P<playlist_id>\d+)/tracks',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $playlist_id = intval($request->get_param('playlist_id'));
+                $api_url = yourparty_api_base_url() . '/curator/playlists/' . $playlist_id . '/tracks';
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode(['media_id' => $request->get_param('media_id')]),
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Schedule playlist
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/playlists/(?P<playlist_id>\d+)/schedule',
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $playlist_id = intval($request->get_param('playlist_id'));
+                $api_url = yourparty_api_base_url() . '/curator/playlists/' . $playlist_id . '/schedule';
+                $response = wp_remote_post($api_url, [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode([
+                        'start_time' => sanitize_text_field($request->get_param('start_time')),
+                        'end_time' => sanitize_text_field($request->get_param('end_time')),
+                        'days' => $request->get_param('days') ?: []
+                    ]),
+                    'timeout' => 10,
+                    'sslverify' => true
+                ]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['success' => false]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
+    // Get station schedule
+    register_rest_route(
+        'yourparty/v1',
+        '/curator/schedule',
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $api_url = yourparty_api_base_url() . '/curator/schedule';
+                $response = wp_remote_get($api_url, ['timeout' => 30, 'sslverify' => true]);
+                
+                if (is_wp_error($response)) {
+                    return new WP_Error('api_error', 'Failed', ['status' => 503]);
+                }
+                
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                return rest_ensure_response($data ?: ['schedule' => []]);
+            },
+            'permission_callback' => '__return_true',
+        ]
+    );
+
     register_rest_route(
         'yourparty/v1',
         '/content',
@@ -990,7 +1400,7 @@ add_action('rest_api_init', function () {
                 $api_url = yourparty_api_base_url() . '/user-stats/' . $user_id;
                 
                 $response = wp_remote_get($api_url, [
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -1018,7 +1428,7 @@ add_action('rest_api_init', function () {
                 $api_url = yourparty_api_base_url() . '/mood-stats';
                 
                 $response = wp_remote_get($api_url, [
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -1110,40 +1520,7 @@ add_action('rest_api_init', function () {
 
 
 
-    // Mood Tagging Endpoint
-    register_rest_route(
-        'yourparty/v1',
-        '/mood-tag',
-        [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => 'yourparty_rest_post_mood_tag',
-            'permission_callback' => '__return_true',
-            'args' => [
-                'song_id' => [
-                    'required' => true,
-                    'type' => 'string',
-                ],
-                'mood' => [
-                    'required' => true,
-                    'type' => 'string',
-                ],
-            ],
-        ]
-    );
 
-    // DUAL MOOD VOTING PROXY
-    register_rest_route(
-        'yourparty/v1',
-        '/vote-mood',
-        [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => 'yourparty_rest_post_vote_mood',
-            'permission_callback' => '__return_true',
-            'args' => [
-                'song_id' => ['required' => true, 'type' => 'string'],
-            ],
-        ]
-    );
 
     // --- CONTROL PANEL PROXY ENDPOINTS ---
 
@@ -1190,30 +1567,209 @@ add_action('rest_api_init', function () {
     register_rest_route('yourparty/v1', '/control/moods', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
-            if (!current_user_can('manage_options'))
-                return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
-            $resp = wp_remote_get(yourparty_api_base_url() . '/moods', ['timeout' => 5]);
+            $resp = wp_remote_get(yourparty_api_base_url() . '/moods', ['timeout' => 30, 'sslverify' => true]);
             if (is_wp_error($resp))
                 return [];
-            return json_decode(wp_remote_retrieve_body($resp), true);
+            return json_decode(wp_remote_retrieve_body($resp), true) ?: [];
         },
-        'permission_callback' => function () {
-            return current_user_can('manage_options'); }
+        'permission_callback' => 'is_user_logged_in'
     ]);
 
-    // Steer
+    // Steer GET
     register_rest_route('yourparty/v1', '/control/steer', [
         'methods' => WP_REST_Server::READABLE,
         'callback' => function () {
-            if (!current_user_can('manage_options'))
-                return new WP_Error('rest_forbidden', 'Admins only.', ['status' => 403]);
-            $resp = wp_remote_get(yourparty_api_base_url() . '/control/steer', ['timeout' => 5]);
+            $resp = wp_remote_get(yourparty_api_base_url() . '/control/steer', ['timeout' => 30, 'sslverify' => true]);
             if (is_wp_error($resp))
-                return $resp;
+                return ['mode' => 'auto', 'target' => null];
+            return json_decode(wp_remote_retrieve_body($resp), true) ?: ['mode' => 'auto', 'target' => null];
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Steer POST
+    register_rest_route('yourparty/v1', '/control/steer', [
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $api_url = yourparty_api_base_url() . '/control/steer';
+            $resp = wp_remote_post($api_url, [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => json_encode([
+                    'mode' => sanitize_text_field($request->get_param('mode')),
+                    'target' => sanitize_text_field($request->get_param('target'))
+                ]),
+                'timeout' => 30,
+                'sslverify' => true
+            ]);
+            if (is_wp_error($resp))
+                return new WP_Error('api_error', 'Steer failed', ['status' => 503]);
+            return json_decode(wp_remote_retrieve_body($resp), true) ?: ['success' => true];
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // === MISSING CURATOR & CONTROL ROUTES ===
+
+    // Mood Tag (POST) - Logged in users
+    register_rest_route('yourparty/v1', '/mood-tag', [
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $resp = wp_remote_post(yourparty_api_base_url() . '/mood-tag', [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => json_encode($request->get_json_params()),
+                'timeout' => 30,
+                'sslverify' => true
+            ]);
             return json_decode(wp_remote_retrieve_body($resp), true);
         },
-        'permission_callback' => function () {
-            return current_user_can('manage_options'); }
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Vote Mood (POST) - PUBLIC endpoint for anonymous voting
+    register_rest_route('yourparty/v1', '/vote-mood', [
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $resp = wp_remote_post(yourparty_api_base_url() . '/vote-mood', [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => json_encode($request->get_json_params()),
+                'timeout' => 30,
+                'sslverify' => true
+            ]);
+            if (is_wp_error($resp)) {
+                return new WP_Error('api_error', 'Vote failed', ['status' => 503]);
+            }
+            return json_decode(wp_remote_retrieve_body($resp), true) ?: ['success' => false];
+        },
+        'permission_callback' => '__return_true'  // Public - anyone can vote
+    ]);
+
+
+    // Control Queue (GET, POST)
+    register_rest_route('yourparty/v1', '/control/queue', [
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $resp = wp_remote_get(yourparty_api_base_url() . '/control/queue', ['timeout' => 30, 'sslverify' => true]);
+                return json_decode(wp_remote_retrieve_body($resp), true);
+            },
+            'permission_callback' => 'is_user_logged_in'
+        ],
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $resp = wp_remote_post(yourparty_api_base_url() . '/control/queue', [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode($request->get_json_params()),
+                    'timeout' => 30, 'sslverify' => true
+                ]);
+                return json_decode(wp_remote_retrieve_body($resp), true);
+            },
+            'permission_callback' => 'is_user_logged_in'
+        ]
+    ]);
+
+    // Control Queue Delete
+    register_rest_route('yourparty/v1', '/control/queue/(?P<id>\d+)', [
+        'methods' => WP_REST_Server::DELETABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $id = $request->get_param('id');
+            $resp = wp_remote_request(yourparty_api_base_url() . "/control/queue/$id", [
+                'method' => 'DELETE',
+                'timeout' => 30,
+                'sslverify' => true
+            ]);
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Library Search (GET)
+    register_rest_route('yourparty/v1', '/control/library/search', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $q = urlencode($request->get_param('q'));
+            $resp = wp_remote_get(yourparty_api_base_url() . "/control/library/search?q=$q", ['timeout' => 30, 'sslverify' => true]);
+            if (is_wp_error($resp)) return [];
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Library Top Rated (GET)
+    register_rest_route('yourparty/v1', '/control/library/rated', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            $resp = wp_remote_get(yourparty_api_base_url() . "/mongo/tracks/rated?min_rating=4.0", ['timeout' => 30, 'sslverify' => true]);
+            if (is_wp_error($resp)) return [];
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Curator Playlists (GET, POST)
+    register_rest_route('yourparty/v1', '/curator/playlists', [
+        [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => function () {
+                $resp = wp_remote_get(yourparty_api_base_url() . '/curator/playlists', ['timeout' => 30, 'sslverify' => true]);
+                return json_decode(wp_remote_retrieve_body($resp), true);
+            },
+            'permission_callback' => 'is_user_logged_in'
+        ],
+        [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => function (WP_REST_Request $request) {
+                $resp = wp_remote_post(yourparty_api_base_url() . '/curator/playlists', [
+                    'headers' => ['Content-Type' => 'application/json'],
+                    'body' => json_encode($request->get_json_params()),
+                    'timeout' => 30, 'sslverify' => true
+                ]);
+                return json_decode(wp_remote_retrieve_body($resp), true);
+            },
+            'permission_callback' => 'is_user_logged_in'
+        ]
+    ]);
+
+    // Curator Schedule (GET)
+    register_rest_route('yourparty/v1', '/curator/schedule', [
+        'methods' => WP_REST_Server::READABLE,
+        'callback' => function () {
+            // Note: Implemented in interactive.py or simulated
+            $resp = wp_remote_get(yourparty_api_base_url() . '/curator/schedule', ['timeout' => 30, 'sslverify' => true]);
+            if (is_wp_error($resp)) return []; 
+            return json_decode(wp_remote_retrieve_body($resp), true) ?: [];
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+
+    // Curator Playlist Items (POST Tracks)
+    register_rest_route('yourparty/v1', '/curator/playlists/(?P<id>\d+)/tracks', [
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $id = $request->get_param('id');
+            $resp = wp_remote_post(yourparty_api_base_url() . "/curator/playlists/$id/tracks", [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => json_encode($request->get_json_params()),
+                'timeout' => 30, 'sslverify' => true
+            ]);
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => 'is_user_logged_in'
+    ]);
+    
+    // Curator Playlist Schedule (POST)
+    register_rest_route('yourparty/v1', '/curator/playlists/(?P<id>\d+)/schedule', [
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => function (WP_REST_Request $request) {
+            $id = $request->get_param('id');
+            $resp = wp_remote_post(yourparty_api_base_url() . "/curator/playlists/$id/schedule", [
+                'headers' => ['Content-Type' => 'application/json'],
+                'body' => json_encode($request->get_json_params()),
+                'timeout' => 30, 'sslverify' => true
+            ]);
+            return json_decode(wp_remote_retrieve_body($resp), true);
+        },
+        'permission_callback' => 'is_user_logged_in'
     ]);
 
     // NEW: Contact Form Endpoint
@@ -1383,7 +1939,7 @@ add_action('rest_api_init', function () {
                         'sender' => $sender,
                         'user_id' => sanitize_text_field($request->get_param('user_id') ?: 'anonymous')
                     ]),
-                    'timeout' => 5,
+                    'timeout' => 30,
                     'sslverify' => true
                 ]);
 
@@ -1414,7 +1970,7 @@ add_action('rest_api_init', function () {
         [
             'methods' => WP_REST_Server::READABLE,
             'callback' => function () {
-                $response = wp_remote_get(yourparty_api_base_url() . '/shoutouts', ['timeout' => 5, 'sslverify' => true]);
+                $response = wp_remote_get(yourparty_api_base_url() . '/shoutouts', ['timeout' => 30, 'sslverify' => true]);
                 
                 if (is_wp_error($response)) {
                     return [];
@@ -1483,7 +2039,7 @@ function yourparty_proxy_request($method, $path, $body = null) {
     $url = yourparty_api_base_url() . $path;
     $args = [
         'method' => $method,
-        'timeout' => 5,
+        'timeout' => 30,
         'sslverify' => true,
         'headers' => ['Content-Type' => 'application/json']
     ];

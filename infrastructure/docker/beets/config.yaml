@@ -1,0 +1,95 @@
+# ============================================================
+# BEETS CONFIGURATION - YourParty.tech V2
+# Library Manager with Auto-Ingest Pipeline
+# ============================================================
+
+# Directory settings
+directory: /music
+library: /config/musiclibrary.db
+
+# Import settings
+import:
+    write: yes
+    copy: no
+    move: yes
+    resume: yes
+    incremental: yes
+    quiet_fallback: skip
+    timid: no
+    log: /config/beets.log
+    
+# Watch plugin settings (auto-import from /downloads)
+plugins:
+    - fetchart
+    - embedart
+    - lastgenre
+    - discogs
+    - web
+    - convert
+    - scrub
+    - replaygain
+
+# Discogs authentication (for metadata lookup)
+discogs:
+    user_token: ${DISCOGS_TOKEN}
+    source_weight: 0.5
+
+# Fetch album art
+fetchart:
+    auto: yes
+    cautious: yes
+    sources: 
+        - filesystem
+        - coverart
+        - albumart
+        - discogs
+        - lastfm
+
+# Embed art into files
+embedart:
+    auto: yes
+    ifempty: yes
+
+# Last.fm genre lookup
+lastgenre:
+    auto: yes
+    canonical: yes
+    count: 3
+    fallback: ''
+    force: no
+    source: album
+
+# Web interface (for debugging)
+web:
+    host: 0.0.0.0
+    port: 8337
+
+# File naming
+paths:
+    default: '%the{$albumartist}/$album%aunique{}/$track - $title'
+    singleton: 'Singles/%the{$artist}/$title'
+    comp: 'Compilations/$album%aunique{}/$track - $title'
+
+# Audio format preferences
+convert:
+    auto: no
+    ffmpeg: /usr/bin/ffmpeg
+    opts: -aq 2
+    embed: yes
+    format: mp3
+
+# Clean metadata
+scrub:
+    auto: yes
+
+# ReplayGain for volume normalization
+replaygain:
+    backend: ffmpeg
+    auto: yes
+    overwrite: no
+
+# Custom hook: Push metadata to Directus
+# This runs after each import
+afterimport:
+    # Custom script to sync with Directus
+    # Will be handled by external watcher or API hook

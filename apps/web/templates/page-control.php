@@ -375,6 +375,28 @@ get_header();
             </div>
         </section>
 
+        <!-- MY PLAYLISTS (NTS-Lite Curator Feature) -->
+        <section class="deck-panel playlist-deck">
+            <div class="panel-head">
+                <h3>📁 MY PLAYLISTS</h3>
+                <button id="create-playlist-btn" class="cyber-btn small" style="padding:5px 10px; font-size:10px; background:var(--emerald); color:#000; border:none; cursor:pointer;">+ NEW</button>
+            </div>
+            
+            <div class="playlist-grid" id="playlist-grid">
+                <div class="loading-state" style="text-align:center; padding:30px; color:#666;">
+                    Loading playlists...
+                </div>
+            </div>
+            
+            <!-- Schedule Overview -->
+            <div class="schedule-overview" style="margin-top:20px; border-top:1px solid #222; padding-top:15px;">
+                <h4 style="font-size:11px; color:#888; margin-bottom:10px; letter-spacing:0.1em;">📅 UPCOMING SCHEDULE</h4>
+                <div id="schedule-list" style="font-size:12px; color:#aaa;">
+                    <div class="loading-state">Loading schedule...</div>
+                </div>
+            </div>
+        </section>
+
         <!-- RIGHT: COMMAND DECK (Admin Only) -->
         <?php if ($is_admin): ?>
         <aside class="deck-panel command-deck">

@@ -35,6 +35,7 @@ from track_matcher import TrackMatcher
 from library_service import get_library_service
 from playlist_service import PlaylistService
 from mood_scheduler import schedule_mood_queue_worker
+from services.syncer import syncer
 
 # Auth Imports
 from fastapi.security import OAuth2PasswordRequestForm
@@ -49,8 +50,12 @@ MOOD_CYCLE_SECONDS = int(os.getenv("MOOD_CYCLE_SECONDS", "300"))
 AZURACAST_VERIFY_SSL = os.getenv("AZURACAST_VERIFY_SSL", "false").lower() == "true"
 
 # Configure Logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("radio-api")
 
 app = FastAPI(title="Music Library Automation API")
 app.state.limiter = limiter
@@ -258,6 +263,9 @@ async def startup_event():
         logger.info("Connected to MongoDB & Services Initialized.")
     except Exception as e:
         logger.error(f"Failed to connect to Mongo: {e}")
+
+    # Start Background Syncer (Decoupled Architecture)
+    asyncio.create_task(syncer.start())
 
     # Start Mood Auto-DJ
     if FEATURE_MOOD_AUTODJ and state.mongo_client and state.azura_client:

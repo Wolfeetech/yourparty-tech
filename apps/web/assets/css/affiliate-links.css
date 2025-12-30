@@ -1,0 +1,82 @@
+/* ============================================
+   AFFILIATE LINKS - Bandcamp/Discogs Buttons
+   YourParty.tech V2
+   ============================================ */
+
+#affiliate-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.affiliate-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.affiliate-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Bandcamp - Teal/Cyan theme */
+.affiliate-bandcamp {
+  background: linear-gradient(135deg, #1da0c3 0%, #17a2b8 100%);
+  color: #fff;
+}
+
+.affiliate-bandcamp:hover {
+  background: linear-gradient(135deg, #15839e 0%, #138496 100%);
+  color: #fff;
+}
+
+.affiliate-bandcamp .affiliate-icon::before {
+  content: "🎵";
+}
+
+/* Discogs - Orange theme */
+.affiliate-discogs {
+  background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%);
+  color: #fff;
+}
+
+.affiliate-discogs:hover {
+  background: linear-gradient(135deg, #e64a19 0%, #d84315 100%);
+  color: #fff;
+}
+
+.affiliate-discogs .affiliate-icon::before {
+  content: "💿";
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .affiliate-link {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .affiliate-link:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  #affiliate-links {
+    flex-direction: column;
+  }
+  
+  .affiliate-link {
+    justify-content: center;
+    width: 100%;
+  }
+}

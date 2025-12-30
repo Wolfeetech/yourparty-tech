@@ -748,15 +748,6 @@ class MongoDatabaseClient:
     ) -> List[Dict[str, Any]]:
         """
         REFINEMENT MODE: Get tracks with some tags but needing more verification.
-        
-        Args:
-            min_votes: Minimum mood votes required
-            max_votes: Maximum mood votes (tracks with more are "verified")
-            limit: Maximum tracks to return
-            station_id: Optional station identifier to filter votes
-            
-        Returns:
-            List of tracks needing more community input
         """
         try:
             if not hasattr(self, 'moods_collection'):
@@ -799,6 +790,64 @@ class MongoDatabaseClient:
         except Exception as e:
             logger.error(f"Error getting tracks needing refinement: {e}")
             return []
+
+    # ========== PLAYLIST CACHING (Decoupling) ==========
+
+    def save_playlists(self, playlists: List[Dict[str, Any]]) -> bool:
+        """
+        Cache full playlist objects from AzuraCast to MongoDB.
+        Replaces the entire collection or uses upsert (we'll replace for simplicity/cleanliness).
+        """
+        try:
+            if not hasattr(self, 'playlists_collection'):
+                self.playlists_collection = self.db["playlists"]
+            
+            # Timestamp for sync tracking
+            sync_time = datetime.utcnow()
+            
+            # Prepare docs
+            docs = []
+            for pl in playlists:
+                pl['last_synced'] = sync_time
+                docs.append(pl)
+                
+            if not docs:
+                return True
+                
+            # Bulk write or Drop/Insert?
+            # Safe strategy: Update each by ID, remove stale ones later?
+            # Or simpler: Drop collection and rewrite (fastest for small datasets <100 playlists)
+            # Let's use update_one upsert to be safe against concurrency quirks
+            
+            ids_processed = []
+            for doc in docs:
+                self.playlists_collection.update_one(
+                    {"id": doc["id"]},
+                    {"$set": doc},
+                    upsert=True
+                )
+                ids_processed.append(doc["id"])
+                
+            # Optional: Remove playlists not in the new list (deleted on AzuraCast)
+            self.playlists_collection.delete_many({"id": {"$nin": ids_processed}})
+            
+            logger.info(f"Synced {len(docs)} playlists to MongoDB cache")
+            return True
+        except Exception as e:
+            logger.error(f"Error caching playlists: {e}")
+            return False
+
+    def get_cached_playlists(self) -> List[Dict[str, Any]]:
+        """Retrieve playlists from local cache (Instant Read)."""
+        try:
+            if not hasattr(self, 'playlists_collection'):
+                self.playlists_collection = self.db["playlists"]
+                
+            return list(self.playlists_collection.find({}, {"_id": 0}))
+        except Exception as e:
+            logger.error(f"Error reading cached playlists: {e}")
+            return []
+
 
 
     def sync_track_metadata(self, file_path: str, metadata: Dict[str, Any], song_id: str = None):

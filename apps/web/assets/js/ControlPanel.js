@@ -8,6 +8,8 @@
 class ControlPanel {
     constructor() {
         this.apiBase = 'https://api.yourparty.tech';
+        this.wpApiBase = '/wp-json/yourparty/v1';  // WordPress REST API
+        this.nonce = (window.YourPartyConfig && window.YourPartyConfig.nonce) || '';
         this.pollInterval = 5000; // 5s
         this.pollTimer = null;
 
@@ -50,7 +52,9 @@ class ControlPanel {
         // Bind Tag Button
         const tagBtn = document.getElementById('mood-tag-button');
         if (tagBtn) {
-            tagBtn.addEventListener('click', async () => {
+            tagBtn.addEventListener('click', async (e) => {
+                // Stop other scripts (mood-dialog.js, app.js) from handling this event
+                e.stopImmediatePropagation();
                 const modal = document.getElementById('vibe-tag-modal');
                 if (modal) {
                     // Update Modal Title
@@ -94,7 +98,10 @@ class ControlPanel {
         if (browseBtn) {
             browseBtn.addEventListener('click', () => {
                 const modal = document.getElementById('library-modal');
-                if (modal) modal.showModal();
+                if (modal) {
+                    modal.showModal();
+                    this.fetchTopRated(); // Show content immediately
+                }
             });
         }
 
@@ -119,25 +126,33 @@ class ControlPanel {
 
     async fetchPulse() {
         try {
-            // 1. Fetch Moods & Steering (Backend)
-            const [moodsRes, steerRes] = await Promise.all([
-                fetch(`${this.apiBase}/moods`),
-                fetch(`${this.apiBase}/control/steer`)
+            // 1. Fetch Moods & Steering (via WordPress proxy) - Use allSettled to prevent partial failure blocking
+            const results = await Promise.allSettled([
+                fetch(`${this.wpApiBase}/control/moods`, { headers: { 'X-WP-Nonce': this.nonce } }),
+                fetch(`${this.wpApiBase}/control/steer`, { headers: { 'X-WP-Nonce': this.nonce } })
             ]);
+
+            const moodsRes = results[0].status === 'fulfilled' ? results[0].value : null;
+            const steerRes = results[1].status === 'fulfilled' ? results[1].value : null;
 
             this.fetchQueue(); // Poll Queue separately (non-blocking)
 
-            this.updateMoods(await moodsRes.json());
-            this.updateSteering(await steerRes.json());
+            if (moodsRes && moodsRes.ok) this.updateMoods(await moodsRes.json());
+            if (steerRes && steerRes.ok) this.updateSteering(await steerRes.json());
+        } catch (e) {
+            console.error("❌ Control Pulse Partial Error:", e);
+        }
 
-            // 2. Fetch Now Playing (AzuraCast Public JSON)
+        try {
+            // 2. Fetch Now Playing (AzuraCast Public JSON) - Critical for Tagging
             // Using static JSON for performance/reliability
             const npRes = await fetch('https://radio.yourparty.tech/api/nowplaying_static/radio.yourparty.json');
-            const npData = await npRes.json();
-            this.updateNowPlaying(npData);
-
+            if (npRes.ok) {
+                const npData = await npRes.json();
+                this.updateNowPlaying(npData);
+            }
         } catch (e) {
-            console.error("❌ Control Pulse Failed:", e);
+            console.error("❌ Now Playing Sync Failed:", e);
         }
     }
 
@@ -161,8 +176,12 @@ class ControlPanel {
             if (song.bpm) meta += ` <span class="badge" style="background:#333; padding:2px 6px; border-radius:4px; font-size:0.8em; margin-left:4px;">🥁 ${song.bpm}</span>`;
 
             artistEl.innerHTML = song.artist + meta;
+            artistEl.innerHTML = song.artist + meta;
             artistEl.style.display = 'inline';
         }
+
+        // Fetch authoritative metadata (Mood, Rating) from Mongo
+        this.fetchTrackMetadata(song.id);
 
         // Update Visualizer State?
         // (Visualizer usually handles itself via audio context, but we can sync state if needed)
@@ -175,34 +194,53 @@ class ControlPanel {
         }
 
         const statusEl = document.getElementById('tag-status');
+        const modal = document.getElementById('vibe-tag-modal');
         if (statusEl) statusEl.textContent = `Tagging as ${mood}...`;
 
         try {
-            const res = await fetch(`${this.apiBase}/mood-tag`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+            const res = await fetch(`${this.wpApiBase}/mood-tag`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': this.nonce
+                },
                 body: JSON.stringify({
                     song_id: this.currentSongId,
                     mood: mood,
                     station_id: 1
-                })
+                }),
+                signal: controller.signal
             });
 
-            const result = await res.json();
+            clearTimeout(timeoutId);
 
-            if (result.success || result.status === 'ok') { // Robust check
-                if (statusEl) statusEl.textContent = "✅ Tag Saved!";
-                setTimeout(() => {
-                    document.getElementById('vibe-tag-modal').close();
-                    if (statusEl) statusEl.textContent = "";
-                }, 1000);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success || result.status === 'ok') {
+                    if (statusEl) statusEl.textContent = "✅ Tag Saved!";
+                } else {
+                    if (statusEl) statusEl.textContent = "✅ Tag Recorded"; // Accept partial success
+                }
             } else {
-                if (statusEl) statusEl.textContent = "❌ Save Failed";
+                if (statusEl) statusEl.textContent = `❌ Error ${res.status}`;
             }
         } catch (e) {
             console.error("Tag error:", e);
-            if (statusEl) statusEl.textContent = "❌ Connection Error";
+            if (e.name === 'AbortError') {
+                if (statusEl) statusEl.textContent = "⏱️ Timeout - Tag may have saved";
+            } else {
+                if (statusEl) statusEl.textContent = "❌ Connection Error";
+            }
         }
+
+        // Always close modal after a delay regardless of result
+        setTimeout(() => {
+            if (modal) modal.close();
+            if (statusEl) statusEl.textContent = "";
+        }, 1500);
     }
 
     updateMoods(data) {
@@ -296,9 +334,12 @@ class ControlPanel {
                     target: mode === 'auto' ? null : target
                 };
 
-                await fetch(`${this.apiBase}/control/steer`, {
+                await fetch(`${this.wpApiBase}/control/steer`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': this.nonce
+                    },
                     body: JSON.stringify(payload)
                 });
 
@@ -357,6 +398,7 @@ class ControlPanel {
             if (key) metaHtml += `<span class="badge key-badge" style="background:#333; color:#aaa; font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px;">🔑 ${key}</span>`;
             if (bpm) metaHtml += `<span class="badge bpm-badge" style="background:#333; color:#aaa; font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px;">🥁 ${bpm}</span>`;
             if (mood) metaHtml += `<span class="badge mood-badge" style="background:#222; color:var(--emerald); font-size:9px; padding:2px 4px; border-radius:3px; margin-left:5px; border:1px solid #333;">${mood}</span>`;
+            if (rating > 0) metaHtml += `<span class="badge" style="color:#ffd700; font-size:9px; margin-left:5px;">★ ${parseFloat(rating).toFixed(1)}</span>`;
 
             el.innerHTML = `
                 <span class="queue-pos" style="font-family:monospace; color:#666; width:30px; text-align:center;">${i + 1}</span>
@@ -387,11 +429,12 @@ class ControlPanel {
 
     async deleteQueueItem(id) {
         try {
-            const res = await fetch(`${this.apiBase}/control/queue/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${this.wpApiBase}/control/queue/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-WP-Nonce': this.nonce }
+            });
             if (res.ok) {
                 this.fetchQueue(); // Refresh immediately
-                // Also refresh Pulse to update other clients
-                fetch(`${this.apiBase}/control/queue`);
             } else {
                 alert("Failed to delete item");
             }
@@ -407,7 +450,9 @@ class ControlPanel {
         resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Searching...</div>';
 
         try {
-            const res = await fetch(`${this.apiBase}/control/library/search?q=${encodeURIComponent(query)}`);
+            const res = await fetch(`${this.wpApiBase}/control/library/search?q=${encodeURIComponent(query)}`, {
+                headers: { 'X-WP-Nonce': this.nonce }
+            });
             const items = await res.json();
 
             resultsEl.innerHTML = '';
@@ -459,9 +504,12 @@ class ControlPanel {
         if (!confirm(`Add "${title}" to Queue?`)) return;
 
         try {
-            const res = await fetch(`${this.apiBase}/control/queue`, {
+            const res = await fetch(`${this.wpApiBase}/control/queue`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': this.nonce
+                },
                 body: JSON.stringify({ media_id: mediaId })
             });
             const data = await res.json();
@@ -478,9 +526,291 @@ class ControlPanel {
             alert("Error queuing track.");
         }
     }
+
+    async fetchTopRated() {
+        const resultsEl = document.getElementById('lib-search-results');
+        if (!resultsEl) return;
+
+        resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Loading Top Rated...</div>';
+
+        try {
+            const res = await fetch(`${this.wpApiBase}/control/library/rated`, { headers: { 'X-WP-Nonce': this.nonce } });
+            const data = await res.json();
+
+            // API returns { tracks: [], count: N }
+            const tracks = data.tracks || [];
+
+            if (tracks.length === 0) {
+                resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No rated tracks yet. Start voting!</div>';
+                return;
+            }
+
+            resultsEl.innerHTML = '<div style="padding:10px; color:var(--emerald); font-size:12px; font-weight:bold; letter-spacing:1px; border-bottom:1px solid #333; margin-bottom:10px;">🔥 HIGHEST RATED VIBES</div>';
+
+            tracks.forEach((track, i) => {
+                const row = document.createElement('div');
+                row.className = 'lib-result-item';
+                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); margin-bottom:5px;";
+
+                // Rating Badge
+                const rating = parseFloat(track.rating || 0).toFixed(1);
+
+                row.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; color:#fff; font-size:13px;">${track.title || 'Unknown'} <span style="color:#ffd700;">★ ${rating}</span></div>
+                        <div style="font-size:11px; color:#aaa;">${track.artist || 'Unknown'}</div>
+                    </div>
+                    <div>
+                        <button class="cyber-btn small btn-queue" style="padding:4px 8px; font-size:10px; background:var(--emerald); color:#000; border:none; cursor:pointer;">+ ADD</button>
+                    </div>
+                `;
+
+                // Track objects from Mongo usually have `song_id` or `azuracast_id`
+                const mid = track.song_id || track.id;
+                row.querySelector('.btn-queue').addEventListener('click', () => {
+                    this.queueTrack(mid, track.title);
+                });
+
+                resultsEl.appendChild(row);
+            });
+
+        } catch (e) {
+            console.error("Top Rated error", e);
+            resultsEl.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4444;">Failed to load top tracks.</div>';
+        }
+    }
+
+    async fetchTrackMetadata(songId) {
+        if (!songId) return;
+        try {
+            // Get title and artist from current NP state for better matching
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const title = titleEl ? encodeURIComponent(titleEl.textContent.trim()) : '';
+            const artistRaw = artistEl ? artistEl.textContent.split('<span')[0].trim() : '';
+            const artist = encodeURIComponent(artistRaw);
+
+            // Build URL with all identifiers
+            let url = `${this.apiBase}/track-metadata?song_id=${songId}`;
+            if (title) url += `&title=${title}`;
+            if (artist) url += `&artist=${artist}`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success) {
+                // Update Intel UI
+                const artistEl = document.getElementById('track-artist');
+                let extras = '';
+
+                if (data.mood) extras += ` <span style="color:var(--emerald); border:1px solid var(--emerald); padding:1px 4px; border-radius:3px; font-size:0.8em; margin-left:5px;">${data.mood}</span>`;
+
+                // We could show rating here too if the endpoint returns it (it doesn't currently, likely needs update)
+                // But user specifically asked for "Next song has this mood".
+
+                if (artistEl) artistEl.innerHTML += extras;
+            }
+        } catch (e) {
+            console.error("Meta fetch failed", e);
+        }
+    }
+
+    // =============================================
+    // PLAYLIST MANAGEMENT (NTS-Lite Curator)
+    // =============================================
+
+    async fetchPlaylists() {
+        try {
+            const res = await fetch(`${this.wpApiBase}/curator/playlists`);
+            const playlists = await res.json();
+            this.renderPlaylists(playlists);
+        } catch (e) {
+            console.error("Failed to fetch playlists:", e);
+        }
+    }
+
+    renderPlaylists(playlists) {
+        const grid = document.getElementById('playlist-grid');
+        if (!grid) return;
+
+        if (!playlists || !Array.isArray(playlists) || playlists.length === 0) {
+            console.warn("Playlists data invalid or empty:", playlists);
+            grid.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No playlists yet. Click + NEW to create one.</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+        playlists.forEach(pl => {
+            const card = document.createElement('div');
+            card.className = 'playlist-card';
+            card.style.cssText = `
+                background: rgba(255,255,255,0.03);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+            `;
+            card.onmouseover = () => card.style.borderColor = 'var(--emerald)';
+            card.onmouseout = () => card.style.borderColor = 'rgba(255,255,255,0.1)';
+
+            const hasSchedule = pl.schedule && pl.schedule.length > 0;
+            const scheduleInfo = hasSchedule
+                ? `<span style="color:var(--emerald); font-size:10px;">📅 Scheduled</span>`
+                : `<span style="color:#666; font-size:10px;">No schedule</span>`;
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:600; color:#fff;">${pl.name}</div>
+                        <div style="font-size:11px; color:#888;">${pl.num_songs || 0} tracks • ${scheduleInfo}</div>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-schedule" data-id="${pl.id}" style="background:#333; border:none; color:#fff; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;">📅</button>
+                        <button class="btn-play" data-id="${pl.id}" style="background:var(--emerald); border:none; color:#000; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;">▶</button>
+                    </div>
+                </div>
+            `;
+
+            // Bind schedule button
+            card.querySelector('.btn-schedule').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showScheduleDialog(pl);
+            });
+
+            // Bind play button (immediate queue)
+            card.querySelector('.btn-play').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.activatePlaylist(pl.id);
+            });
+
+            grid.appendChild(card);
+        });
+    }
+
+    async fetchSchedule() {
+        try {
+            const res = await fetch(`${this.wpApiBase}/curator/schedule`);
+            const data = await res.json();
+            this.renderSchedule(data.schedule || []);
+        } catch (e) {
+            console.error("Failed to fetch schedule:", e);
+        }
+    }
+
+    renderSchedule(scheduleItems) {
+        const list = document.getElementById('schedule-list');
+        if (!list) return;
+
+        if (!scheduleItems || scheduleItems.length === 0) {
+            list.innerHTML = '<div style="color:#666;">No scheduled shows. Click 📅 on a playlist to schedule it.</div>';
+            return;
+        }
+
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        list.innerHTML = '';
+
+        scheduleItems.forEach(item => {
+            const dayNames = (item.days || []).map(d => days[d]).join(', ') || 'Daily';
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #222;';
+            row.innerHTML = `
+                <span style="color:#fff;">${item.playlist_name}</span>
+                <span style="color:#888;">${item.start_time} - ${item.end_time} (${dayNames})</span>
+            `;
+            list.appendChild(row);
+        });
+    }
+
+    async createPlaylist() {
+        const name = prompt('Enter playlist name:');
+        if (!name) return;
+
+        try {
+            const res = await fetch(`${this.wpApiBase}/curator/playlists`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await res.json();
+            if (result.success) {
+                this.fetchPlaylists(); // Refresh
+                alert(`Playlist "${name}" created!`);
+            } else {
+                alert('Failed to create playlist');
+            }
+        } catch (e) {
+            console.error('Create playlist error:', e);
+            alert('Error creating playlist');
+        }
+    }
+
+    showScheduleDialog(playlist) {
+        const startTime = prompt(`Schedule "${playlist.name}"\n\nStart time (HH:MM):`, '20:00');
+        if (!startTime) return;
+
+        const endTime = prompt('End time (HH:MM):', '22:00');
+        if (!endTime) return;
+
+        const daysInput = prompt('Days (0=Mon, 6=Sun, comma separated):', '4,5');
+        const days = daysInput ? daysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d)) : [];
+
+        this.schedulePlaylist(playlist.id, startTime, endTime, days);
+    }
+
+    async schedulePlaylist(playlistId, startTime, endTime, days) {
+        try {
+            const res = await fetch(`${this.wpApiBase}/curator/playlists/${playlistId}/schedule`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start_time: startTime, end_time: endTime, days })
+            });
+            const result = await res.json();
+            if (result.success) {
+                this.fetchSchedule(); // Refresh
+                this.fetchPlaylists();
+                alert('Schedule added!');
+            } else {
+                alert('Failed to add schedule');
+            }
+        } catch (e) {
+            console.error('Schedule error:', e);
+            alert('Error scheduling playlist');
+        }
+    }
+
+    async activatePlaylist(playlistId) {
+        // This would typically set the playlist as the active source
+        // For now, show confirmation
+        alert(`Playlist ${playlistId} activated! (Feature in development)`);
+    }
+
+    initCuratorFeatures() {
+        // Bind create playlist button
+        const createBtn = document.getElementById('create-playlist-btn');
+        if (createBtn) {
+            createBtn.addEventListener('click', () => this.createPlaylist());
+        }
+
+        // Initial fetch
+        this.fetchPlaylists();
+        this.fetchSchedule();
+    }
 }
 
 // Init when ready
+// Init when ready
 document.addEventListener('DOMContentLoaded', () => {
     window.controlPanel = new ControlPanel();
+    // Legacy support / Curator alias
+    window.curator = window.controlPanel;
+});
+
+// Init curator features after a short delay
+setTimeout(() => {
+    if (window.controlPanel.initCuratorFeatures) {
+        window.controlPanel.initCuratorFeatures();
+    }
+}, 500);
 });

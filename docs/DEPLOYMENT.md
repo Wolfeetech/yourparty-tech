@@ -1,120 +1,159 @@
 # YourParty.tech Deployment Guide
 
-## ⚠️ IMPORTANT: Hardcoded URLs to Change
-
-The following files contain hardcoded IP addresses and URLs that **MUST be updated** for a new server:
-
-### Files with Hardcoded IPs
-
-| File | Line | Current Value | Purpose |
-|------|------|---------------|---------|
-| `inc/api.php` | 19 | `192.168.178.210` | AzuraCast internal IP |
-| `inc/api.php` | 556, 605, 965 | `192.168.178.211:8000` | FastAPI backend |
-| `inc/api.php` | 680 | `192.168.178.211:8080` | Vote-next endpoint |
-| `inc/api.php` | 856, 868, 880 | `192.168.178.211:8000` | Ratings/Moods/Steer |
-| `inc/admin-dashboard.php` | 13 | `192.168.178.211:8000` | API base |
-| `templates/page-control.php` | 631 | `192.168.178.211:8000` | Mood fetch |
-| `assets/app.js` | 24 | `192.168.178.210` | Internal IP check |
-| `functions.php` | 26, 41, 351 | `radio.yourparty.tech` | AzuraCast public URL |
+> **Last Updated:** December 30, 2024  
+> **Maintainer:** DevOps Team
 
 ---
 
-## 🔑 Required Credentials & Services
+## Architecture Overview
 
-### 1. AzuraCast Radio Server
-- **URL:** `https://radio.yourparty.tech` (or your domain)
-- **Internal IP:** `192.168.178.210` (change to your AzuraCast IP)
-- **API Key:** Get from AzuraCast Admin → Station → API Keys
-- **Station ID:** Usually `1`
-
-### 2. FastAPI Backend (Rating/Mood Service)
-- **URL:** `http://192.168.178.211:8000` (change to your backend IP)
-- **Endpoints used:**
-  - `/vote-mood` - Submit mood votes
-  - `/mood-tag` - Tag tracks with moods
-  - `/ratings` - Get track ratings
-  - `/moods` - Get mood statistics
-  - `/control/steer` - Vibe steering
-
-### 3. MongoDB Database
-- **URI:** `mongodb://192.168.178.202:27017/yourparty`
-- **Used by:** FastAPI backend (not directly by WordPress)
-
-### 4. WordPress Database
-- **Create new MySQL database** on target server
-- **Credentials needed:** DB_NAME, DB_USER, DB_PASSWORD, DB_HOST
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Windows Dev    │────▶│   PVE Host      │────▶│   Containers    │
+│  (yourparty-    │ SCP │   (pve)         │ pct │                 │
+│   tech repo)    │     │                 │push │  207: WordPress │
+└─────────────────┘     └─────────────────┘     │  211: FastAPI   │
+                                                │  202: MongoDB   │
+                                                │  208: MariaDB   │
+                                                └─────────────────┘
+```
 
 ---
 
-## 📦 Quick Deployment Steps
+## Standard Deployment Workflow
+
+### 1. Make Changes Locally
+```powershell
+# Edit files in: C:\Users\StudioPC\yourparty-tech\
+code apps/api/routers/interactive.py
+```
+
+### 2. Copy to PVE Host
+```powershell
+scp C:\Users\StudioPC\yourparty-tech\apps\api\routers\interactive.py pve:/tmp/
+```
+
+### 3. Push to Container
+```bash
+# FastAPI (CT 211)
+ssh pve "pct push 211 /tmp/interactive.py /app/routers/interactive.py"
+
+# WordPress (CT 207)
+ssh pve "pct push 207 /tmp/api.php /var/www/html/wp-content/themes/yourparty-tech/inc/api.php"
+ssh pve "pct exec 207 -- chown www-data:www-data /var/www/html/wp-content/themes/yourparty-tech/inc/api.php"
+```
+
+### 4. Restart Services
+```bash
+# FastAPI
+ssh pve "pct exec 211 -- systemctl restart radio-api"
+
+# WordPress (if PHP-FPM issues)
+ssh pve "pct exec 207 -- systemctl restart apache2"
+```
+
+### 5. Verify Deployment
+```bash
+# Health Check
+curl https://api.yourparty.tech/health
+
+# FastAPI Logs
+ssh pve "pct exec 211 -- journalctl -u radio-api -n 50 --no-pager"
+```
+
+---
+
+## Quick Commands Cheatsheet
+
+| Task | Command |
+|------|---------|
+| List containers | `ssh pve "pct list"` |
+| Enter container shell | `ssh pve "pct enter 211"` |
+| Check API status | `curl https://api.yourparty.tech/health` |
+| View logs | `ssh pve "pct exec 211 -- journalctl -u radio-api -f"` |
+| Restart API | `ssh pve "pct exec 211 -- systemctl restart radio-api"` |
+
+---
+
+## Rollback Procedure
+
+If a deployment causes issues:
+
+### 1. Identify Last Working Version
+```bash
+# Check git log
+git log --oneline -10
+```
+
+### 2. Restore Previous File
+```powershell
+# Checkout previous version
+git checkout HEAD~1 -- apps/api/routers/interactive.py
+
+# Deploy the rollback
+scp apps/api/routers/interactive.py pve:/tmp/
+ssh pve "pct push 211 /tmp/interactive.py /app/routers/interactive.py"
+ssh pve "pct exec 211 -- systemctl restart radio-api"
+```
+
+### 3. Verify Rollback
+```bash
+curl https://api.yourparty.tech/health
+```
+
+---
+
+## Environment Variables (CT 211)
+
+The API requires these environment variables in `/app/.env`:
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/Wolfeetech/yourparty-tech.git
-cd yourparty-tech
+MONGO_URI=mongodb://...
+AZURACAST_API_URL=https://radio.yourparty.tech/api
+AZURACAST_API_KEY=...
+```
 
-# 2. Copy theme to WordPress
-cp -r yourparty-tech/* /var/www/html/wp-content/themes/yourparty-tech/
-
-# 3. Update hardcoded IPs (use sed or manual edit)
-# Replace 192.168.178.210 with your AzuraCast IP
-# Replace 192.168.178.211 with your FastAPI IP
-# Replace radio.yourparty.tech with your domain
-
-# 4. Set file permissions
-chown -R www-data:www-data /var/www/html/wp-content/themes/yourparty-tech/
-chmod -R 755 /var/www/html/wp-content/themes/yourparty-tech/
+To update:
+```bash
+ssh pve "pct exec 211 -- nano /app/.env"
+ssh pve "pct exec 211 -- systemctl restart radio-api"
 ```
 
 ---
 
-## 🔧 Post-Deployment Checklist
+## Backup Verification
 
-- [ ] Update all hardcoded IPs (see table above)
-- [ ] WordPress Admin → Appearance → Activate "YourParty.tech" theme
-- [ ] WordPress Admin → Settings → Reading → Homepage = "Front Page"
-- [ ] Create page "Control" with template "Radio Control Dashboard"
-- [ ] Test: Stream plays when clicking play button
-- [ ] Test: TAG VIBE dialog opens and closes
-- [ ] Test: Control Panel shows mood data
+Daily backups run automatically at:
+- **MongoDB:** 03:00 UTC (CT 202)
+- **MariaDB:** 04:00 UTC (CT 208)
 
----
-
-## 🏗️ External Services to Set Up
-
-If starting from scratch, you need:
-
-1. **AzuraCast** - Radio automation software
-   - Install: https://docs.azuracast.com/
-   - Add your music library
-   - Create station
-
-2. **FastAPI Backend** (optional for voting)
-   - Located in: `backend/` folder (if present)
-   - Requires: Python 3.9+, MongoDB
-   - Run: `uvicorn main:app --host 0.0.0.0 --port 8000`
-
-3. **MongoDB** (optional for voting)
-   - Install MongoDB 6.0+
-   - Create database: `yourparty`
-
----
-
-## 📁 File Structure
-
+Check backup status:
+```bash
+ssh pve "pct exec 202 -- ls -la /mnt/nas/backups/mongodb/"
+ssh pve "pct exec 208 -- ls -la /mnt/nas/backups/mariadb/"
 ```
-yourparty-tech/
-├── front-page.php          # Homepage with player + mood dialog
-├── functions.php           # Theme setup, URL configs
-├── inc/
-│   ├── api.php             # ⚠️ Contains most hardcoded IPs
-│   └── admin-dashboard.php # Admin widget
-├── templates/
-│   └── page-control.php    # ⚠️ Has hardcoded IP for mood fetch
-├── assets/
-│   ├── js/modules/         # ES6 modules
-│   └── app.js              # ⚠️ Has internal IP check
-├── main.js                 # App entry point
-├── .env.example            # Config template
-└── DEPLOYMENT.md           # This file
+
+---
+
+## Troubleshooting
+
+### API Not Responding
+```bash
+# Check if service is running
+ssh pve "pct exec 211 -- systemctl status radio-api"
+
+# Check for errors in logs
+ssh pve "pct exec 211 -- journalctl -u radio-api -n 100 --no-pager"
+
+# Verify MongoDB connection
+ssh pve "pct exec 211 -- curl -s http://localhost:8000/health"
+```
+
+### WordPress 500 Errors
+```bash
+# Check Apache error log
+ssh pve "pct exec 207 -- tail -50 /var/log/apache2/error.log"
+
+# Verify file permissions
+ssh pve "pct exec 207 -- ls -la /var/www/html/wp-content/themes/yourparty-tech/inc/"
 ```
