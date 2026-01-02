@@ -25,7 +25,8 @@ $WEB_FILES = @(
     "assets/mood-dialog.js",
     "inc/api.php",
     "templates/page-control.php",
-    "functions.php"
+    "functions.php",
+    "front-page.php"
 )
 
 Write-Host "=== YourParty Full Stack Deployment ===" -ForegroundColor Cyan
