@@ -1,66 +1,43 @@
 /**
- * Mood & Genre Tagging (YourParty)
- * - Modern modal (single source of truth)
- * - Separate mood / genre grids with live counts
- * - Works with theme styles (.mood-dialog__*)
+ * YourParty Mood Tagging Module
  */
 const MoodModule = (function () {
   'use strict';
 
-  const MOODS = [
-    { id: 'energetic', label: 'Energetic', color: '#f59e0b' },
-    { id: 'chill', label: 'Chill', color: '#10b981' },
-    { id: 'euphoric', label: 'Euphoric', color: '#fbbf24' },
-    { id: 'dark', label: 'Dark', color: '#6b7280' },
-    { id: 'groovy', label: 'Groovy', color: '#ec4899' },
-    { id: 'melodic', label: 'Melodic', color: '#8b5cf6' },
-    { id: 'melancholic', label: 'Melancholic', color: '#6366f1' },
-    { id: 'aggressive', label: 'Aggressive', color: '#ef4444' },
-    { id: 'hypnotic', label: 'Hypnotic', color: '#a78bfa' },
-    { id: 'trippy', label: 'Trippy', color: '#c084fc' },
-    { id: 'warm', label: 'Warm', color: '#fb923c' },
-    { id: 'uplifting', label: 'Uplifting', color: '#3b82f6' }
-  ];
+  // Mood Definitions
+  const MOODS = {
+    'euphoric': { label: 'Euphoric', emoji: '🤩', color: '#fbbf24' },
+    'energetic': { label: 'Energetic', emoji: '⚡', color: '#f59e0b' },
+    'chill': { label: 'Chill', emoji: '🌴', color: '#10b981' },
+    'startuppy': { label: 'Startuppy', emoji: '🚀', color: '#6366f1' },
+    'dark': { label: 'Dark', emoji: '🌑', color: '#6b7280' },
+    'melodic': { label: 'Melodic', emoji: '🎹', color: '#8b5cf6' },
+    'trashey': { label: 'Trashy', emoji: '🗑️', color: '#ef4444' }
+  };
 
-  const GENRES = [
-    'house',
-    'techno',
-    'tech-house',
-    'deep-house',
-    'progressive-house',
-    'afro-house',
-    'bass-house',
-    'dnb',
-    'trance',
-    'psytrance',
-    'disco',
-    'funk',
-    'hiphop',
-    'trap',
-    'dubstep',
-    'garage',
-    'breakbeat',
-    'ambient',
-    'downtempo',
-    'indie',
-    'pop',
-    'rock',
-    'schlager'
-  ];
+  const GENRES = {
+    'house': 'House',
+    'techno': 'Techno',
+    'dnb': 'DnB',
+    'hiphop': 'HipHop',
+    'pop': 'Pop',
+    'rock': 'Rock',
+    'indie': 'Indie',
+    'schlager': 'Schlager'
+  };
 
   let currentSongId = null;
-  let currentTrack = { title: '', artist: '' };
   let currentMoods = {};
-  let currentGenres = {};
-  let selectedMood = '';
-  let selectedGenre = '';
 
   function init() {
-    createDialog();
+    console.log('[MoodModule] Init');
+    // Initial bind for global buttons if any
     bindGlobalEvents();
+    createDialog();
   }
 
   function bindGlobalEvents() {
+    // Tag button in player (if it exists)
     const tagBtn = document.getElementById('mood-tag-button');
     if (tagBtn) {
       tagBtn.addEventListener('click', (e) => {
@@ -73,295 +50,180 @@ const MoodModule = (function () {
   function createDialog() {
     if (document.getElementById('mood-dialog')) return;
 
-    const overlay = document.createElement('div');
-    overlay.id = 'mood-dialog';
-    overlay.className = 'mood-dialog';
+    const dialog = document.createElement('div');
+    dialog.id = 'mood-dialog';
+    dialog.className = 'mood-dialog glass-panel';
+    dialog.style.display = 'none'; // Hidden by default
 
-    overlay.innerHTML = `
-      <div class="mood-dialog__backdrop" data-close="true"></div>
-      <div class="mood-dialog__content">
-        <div class="mood-dialog__header">
-          <div>
-            <h3>Track taggen</h3>
-            <p class="mood-dialog__subtitle">Waehle Vibe & Genre fuer bessere Playlists</p>
-          </div>
-          <button class="mood-dialog__close" data-close="true" aria-label="Schliessen">&times;</button>
-        </div>
+    // HTML Structure
+    dialog.innerHTML = `
+            <div class="mood-dialog-content">
+                <button class="close-btn" onclick="MoodModule.closeDialog()">×</button>
+                <h3>Tag this Track!</h3>
+                <p class="track-info" id="dialog-track-info">Select Vibe & Genre</p>
+                
+                <div class="tag-section">
+                    <h4>Vibe</h4>
+                    <div class="mood-grid">
+                        ${Object.entries(MOODS).map(([key, data]) => `
+                            <button class="mood-btn" data-type="mood" data-value="${key}" style="--btn-color: ${data.color}">
+                                <span class="emoji">${data.emoji}</span>
+                                <span class="label">${data.label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
 
-        <div class="mood-dialog__track" id="mood-dialog-track">
-          <div class="mood-dialog__track-title">-</div>
-          <div class="mood-dialog__track-artist">-</div>
-        </div>
+                <div class="tag-section">
+                    <h4>Genre</h4>
+                     <div class="genre-grid">
+                        ${Object.entries(GENRES).map(([key, label]) => `
+                            <button class="mood-btn genre-btn" data-type="genre" data-value="${key}">
+                                <span class="label">${label}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
 
-        <div class="mood-dialog__grid">
-          <section class="mood-dialog__section">
-            <div class="mood-dialog__section-head">
-              <h4>Stimmung</h4>
-              <div class="mood-dialog__pill">Top Votes live</div>
+                <div class="dialog-footer">
+                   <p class="status-msg" id="tag-status"></p>
+                </div>
             </div>
-            <div class="mood-dialog__options" id="mood-options">
-              ${MOODS.map((m) => `
-                <button class="mood-option" data-type="mood" data-value="${m.id}" style="--mood-color:${m.color}">
-                  <span class="mood-option__label">${m.label}</span>
-                  <span class="mood-option__count" data-count="${m.id}">0</span>
-                </button>
-              `).join('')}
-            </div>
-          </section>
+            <div class="mood-dialog-backdrop" onclick="MoodModule.closeDialog()"></div>
+        `;
 
-          <section class="mood-dialog__section">
-            <div class="mood-dialog__section-head">
-              <h4>Genre</h4>
-              <div class="mood-dialog__pill">Mehr Auswahl fÃ¼r Kuratoren</div>
-            </div>
-            <div class="mood-dialog__options" id="genre-options">
-              ${GENRES.map((g) => `
-                <button class="mood-option" data-type="genre" data-value="${g}">
-                  <span class="mood-option__label">${formatLabel(g)}</span>
-                  <span class="mood-option__count" data-count="${g}">0</span>
-                </button>
-              `).join('')}
-            </div>
-          </section>
-        </div>
+    document.body.appendChild(dialog);
 
-        <div class="mood-dialog__footer">
-          <div class="mood-dialog__stats" id="mood-dialog-stats"></div>
-          <div class="mood-dialog__actions">
-            <button class="btn-ghost" data-close="true">Abbrechen</button>
-            <button class="btn-primary" id="mood-submit" disabled>Tag senden</button>
-          </div>
-          <div class="mood-dialog__feedback" id="tag-status"></div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    overlay.addEventListener('click', (e) => {
-      const btn = e.target.closest('.mood-option');
-      if (btn) {
-        handleSelection(btn);
-        return;
-      }
-      if (e.target.dataset.close === 'true') {
-        closeDialog();
-      }
+    // Bind clicks inside dialog
+    dialog.querySelectorAll('.mood-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const type = btn.dataset.type;
+        const val = btn.dataset.value;
+        submitTag(type, val, btn);
+      });
     });
-
-    const submitBtn = overlay.querySelector('#mood-submit');
-    if (submitBtn) {
-      submitBtn.addEventListener('click', submitTag);
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeDialog();
-    });
-  }
-
-  function handleSelection(btn) {
-    const type = btn.dataset.type;
-    const val = btn.dataset.value;
-    if (!type || !val) return;
-
-    const selector = `.mood-option[data-type="${type}"]`;
-    document.querySelectorAll(selector).forEach((b) => b.classList.remove('selected'));
-    btn.classList.add('selected');
-
-    if (type === 'mood') selectedMood = val;
-    if (type === 'genre') selectedGenre = val;
-
-    const submitBtn = document.getElementById('mood-submit');
-    if (submitBtn) {
-      submitBtn.disabled = !selectedMood && !selectedGenre;
-    }
-  }
-
-  function formatLabel(str) {
-    return str.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   function openDialog() {
     const dialog = document.getElementById('mood-dialog');
-    if (!dialog) return;
-
-    const title = document.getElementById('track-title')?.textContent || '-';
-    const artist = document.getElementById('track-artist')?.textContent || '-';
-    currentTrack = { title, artist };
-
-    const info = dialog.querySelector('#mood-dialog-track');
-    if (info) {
-      info.querySelector('.mood-dialog__track-title').textContent = title;
-      info.querySelector('.mood-dialog__track-artist').textContent = artist;
+    if (dialog) {
+      dialog.classList.add('active');
+      dialog.style.display = 'flex';
     }
-
-    preselectCurrent();
-    renderCounts();
-    renderStats();
-
-    dialog.classList.add('open');
   }
 
   function closeDialog() {
     const dialog = document.getElementById('mood-dialog');
-    if (!dialog) return;
-    dialog.classList.remove('open');
+    if (dialog) {
+      dialog.classList.remove('active');
+      setTimeout(() => dialog.style.display = 'none', 200);
+    }
   }
 
-  function preselectCurrent() {
-    document.querySelectorAll('.mood-option').forEach((btn) => btn.classList.remove('selected'));
-    if (selectedMood) {
-      const btn = document.querySelector(`.mood-option[data-type="mood"][data-value="${selectedMood}"]`);
-      if (btn) btn.classList.add('selected');
-    }
-    if (selectedGenre) {
-      const btn = document.querySelector(`.mood-option[data-type="genre"][data-value="${selectedGenre}"]`);
-      if (btn) btn.classList.add('selected');
-    }
-    const submitBtn = document.getElementById('mood-submit');
-    if (submitBtn) submitBtn.disabled = !selectedMood && !selectedGenre;
-  }
-
-  async function submitTag() {
+  async function submitTag(type, value, btnElement) {
     if (!currentSongId) return;
 
-    const submitBtn = document.getElementById('mood-submit');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Speichere...';
-    }
+    // Feedback
+    btnElement.classList.add('loading');
 
     const config = window.YourPartyConfig || {};
-    const endpoint = config.restBase ? `${config.restBase}/mood-tag` : 'https://api.yourparty.tech/mood-tag';
+    const endpoint = (config.restBase) ? `${config.restBase}/mood-tag` : 'https://api.yourparty.tech/mood-tag';
 
+    // Construct payload for Python API
     const payload = {
       song_id: currentSongId,
-      title: currentTrack.title,
-      artist: currentTrack.artist,
-      mood: selectedMood || '',
-      genre: selectedGenre || ''
+      title: document.getElementById('track-title')?.innerText || '',
+      artist: document.getElementById('track-artist')?.innerText || ''
     };
+
+    if (type === 'mood') payload.mood = value;
+    if (type === 'genre') payload.genre = value;
 
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(payload)
       });
+
       const data = await response.json();
+
       if (response.ok) {
-        showStatus('Gespeichert! Danke.', 'success');
+        showStatus('Tag saved!', 'success');
+        btnElement.classList.add('active');
+
+        // Refresh status/moods after short delay
         setTimeout(() => {
-          closeDialog();
           if (window.YourPartyApp) window.YourPartyApp.fetchStatus();
-        }, 900);
+        }, 1000);
       } else {
-        showStatus(data.error || 'Fehler beim Speichern.', 'error');
+        showStatus(data.message || 'Error saving tag', 'error');
       }
+
     } catch (err) {
       console.error(err);
-      showStatus('Netzwerkfehler.', 'error');
+      showStatus('Network error', 'error');
     } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Tag senden';
-      }
+      btnElement.classList.remove('loading');
     }
   }
 
   function showStatus(msg, type) {
     const el = document.getElementById('tag-status');
-    if (!el) return;
-    el.textContent = msg;
-    el.className = `mood-dialog__feedback ${type}`;
-    setTimeout(() => (el.textContent = ''), 3000);
+    if (el) {
+      el.textContent = msg;
+      el.className = `status-msg ${type}`;
+      setTimeout(() => el.textContent = '', 3000);
+    }
   }
 
-  function renderCounts() {
-    const moodCounts = currentMoods || {};
-    const genreCounts = currentGenres || {};
+  function updateDisplay(topMood, moods) {
+    const displays = document.querySelectorAll('.mood-display-area, .current-mood-tags, #current-mood-tags');
 
-    document.querySelectorAll('.mood-option[data-type="mood"]').forEach((btn) => {
-      const key = btn.dataset.value;
-      const count = moodCounts[key] || 0;
-      const counter = btn.querySelector('.mood-option__count');
-      if (counter) counter.textContent = count;
-    });
+    displays.forEach(display => {
+      if (!display) return;
 
-    document.querySelectorAll('.mood-option[data-type="genre"]').forEach((btn) => {
-      const key = btn.dataset.value;
-      const count = genreCounts[key] || 0;
-      const counter = btn.querySelector('.mood-option__count');
-      if (counter) counter.textContent = count;
-    });
-  }
-
-  function renderStats() {
-    const stats = document.getElementById('mood-dialog-stats');
-    if (!stats) return;
-
-    const topMood = getTop(currentMoods);
-    const topGenre = getTop(currentGenres);
-    const moodLine = topMood ? `Top Mood: ${formatLabel(topMood.key)} (${topMood.value})` : 'Noch keine Moods';
-    const genreLine = topGenre ? `Top Genre: ${formatLabel(topGenre.key)} (${topGenre.value})` : 'Noch keine Genres';
-
-    stats.innerHTML = `
-      <div class="mood-dialog__stat-line">${moodLine}</div>
-      <div class="mood-dialog__stat-line">${genreLine}</div>
-    `;
-  }
-
-  function getTop(obj = {}) {
-    const entries = Object.entries(obj || {});
-    if (!entries.length) return null;
-    entries.sort((a, b) => b[1] - a[1]);
-    return { key: entries[0][0], value: entries[0][1] };
-  }
-
-  function updateBadgeDisplay(topMood, moods, topGenre, genres) {
-    const containers = document.querySelectorAll('#current-mood-tags, .current-mood-tags, #immersive-mood-tags');
-    const moodEntries = Object.entries(moods || {}).sort((a, b) => b[1] - a[1]);
-    const genreEntries = Object.entries(genres || {}).sort((a, b) => b[1] - a[1]);
-
-    const moodChips = moodEntries.slice(0, 4).map(([key, count]) => {
-      const moodDef = MOODS.find((m) => m.id === key);
-      const label = moodDef ? moodDef.label : formatLabel(key);
-      return `<span class="mood-badge" style="--mood-color:${moodDef ? moodDef.color : '#444'}">${label} (${count})</span>`;
-    }).join('');
-
-    const genreChips = genreEntries.slice(0, 4).map(([key, count]) => {
-      return `<span class="mood-badge mood-genre">${formatLabel(key)} (${count})</span>`;
-    }).join('');
-
-    containers.forEach((el) => {
-      if (!el) return;
-      if (!moodChips && !genreChips) {
-        el.innerHTML = `<span class="mood-badge mood-empty">+ Tag hinzufuegen</span>`;
-        return;
+      if (topMood && MOODS[topMood]) {
+        const mood = MOODS[topMood];
+        const count = moods[topMood] || 0;
+        display.innerHTML = `
+            <span class="mood-badge" style="--mood-color: ${mood.color}" role="button" onclick="MoodModule.openDialog()">
+              ${mood.emoji} ${mood.label}${count > 1 ? ` (${count})` : ''}
+            </span>
+          `;
+      } else {
+        display.innerHTML = `
+            <span class="mood-badge mood-empty" role="button" onclick="MoodModule.openDialog()">+ Tag hinzufügen</span>
+          `;
       }
-      el.innerHTML = `${moodChips}${genreChips}`;
     });
   }
 
-  function setMoodData(songId, topMood, moods = {}, topGenre = '', genres = {}) {
+  /**
+   * Set mood data for current song
+   */
+  function setMoodData(songId, topMood, moods = {}) {
     currentSongId = songId;
-    currentMoods = moods || {};
-    currentGenres = genres || {};
-    selectedMood = topMood || '';
-    selectedGenre = topGenre || '';
-    updateBadgeDisplay(topMood, currentMoods, topGenre, currentGenres);
+    currentMoods = moods;
+    updateDisplay(topMood, moods);
   }
 
-  const api = {
+  // Public API
+  const instance = {
     init,
     setMoodData,
+    getMoods: () => MOODS,
     openDialog,
     closeDialog
   };
 
-  window.MoodModule = api;
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = api;
-  }
-  return api;
+  window.MoodModule = instance;
+  return instance;
 })();
+
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MoodModule;
+}

@@ -69,32 +69,6 @@ function yourparty_content_defaults(): array
 
         // About Section
         'about_eyebrow' => 'Über uns',
-        'about_title' => 'Handwerk trifft Veranstaltungstechnik',
-        'about_lead' => 'Wir sind ein  2-Mann-Team aus dem Bodenseeraum mit Expertise in Bühnenbau und Veranstaltungstechnik.',
-        'about_text' => 'Unsere Stärke liegt in der Kombination aus handwerklichem Können und technischem Verständnis. Wir realisieren Bühnenbau-Projekte, entwickeln maßgeschneiderte Audio-Lösungen für private Musikzimmer, Proberäume, kleine Events und DJ-Setups. B2B und B2C.',
-
-        // Contact Section
-        'contact_eyebrow' => 'Kontakt',
-        'contact_title' => 'Projekt besprechen?',
-        'contact_lead' => 'Erzähl uns von deiner Idee – egal ob Bühnenbau, Proberaum-Akustik, DJ-Setup oder individuelles Stage-Design.',
-        'contact_email' => 'hello@yourparty.tech',
-        'contact_phone' => '+49 1515 5243164',
-
-        // Services Section
-        'services_eyebrow' => 'Services',
-        'services_title' => 'Was wir umsetzen',
-        'service_1_title' => 'Bühnenbau & Stage Construction',
-        'service_1_desc' => 'Professioneller Bühnenbau für Events jeder Größe. Von mobilen Bühnen bis zu fest installierten Konstruktionen.',
-        'service_2_title' => 'FOH & Lichttechnik',
-        'service_2_desc' => 'Front-of-House Audio-Engineering und professionelle Lichttechnik für kleine bis mittlere Veranstaltungen. B2B Festival-Support.',
-        'service_3_title' => 'Custom Audio Builds',
-        'service_3_desc' => 'Individuelle Lautsprechersysteme und Akustik-Lösungen für Proberäume, DJ-Setups und private Räume. B2B & B2C.',
-
-        // References Section
-        'references_eyebrow' => 'Projekte',
-        'references_title' => 'Was wir bisher realisiert haben',
-        'reference_1' => 'Bühnenbau-Projekte',
-        'reference_2' => 'Festival Support (FOH)',
         'reference_3' => 'Private DJ-Studios',
         'reference_4' => 'Proberaum-Akustik',
         'reference_5' => 'Event-Tech (lokal)',

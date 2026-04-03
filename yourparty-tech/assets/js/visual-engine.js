@@ -50,20 +50,56 @@ const VisualEngine = (function () {
         }
 
         resize();
+        delayedResize(); // Ensure sizing after layout
         return true;
     }
 
     function resize() {
         if (!canvas) return;
-        const rect = canvas.parentElement?.getBoundingClientRect() || { width: 800, height: 400 };
 
-        // High-DPI Scaling
-        canvas.width = rect.width * DPI;
-        canvas.height = rect.height * DPI;
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
+        // Get container - must have explicit dimensions
+        const container = document.getElementById('visualizer-wrapper') ||
+            document.querySelector('.radio-card__visualizer-container') ||
+            canvas.parentElement;
 
-        if (ctx) ctx.scale(DPI, DPI);
+        if (!container) return;
+
+        // Force layout calculation
+        const computedStyle = getComputedStyle(container);
+        let width = container.clientWidth || parseInt(computedStyle.width) || 800;
+        let height = container.clientHeight || parseInt(computedStyle.height) || 120;
+
+        // Fallback if container has no size yet
+        if (width < 100) width = 800;
+        if (height < 50) height = 120;
+
+        // Set canvas internal size (pixel buffer)
+        canvas.width = Math.floor(width * DPI);
+        canvas.height = Math.floor(height * DPI);
+
+        // Set display size
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+
+        // Reset and scale context
+        if (ctx) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(DPI, DPI);
+        }
+
+        console.log('[VisualEngine] Resized to:', width, 'x', height);
+    }
+
+    // Auto-resize on window resize
+    window.addEventListener('resize', () => {
+        resize();
+    });
+
+    // Delayed init to ensure container is sized
+    function delayedResize() {
+        setTimeout(resize, 100);
+        setTimeout(resize, 500);
+        setTimeout(resize, 1000);
     }
 
     function startRendering() {
