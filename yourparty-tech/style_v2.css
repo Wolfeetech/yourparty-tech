@@ -1,0 +1,242 @@
+/*
+Theme Name: YourParty Tech
+Theme URI: https://yourparty.tech
+Author: YourParty Team
+Description: Deep Space Edition
+Version: 3.3.26
+*/
+
+:root {
+    /* PALETTE: Deep Space (Premium) */
+    --bg-dark: #000000;
+    --bg-panel: rgba(15, 15, 20, 0.95);
+    
+    --primary: #8b5cf6; /* Electric Violet */
+    --primary-rgb: 139, 92, 246;
+    --primary-hover: #a78bfa;
+    --primary-glow: rgba(139, 92, 246, 0.5);
+    
+    --accent: #06b6d4; /* Cyan */
+    --emerald: #10b981;
+    --danger: #ef4444;
+    
+    --text: #ffffff;
+    --text-muted: #94a3b8;
+    
+    --glass-bg: rgba(10, 10, 10, 0.8);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    --glass-blur: 16px;
+    
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --border-radius: 16px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-dark);
+    background-image: 
+        radial-gradient(circle at 20% 0%, rgba(139, 92, 246, 0.15), transparent 40%),
+        radial-gradient(circle at 80% 100%, rgba(6, 182, 212, 0.1), transparent 40%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--font-family);
+    margin: 0;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* TYPOGRAPHY */
+h1, h2, h3, h4 { margin-top: 0; font-weight: 700; color: #fff; }
+a { color: inherit; text-decoration: none; transition: var(--transition); }
+button { font-family: inherit; }
+
+/* UTILS */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+}
+.btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px var(--primary-glow); }
+.btn--ghost { background: transparent; border: 1px solid rgba(255,255,255,0.2); }
+.btn--ghost:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+
+/* COMPONENTS */
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(var(--glass-blur));
+    border: var(--glass-border);
+    border-radius: var(--border-radius);
+}
+
+/* RADIO CARD (Main Player) */
+.radio-card {
+    background: rgba(18, 18, 22, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+}
+.radio-card--integrated { display: flex; flex-direction: column; }
+.radio-card__header { display: flex; padding: 30px; gap: 30px; align-items: center; }
+.radio-card__cover-wrapper { 
+    width: 200px; height: 200px; 
+    border-radius: 12px; overflow: hidden; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
+    flex-shrink: 0; 
+}
+.radio-card__cover-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.radio-card__info { flex: 1; min-width: 0; }
+.radio-card__title-row h3 { font-size: 2.5rem; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio-card__artist-row p { font-size: 1.25rem; color: var(--primary); margin-bottom: 20px; }
+
+/* META ROW (Ratings, Moods) */
+.radio-card__meta-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.rating-stars { display: flex; gap: 5px; }
+.rating-star { background: none; border: none; font-size: 24px; color: #333; cursor: pointer; transition: 0.2s; padding: 0; }
+.rating-star:hover, .rating-star.active { color: var(--emerald); transform: scale(1.2); }
+
+/* VISUALIZER (Inline) */
+.radio-card__visualizer-container {
+    height: 120px;
+    background: #000;
+    position: relative;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+#inline-visualizer { width: 100%; height: 100%; display: block; }
+.visualizer-controls { display: flex; gap: 8px; position: absolute; top: 10px; right: 10px; z-index: 20; }
+.vis-btn { 
+    background: rgba(255,255,255,0.1); border: none; color: #aaa; 
+    width: 32px; height: 32px; border-radius: 8px; 
+    display: flex; align-items: center; justify-content: center; cursor: pointer; 
+}
+.vis-btn:hover, .vis-btn.active { background: var(--primary); color: #fff; }
+
+/* CONTROLS (Play) */
+.radio-card__controls-row {
+    position: absolute; bottom: 30px; right: 30px;
+}
+.play-btn-large {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--primary-glow);
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.play-btn-large:hover { transform: scale(1.1); box-shadow: 0 0 30px var(--primary-glow); }
+
+/* MOOD DIALOG (Deep Space) */
+.mood-dialog {
+    display: none; /* Flex when open */
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+    z-index: 99999;
+    align-items: center; justify-content: center;
+}
+.mood-dialog.open { display: flex; opacity: 1; pointer-events: auto; }
+.mood-dialog__content {
+    background: #0a0a0c;
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 50px rgba(139, 92, 246, 0.2);
+    border-radius: 20px;
+    padding: 40px;
+    width: 90%; max-width: 600px;
+    position: relative;
+    animation: dialogPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes dialogPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.mood-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; margin-top: 20px; }
+.mood-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 15px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer; color: #ccc;
+    transition: 0.2s;
+}
+.mood-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--primary);
+    transform: translateY(-3px);
+    color: #fff;
+}
+.mood-btn .emoji { font-size: 24px; }
+.mood-btn .label { font-size: 11px; font-weight: 600; text-transform: uppercase; }
+
+/* FULLSCREEN OVERLAY (Immersive) */
+.immersive-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 10000;
+    display: none; opacity: 0; transition: opacity 0.5s;
+}
+.immersive-overlay.active { display: block; opacity: 1; }
+#immersive-canvas { width: 100%; height: 100%; display: block; }
+
+.immersive-modes {
+    display: flex; gap: 10px;
+}
+.vis-mode-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ccc; padding: 8px 16px; border-radius: 20px;
+    cursor: pointer; font-size: 12px; text-transform: uppercase; font-weight: 600;
+    pointer-events: auto;
+}
+.vis-mode-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.vis-mode-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.immersive-close-btn {
+    position: absolute; top: 20px; right: 20px;
+    background: none; border: none; color: #fff; cursor: pointer;
+    z-index: 200; padding: 10px; border-radius: 50%;
+    transition: 0.2s;
+}
+.immersive-close-btn:hover { background: rgba(255,255,255,0.1); transform: rotate(90deg); }
+
+.immersive-footer {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    padding: 40px;
+    background: linear-gradient(to top, #000 0%, transparent 100%);
+    display: flex; justify-content: space-between; align-items: flex-end;
+    pointer-events: none; /* Let clicks pass to canvas if needed, but contents need pointer-events auto */
+}
+.immersive-track-row { display: flex; align-items: flex-end; gap: 30px; }
+.immersive-cover { width: 120px; height: 120px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+.immersive-meta { text-shadow: 0 4px 10px rgba(0,0,0,0.8); pointer-events: auto; }
+#immersive-title { font-size: 3rem; margin: 0; line-height: 1; }
+#immersive-artist { font-size: 1.5rem; color: var(--primary); margin: 5px 0 20px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .radio-card__header { flex-direction: column; padding: 20px; text-align: center; }
+    .radio-card__cover-wrapper { width: 150px; height: 150px; margin: 0 auto; }
+    .radio-card__meta-row { justify-content: center; }
+    .radio-card__controls-row { position: relative; bottom: auto; right: auto; margin-top: 20px; display: flex; justify-content: center; }
+}

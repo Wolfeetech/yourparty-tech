@@ -4,7 +4,11 @@
  */
 
 if (!defined('YOURPARTY_VERSION')) {
-    define('YOURPARTY_VERSION', '3.3.19');
+    define('YOURPARTY_VERSION', '3.3.29');
+}
+
+if (!defined('YOURPARTY_API_RATE_URL')) {
+    define('YOURPARTY_API_RATE_URL', 'http://192.168.178.211:8000/rate');
 }
 
 if (!defined('YOURPARTY_AZURACAST_API_KEY')) {
@@ -121,11 +125,19 @@ add_action('wp_enqueue_scripts', function () {
         true
     );
 
+    wp_enqueue_script(
+        'yourparty-visualizer',
+        get_template_directory_uri() . '/assets/js/visualizer-premium.js',
+        ['yourparty-stream-controller'],
+        YOURPARTY_VERSION,
+        true
+    );
+
     // Main App (depends on modules)
     wp_enqueue_script(
         'yourparty-tech-app',
         get_template_directory_uri() . '/assets/js/app.js',
-        ['yourparty-stream-controller', 'yourparty-rating-module', 'yourparty-mood-module'],
+        ['yourparty-stream-controller', 'yourparty-rating-module', 'yourparty-mood-module', 'yourparty-visualizer'],
         YOURPARTY_VERSION,
         true
     );

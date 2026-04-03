@@ -180,6 +180,13 @@ $requests_url = apply_filters(
                         </svg>
                     </button>
 
+                    <!-- VISUALIZER MODES (ADDED FIX) -->
+                    <div class="immersive-modes" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 200;">
+                         <button class="vis-mode-btn" data-mode="pro_spectrum">Spectrum</button>
+                         <button class="vis-mode-btn" data-mode="precision_scope">Scope</button>
+                         <button class="vis-mode-btn" data-mode="particle_field">Particles</button>
+                    </div>
+
                     <!-- Main Visualizer Area -->
                     <div class="immersive-visualizer-container">
                         <canvas id="immersive-canvas"></canvas>

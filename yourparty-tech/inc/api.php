@@ -536,7 +536,10 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
         'warm',
         'uplifting',
         'deep',
-        'funky'
+        'funky',
+        'startuppy',
+        'melodic',
+        'trashey'
     ];
 
     if (empty($song_id)) {
@@ -552,8 +555,8 @@ function yourparty_rest_post_mood_tag(WP_REST_Request $request)
     $artist = sanitize_text_field((string) $request->get_param('artist'));
 
     // Proxy to FastAPI backend (MongoDB storage)
-    // Using PVE Host IP (.25) via NAT because direct container access (.211) is bridged/isolated
-    $api_url = 'http://192.168.178.25:8080/mood-tag';
+    // Using CT 211 IP directly
+    $api_url = 'http://192.168.178.211:8000/mood-tag';
 
     $body_args = [
         'song_id' => $song_id,
@@ -642,7 +645,7 @@ add_action('rest_api_init', function () {
                 $vote = sanitize_text_field($request->get_param('vote'));
 
                 // Proxy to FastAPI
-                $api_url = 'http://192.168.178.211:8080/control/vote-next';
+                $api_url = 'http://192.168.178.211:8000/control/vote-next';
 
                 $response = wp_remote_post($api_url, [
                     'headers' => ['Content-Type' => 'application/json'],

@@ -1,0 +1,2 @@
+GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'%' IDENTIFIED BY 'SimplePass123';
+FLUSH PRIVILEGES;

@@ -57,8 +57,18 @@ function yourparty_content_defaults(): array
         'usp_desc_1' => 'Von Proberäumen über DJ-Setups bis zu kleinen Veranstaltungen – wir planen und realisieren individuelle Lösungen.',
         'usp_title_2' => 'Bühnenbau & Stage Design',
         'usp_desc_2' => 'Professioneller Bühnenbau und Sonderfertigungen für Bühnen-Designs. Handwerklich präzise, technisch durchdacht.',
-        'usp_title_3' => '24/7 Radio Stream',
-        'usp_desc_3' => 'Unser eigener Internet-Radiosender mit elektronischer Musik – zur Inspiration und als technische Referenz.',
+        'usp_title_3' => 'Smart Home & Installation',
+        'usp_desc_3' => 'Netzwerktechnik, Multi-Room Audio und intelligente Steuerungssysteme für private und gewerbliche Kunden.',
+
+        // Services Section (Fixed)
+        'services_eyebrow' => 'Leistungen',
+        'services_title' => 'Technische Realisation',
+        'service_1_title' => 'Bühnenbau & Rigging',
+        'service_1_desc' => 'Sicherer Bau von Bühnen, Traversenkonstruktionen und Hängepunkten nach aktuellen SQ-Standards.',
+        'service_2_title' => 'Event Production',
+        'service_2_desc' => 'Vollumfängliche technische Planung und Durchführung von Events. Licht, Ton, Video – alles aus einer Hand.',
+        'service_3_title' => 'Festinstallation',
+        'service_3_desc' => 'Dauerhafte Installation von Licht- und Tontechnik in Clubs, Bars und Konferenzräumen.',
 
         // Radio Section
         'radio_eyebrow' => '24/7 ELECTRONIC MUSIC',

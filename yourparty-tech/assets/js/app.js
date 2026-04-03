@@ -136,21 +136,23 @@ const YourPartyApp = (function () {
         const artistEl = document.getElementById('track-artist');
         const artEl = document.getElementById('cover-art');
 
-        // Text Updates with "Flash" effect (remove/add class if I had CSS, but just text for now)
+        // Text Updates with "Flash" effect
         if (titleEl) {
-            if (titleEl.textContent !== song.title) {
+            const newTitle = song.title || 'Unknown Title';
+            if (titleEl.textContent !== newTitle) {
                 titleEl.style.opacity = '0';
                 setTimeout(() => {
-                    titleEl.textContent = song.title || 'Unknown Title';
+                    titleEl.textContent = newTitle;
                     titleEl.style.opacity = '1';
                 }, 200);
             }
         }
         if (artistEl) {
-            if (artistEl.textContent !== song.artist) {
+            const newArtist = song.artist || 'Unknown Artist';
+            if (artistEl.textContent !== newArtist) {
                 artistEl.style.opacity = '0';
                 setTimeout(() => {
-                    artistEl.textContent = song.artist || 'Unknown Artist';
+                    artistEl.textContent = newArtist;
                     artistEl.style.opacity = '1';
                 }, 200);
             }
@@ -158,8 +160,17 @@ const YourPartyApp = (function () {
 
         // Cover Art Transition
         if (artEl) {
-            const newSrc = song.art || _generateFallbackGradient(song.title);
-            if (artEl.src !== newSrc) {
+            let newSrc = song.art || _generateFallbackGradient(song.title);
+
+            // PROXY FIX: Avoid HTTP/2 Errors with local proxy
+            if (newSrc && (newSrc.includes('radio.yourparty.tech') || newSrc.includes('/api/station'))) {
+                newSrc = '/wp-content/themes/yourparty-tech/image-proxy.php?url=' + encodeURIComponent(newSrc);
+            }
+
+            // Check if changed (using attribute to avoid resolved URL mismatch)
+            if (artEl.getAttribute('data-src') !== newSrc) {
+                artEl.setAttribute('data-src', newSrc);
+
                 artEl.style.transition = 'opacity 0.5s ease';
                 artEl.style.opacity = '0';
 
@@ -169,9 +180,10 @@ const YourPartyApp = (function () {
                     artEl.style.opacity = '1';
                 };
                 img.onerror = () => {
+                    console.warn('[App] Image Load Failed, using fallback');
                     artEl.src = _generateFallbackGradient(song.title);
                     artEl.style.opacity = '1';
-                }
+                };
                 img.src = newSrc;
             }
         }
@@ -284,6 +296,24 @@ const YourPartyApp = (function () {
                 fetchHistory().finally(() => btn.style.opacity = '1');
             });
         }
+
+        // Visualizer Mode Buttons (Fullscreen)
+        document.querySelectorAll('.vis-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const mode = btn.dataset.mode;
+                if (typeof VisualizerController !== 'undefined') {
+                    VisualizerController.setMode(mode);
+                    // Active state
+                    document.querySelectorAll('.vis-mode-btn').forEach(b => {
+                        b.style.background = 'rgba(255,255,255,0.1)';
+                        b.style.color = 'rgba(255,255,255,0.6)';
+                    });
+                    btn.style.background = 'var(--primary)';
+                    btn.style.color = '#fff';
+                }
+            });
+        });
     }
 
     /**
@@ -451,428 +481,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
 
-/**
- * Visualizer Module
- * High-Fidelity Audio Analysis
- */
-const VisualizerController = (function () {
-    let analyser;
-    let animationId;
-    let canvas, ctx;
-    let modeIndex = 0;
-    // Modes: Modern Wave (Spline), RTA (Bars), RGB Scroll, Oscilloscope, Matrix
-    const modes = ['modern_wave', 'rta_spectrum', 'rgb_waveform', 'oscilloscope', 'matrix'];
-
-    // Buffers
-    let textCanvas;
-    let scrollCanvas, scrollCtx;
-    let matrixCanvas, matrixCtx;
-    let canvasImmersive, ctxImmersive;
-
-    function init() {
-        canvas = document.getElementById('inline-visualizer');
-        canvasImmersive = document.getElementById('immersive-canvas');
-
-        if (canvas) {
-            ctx = canvas.getContext('2d', { alpha: false }); // Optimize
-
-            ctx = canvas.getContext('2d', { alpha: false }); // Optimize
-
-            // Interaction: Removed per user request ("ist mist")
-            // External buttons control mode now.
-        }
-
-        if (canvasImmersive) {
-            ctxImmersive = canvasImmersive.getContext('2d');
-        }
-
-        window.addEventListener('resize', resize);
-        resize();
-
-        window.addEventListener('stream:audioContextReady', (e) => {
-            analyser = e.detail.analyser;
-            if (analyser) {
-                // High precision for modern look
-                analyser.fftSize = 4096;
-                analyser.smoothingTimeConstant = 0.85;
-            }
-            startRendering();
-        });
-
-        drawIdle();
-    }
-
-    function resize() {
-        const dpr = window.devicePixelRatio || 1;
-
-        if (canvas) {
-            const rect = canvas.getBoundingClientRect();
-            // Set render size
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-
-            // Re-init buffers
-            scrollCanvas = null;
-            matrixCanvas = null;
-        }
-
-        if (canvasImmersive) {
-            canvasImmersive.width = window.innerWidth * dpr;
-            canvasImmersive.height = window.innerHeight * dpr;
-        }
-    }
-
-    function showToast(msg) {
-        if (!ctx) return;
-        const w = canvas.width;
-        // Simple overlay
-        // We render it in the loop to persist for a few frames if needed, 
-        // but for now, we just rely on the 'render' loop to draw the label.
-    }
-
-    function startRendering() {
-        if (animationId) cancelAnimationFrame(animationId);
-        render();
-    }
-
-    function drawIdle() {
-        if (!ctx || !canvas) return;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#4b5563';
-        ctx.font = '500 16px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('WAITING FOR AUDIO...', canvas.width / 2, canvas.height / 2);
-    }
-
-    // Render Loop
-    function render() {
-        animationId = requestAnimationFrame(render);
-        if (!analyser || !ctx) return;
-
-        const w = canvas.width;
-        const h = canvas.height;
-
-        // Data Fetch
-        const fftSize = analyser.frequencyBinCount;
-        const freqData = new Uint8Array(fftSize);
-        const timeData = new Uint8Array(fftSize);
-        analyser.getByteFrequencyData(freqData);
-        analyser.getByteTimeDomainData(timeData);
-
-        // Clear with slight trail for CRT feel
-        ctx.fillStyle = 'rgba(5, 5, 5, 1)';
-        ctx.fillRect(0, 0, w, h);
-
-        // Draw Grid (Technical Look)
-        drawGrid(ctx, w, h);
-
-        const mode = modes[modeIndex];
-        ctx.save();
-
-        switch (mode) {
-            case 'modern_wave':
-                // Renamed internally to "Precision Scope"
-                drawPrecisionScope(ctx, timeData, w, h);
-                break;
-            case 'rta_spectrum':
-                drawProSpectrum(ctx, freqData, w, h);
-                break;
-            case 'rgb_waveform': // GFX Mode
-                drawMatrixRain(ctx, freqData, w, h);
-                break;
-            case 'oscilloscope': // Keep classic but refine
-            case 'matrix': // Fallback or duplicate
-                drawPrecisionScope(ctx, timeData, w, h);
-                break;
-        }
-        ctx.restore();
-
-        // Label
-        ctx.fillStyle = '#00ff41'; // Matrix/Terminal Green
-        ctx.font = '10px "JetBrains Mono", monospace';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'top';
-        ctx.fillText(`MODE: ${mode.toUpperCase()} // 48KHZ // ACTIVE`, w - 10, 10);
-    }
-
-    function drawGrid(c, w, h) {
-        c.strokeStyle = 'rgba(255, 255, 255, 0.03)'; // Fainter, more premium grid
-        c.lineWidth = 1;
-
-        // Horizontal lines
-        c.beginPath();
-        for (let y = 0; y < h; y += h / 4) {
-            c.moveTo(0, y); c.lineTo(w, y);
-        }
-        // Vertical lines
-        for (let x = 0; x < w; x += w / 8) {
-            c.moveTo(x, 0); c.lineTo(x, h);
-        }
-        c.stroke();
-    }
-
-    // 1. Precision Scope (Replaces Modern Wave)
-    // A single, hyper-fast, glowing line representing the actual audio waveform.
-    function drawPrecisionScope(c, data, w, h) {
-        c.lineWidth = 2;
-        c.strokeStyle = '#00f0ff'; // Cyan
-        c.shadowBlur = 10;
-        c.shadowColor = '#00f0ff';
-
-        c.beginPath();
-        const sliceWidth = w / data.length;
-        let x = 0;
-
-        for (let i = 0; i < data.length; i++) {
-            const v = data[i] / 128.0; // 0..2 mostly
-            const y = (v * h / 2); // Center is h/2
-
-            if (i === 0) c.moveTo(x, y);
-            else c.lineTo(x, y);
-
-            x += sliceWidth;
-        }
-        c.stroke();
-        c.shadowBlur = 0;
-
-        // Center line
-        c.strokeStyle = 'rgba(0, 240, 255, 0.1)';
-        c.lineWidth = 1;
-        c.beginPath();
-        c.moveTo(0, h / 2);
-        c.lineTo(w, h / 2);
-        c.stroke();
-    }
-
-    // 2. Pro Spectrum (Replaces RTA)
-    // 64-band RTA with "LED Segment" look
-    function drawProSpectrum(c, data, w, h) {
-        const bands = 64;
-        // Logarithmic sampling? For now, linear is cleaner code-wise, maybe step it
-        const step = Math.floor(data.length * 0.7 / bands); // Drop high freq noise
-        const barW = (w / bands) - 2;
-
-        for (let i = 0; i < bands; i++) {
-            let sum = 0;
-            // Average bin
-            for (let j = 0; j < step; j++) sum += data[i * step + j];
-            let val = sum / step;
-
-            // Draw LED segments
-            const segments = 10;
-            const level = (val / 255) * segments;
-
-            const x = i * (barW + 2) + 1;
-
-            for (let s = 0; s < segments; s++) {
-                // Color scaling
-                let color = '#3b82f6'; // Blue base
-                if (s > 6) color = '#eab308'; // Yellow warn
-                if (s > 8) color = '#ef4444'; // Red peak
-
-                c.fillStyle = (s < level) ? color : 'rgba(50,50,50,0.5)';
-                const segH = (h / segments) - 2;
-                const y = h - (s * (segH + 2)) - segH;
-
-                c.fillRect(x, y, barW, segH);
-            }
-        }
-    }
-
-    // 3. Matrix Rain (Replaces RBG/GFX)
-    let drops = [];
-    function drawMatrixRain(c, data, w, h) {
-        const fontSize = 12;
-        const columns = Math.ceil(w / fontSize);
-
-        if (drops.length !== columns) {
-            drops = new Array(columns).fill(0);
-        }
-
-        c.fillStyle = 'rgba(0, 0, 0, 0.05)'; // Fast fade for trails
-        c.fillRect(0, 0, w, h);
-
-        c.fillStyle = '#0F0'; // Green
-        c.font = fontSize + 'px monospace';
-
-        const beat = data[4]; // Sub-bass bin
-
-        for (let i = 0; i < drops.length; i++) {
-            const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-
-            // Audio Reactivity: Brightness or Speed
-            // We use simple: if beat hits, randomly spawn new drops high up
-            if (beat > 200 && Math.random() > 0.95) drops[i] = 0;
-
-            const x = i * fontSize;
-            const y = drops[i] * fontSize;
-
-            c.fillText(char, x, y);
-
-            if (y > h && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-            drops[i]++;
-        }
-    }
-
-    // Legacy Oscilloscope (for fallback)
-    function drawOscillo(c, d, w, h) { drawPrecisionScope(c, d, w, h); }
-    function drawMatrix(c, d, w, h) { drawMatrixRain(c, d, w, h); }
-    function drawModernWave(c, d, w, h) { drawPrecisionScope(c, d, w, h); }
-    function drawRGBScroll(c, d, w, h) { drawMatrixRain(c, d, w, h); }
-
-    function setImmersive(active) {
-        resize(); // Force check
-    }
-
-    // --- RENDERERS ---
-
-    function drawModernWave(c, data, w, h) {
-        // Premium "Liquid" Waveform
-        c.lineWidth = 4;
-        c.lineCap = 'round';
-        c.shadowBlur = 20;
-        c.shadowColor = '#a855f7'; // Purple glow
-
-        // Vibrant Gradient
-        const gradient = c.createLinearGradient(0, 0, w, 0);
-        gradient.addColorStop(0, '#00f0ff');   // Cyan
-        gradient.addColorStop(0.5, '#2E8B57'); // Emerald
-        gradient.addColorStop(1, '#800080');   // Purple
-        c.strokeStyle = gradient;
-
-        // Fill Gradient
-        const fillGrad = c.createLinearGradient(0, 0, 0, h);
-        fillGrad.addColorStop(0, 'rgba(236, 72, 153, 0.2)');
-        fillGrad.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
-
-        c.beginPath();
-
-        // Downsample to fewer points for smoothness
-        const points = [];
-        const slice = Math.floor(data.length / 40); // 40 points
-
-        for (let i = 0; i < 44; i++) { // Slight overscan
-            let sum = 0;
-            const start = i * slice;
-            if (start + slice < data.length) {
-                for (let j = 0; j < slice; j++) sum += data[start + j];
-                const val = sum / slice;
-                // Scale & Dampen
-                const y = h - ((val / 255) * h * 0.7) - (h * 0.1);
-                points.push({ x: (i / 40) * w, y: y });
-            }
-        }
-
-        if (points.length < 2) return;
-
-        // Draw Smooth Curve
-        c.moveTo(points[0].x, points[0].y);
-
-        for (let i = 0; i < points.length - 1; i++) {
-            const p0 = points[i];
-            const p1 = points[i + 1];
-            const midX = (p0.x + p1.x) / 2;
-            const midY = (p0.y + p1.y) / 2;
-            c.quadraticCurveTo(p0.x, p0.y, midX, midY);
-        }
-
-        // Connect to bottom for fill
-        c.lineTo(w, h);
-        c.lineTo(0, h);
-        c.closePath();
-
-        // Fill
-        c.fillStyle = fillGrad;
-        c.fill();
-
-        // Stroke (redraw curve part only for sharp line)
-        c.beginPath();
-        c.moveTo(points[0].x, points[0].y);
-        for (let i = 0; i < points.length - 1; i++) {
-            const p0 = points[i];
-            const p1 = points[i + 1];
-            const midX = (p0.x + p1.x) / 2;
-            const midY = (p0.y + p1.y) / 2;
-            c.quadraticCurveTo(p0.x, p0.y, midX, midY);
-        }
-        c.stroke();
-        c.shadowBlur = 0;
-
-        // Add "Beat" Circle in background if bass is high
-        const bass = data[5];
-        if (bass > 180) {
-            c.beginPath();
-            c.arc(w / 2, h / 2, (bass / 255) * 100, 0, Math.PI * 2);
-            c.fillStyle = `rgba(255,255,255, ${(bass - 180) / 300})`;
-            c.fill();
-        }
-    }
-
-    // Matrix Rain State
-    let matrixDrops = [];
-
-    function drawMatrix(c, data, w, h) {
-        // Init drops
-        const cols = Math.floor(w / 10);
-        if (matrixDrops.length !== cols) {
-            matrixDrops = new Array(cols).fill(0).map(() => Math.random() * h);
-        }
-
-        // Fade background (Trail effect)
-        c.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        c.fillRect(0, 0, w, h);
-
-        c.fillStyle = '#0f0'; // Hacker Green
-        c.font = '10px monospace';
-
-        for (let i = 0; i < cols; i++) {
-            // Audio reactivity: Speed depends on frequency
-            const freqIndex = Math.floor((i / cols) * data.length * 0.5); // Use lower half
-            const val = data[freqIndex];
-            const speed = 1 + (val / 20); // Faster with volume
-
-            // Char choice: Hex
-            const valid = "0123456789ABCDEF";
-            const char = valid.charAt(Math.floor(Math.random() * valid.length));
-
-            // Color based on intensity
-            const intensity = val / 255;
-            c.fillStyle = `rgba(0, ${255}, ${100}, ${intensity})`;
-
-            if (val > 100) {
-                c.fillText(char, i * 10, matrixDrops[i]);
-            }
-
-            // Move drop
-            matrixDrops[i] += speed;
-
-            // Reset
-            if (matrixDrops[i] > h && Math.random() > 0.975) {
-                matrixDrops[i] = 0;
-            }
-        }
-    }
-
-    function setMode(nameOrIndex) {
-        if (typeof nameOrIndex === 'number') {
-            modeIndex = nameOrIndex % modes.length;
-        } else if (typeof nameOrIndex === 'string') {
-            const idx = modes.indexOf(nameOrIndex);
-            if (idx >= 0) modeIndex = idx;
-        }
-        // Force redraw or toast logic if needed
-        const modeName = modes[modeIndex].replace('_', ' ').toUpperCase();
-        if (window.showToast) window.showToast(`VISUALIZER: ${modeName}`);
-    }
-
-    // Public API
-    return { init, setImmersive, setMode, getModes: () => modes, getAnalyser: () => analyser };
-})();
+// VisualizerController is now loaded from visualizer-premium.js
+// This prevents conflicts and ensures the premium visualizer is used.
 
 /**
  * Realtime Module (WebSockets)
