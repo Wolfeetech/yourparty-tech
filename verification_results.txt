@@ -1,0 +1,7 @@
+--- Testing Rating for a49998e617b05f526a3dd2d495304076 ---
+Status: 200
+Response: {"status":"ok","song_id":"a49998e617b05f526a3dd2d495304076","vote":"like","ratings":{"like":9,"dislike":0,"neutral":0,"distribution":{"1":0,"2":0,"3":0,"4":1,"5":8},"total":9,"average":4.89,"updated_at":1767009277},"forwarded":false}
+
+--- Testing Tagging for a49998e617b05f526a3dd2d495304076 ---
+Status: 200
+Response: {"success":true,"song_id":"a49998e617b05f526a3dd2d495304076","message":"Vote recorded","mood_current":"recorded"}

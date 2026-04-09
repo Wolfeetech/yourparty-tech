@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Radio Playlist Sync Hourly
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1h
+Unit=radio-sync.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,224 @@
+/* LIVE VOTING WIDGET - MTV Track Voting Styles */
+
+.live-voting-widget {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.live-voting__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.live-voting__title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--neon-green, #00ff88);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.live-voting__status {
+    background: #ef4444;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Track Cards Grid */
+.live-voting__track-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.track-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.track-card:hover {
+    border-color: var(--neon-green, #00ff88);
+    background: rgba(0, 255, 136, 0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+}
+
+.track-card--voted {
+    border-color: var(--neon-green, #00ff88);
+    background: rgba(0, 255, 136, 0.15);
+}
+
+.track-card__cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.track-card__cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.track-card__voted-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--neon-green, #00ff88);
+    color: black;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.track-card__info {
+    margin-bottom: 10px;
+}
+
+.track-card__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-card__artist {
+    font-size: 0.85rem;
+    color: #aaa;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-card__votes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vote-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--neon-green, #00ff88);
+}
+
+.vote-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+}
+
+/* Footer */
+.live-voting__footer {
+    text-align: center;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.live-voting__footer small {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+/* Loading State */
+.loading-skeleton {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.no-candidates {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+/* Error State */
+.voting-error {
+    text-align: center;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.voting-error__icon {
+    font-size: 2rem;
+}
+
+.voting-error__message {
+    color: #888;
+    font-size: 0.95rem;
+}
+
+.voting-error__retry {
+    background: var(--neon-green, #00ff88);
+    color: black;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.voting-error__retry:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .live-voting__track-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .track-card {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .track-card__cover {
+        width: 100px;
+        height: 100px;
+        flex-shrink: 0;
+        margin-bottom: 0;
+    }
+    
+    .track-card__info {
+        flex: 1;
+    }
+}

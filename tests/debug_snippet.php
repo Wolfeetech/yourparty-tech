@@ -1,0 +1,1 @@
+<?php die('DEBUG: CONTROL TEMPLATE LOADED'); ?>

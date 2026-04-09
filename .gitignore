@@ -2,9 +2,46 @@ venv/
 __pycache__/
 *.pyc
 *.env
+backend/.env
+apps/api/.env
 node_modules/
 .DS_Store
 .vscode/
 dist/
 build/
 *.log
+
+coverage/
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary and debug files
+temp_*
+*_check.*
+*_verify.*
+*_cache.*
+*_clean.*
+plan_draft.*
+*.html
+
+# Database files
+npm_database.sqlite
+*.sqlite
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local config/inventory files
+fstab_source.txt
+picard_config.txt
+pve_inventory.txt
+sync_log.txt
+scheduler.log
+migration.log
+
+# Backups (don't commit to repo)
+backups/

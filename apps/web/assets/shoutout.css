@@ -1,0 +1,113 @@
+/* Shoutout Dialog */
+.shoutout-dialog {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  z-index: 10000;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.shoutout-dialog.active {
+  display: flex;
+  opacity: 1;
+}
+
+.shoutout-content {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-glass-border, rgba(255, 255, 255, 0.1));
+  padding: 2rem;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.shoutout-content h3 {
+  margin-top: 0;
+  color: var(--color-emerald, #10b981);
+}
+
+.shoutout-desc {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #94a3b8);
+  margin-bottom: 1.5rem;
+}
+
+.shoutout-content input,
+.shoutout-content textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+.shoutout-content textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.shoutout-content button.button-primary {
+  width: 100%;
+  background: var(--color-emerald, #10b981);
+  color: white;
+  border: none;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.shoutout-content button.button-primary:hover {
+  background: #059669;
+}
+
+.shoutout-content .close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.shoutout-feedback {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.shoutout-feedback.success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.shoutout-feedback.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Nav Button Style */
+#open-shoutout-btn {
+  color: var(--color-emerald, #10b981) !important;
+  font-weight: 600;
+}

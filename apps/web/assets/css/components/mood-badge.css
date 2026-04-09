@@ -1,0 +1,121 @@
+/**
+ * YourParty Tech - Mood Badge Component
+ * Tags for mood/genre classification
+ */
+
+/* Badge Container */
+.mood-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* Base Badge */
+.mood-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-base);
+  animation: fadeInBadge 0.3s ease;
+  white-space: nowrap;
+}
+
+/* Default Mood Badge (Purple theme) */
+.mood-badge {
+  background: linear-gradient(135deg, rgba(128, 0, 128, 0.2), rgba(128, 0, 128, 0.1));
+  border: 1px solid var(--color-secondary);
+  color: var(--color-secondary-light);
+}
+
+.mood-badge:hover {
+  background: rgba(128, 0, 128, 0.3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-secondary);
+}
+
+/* Empty State */
+.mood-badge.mood-empty {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--border-default);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mood-badge.mood-empty:hover {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary-light);
+}
+
+/* Vote Count */
+.mood-badge .vote-count {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  margin-left: var(--space-1);
+}
+
+/* Mood Tag Button */
+.mood-tag-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(128, 0, 128, 0.15);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--radius-full);
+  color: var(--color-secondary-light);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.mood-tag-btn:hover {
+  background: rgba(128, 0, 128, 0.3);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-glow-secondary);
+}
+
+.mood-tag-btn:active {
+  transform: scale(0.95);
+}
+
+.mood-tag-btn:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+/* Badge Animations */
+@keyframes fadeInBadge {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Genre Badge Variant (Terracotta) */
+.genre-badge {
+  background: linear-gradient(135deg, rgba(204, 85, 0, 0.2), rgba(204, 85, 0, 0.1));
+  border-color: var(--color-accent);
+  color: var(--color-accent-light);
+}
+
+.genre-badge:hover {
+  background: rgba(204, 85, 0, 0.3);
+}
+
+/* Multiple Badges in Current Mood Display */
+.current-mood-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

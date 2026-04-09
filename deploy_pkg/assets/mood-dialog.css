@@ -1,0 +1,73 @@
+/* === MOOD DIALOG / MODAL === */
+.mood-dialog {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2147483647 !important; /* Nuclear Option: Max Z-Index */
+    display: none; align-items: center; justify-content: center;
+}
+.mood-dialog.active { display: flex !important; }
+
+.mood-dialog-backdrop {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 1;
+}
+
+    position: relative; z-index: 10;
+    background: rgba(20,20,20,0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%; max-width: 500px;
+    max-height: 85vh; /* Prevent screen overflow */
+    overflow-y: auto; /* Enable scrolling */
+    text-align: center;
+    color: #fff;
+    animation: zoomIn 0.3s ease;
+
+@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.mood-dialog h3 { font-size: 1.5rem; margin-bottom: 5px; }
+.track-info { color: #888; margin-bottom: 20px; font-size: 0.9rem; }
+
+.tag-section { margin-bottom: 20px; }
+.tag-section h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--neon-green, #00ff88); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+
+.mood-grid, .genre-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;
+}
+
+.mood-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px; border-radius: 10px; cursor: pointer; color: #fff;
+    transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.mood-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: #fff; }
+.mood-btn .emoji { font-size: 1.5rem; }
+.mood-btn .label { font-size: 0.8rem; font-weight: bold; }
+
+.genre-grid .mood-btn { padding: 8px; }
+
+.status-msg { margin-top: 15px; font-weight: bold; min-height: 20px; }
+.status-msg.success { color: #00ff88; }
+.status-msg.error { color: #ff4444; }
+
+.close-btn {
+    position: absolute; top: 15px; right: 15px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; opacity: 0.7;
+}
+.close-btn:hover { opacity: 1; color: var(--neon-green, #00ff88); }
+
+/* TABS */
+.mood-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.mood-tab {
+    background: none; border: none; color: #666; padding: 10px; cursor: pointer; font-weight: bold; border-bottom: 2px solid transparent; flex: 1;
+}
+.mood-tab.active { color: #fff; border-bottom-color: var(--neon-green, #00ff88); }
+.hint { font-size: 0.8rem; color: #888; font-style: italic; margin-bottom: 10px; }
+
+.submit-btn {
+    background: var(--neon-green, #00ff88); color: #000; padding: 15px 30px; border: none; border-radius: 30px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 20px; width: 100%; transition: all 0.2s;
+}
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+.submit-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,255,136,0.4); }

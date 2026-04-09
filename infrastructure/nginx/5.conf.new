@@ -1,0 +1,136 @@
+# ------------------------------------------------------------
+# yourparty.tech
+# ------------------------------------------------------------
+
+map $scheme $hsts_header {
+    https   "max-age=63072000; preload";
+}
+
+server {
+  set $forward_scheme http;
+  set $server         "192.168.178.207";
+  set $port           80;
+
+  listen 80;
+  listen [::]:80;
+
+  listen 443 ssl;
+  listen [::]:443 ssl;
+
+  server_name yourparty.tech;
+
+  http2 on;
+
+  # Let's Encrypt SSL
+  include conf.d/include/letsencrypt-acme-challenge.conf;
+  include conf.d/include/ssl-cache.conf;
+  include conf.d/include/ssl-ciphers.conf;
+  ssl_certificate /etc/letsencrypt/live/npm-30/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/npm-30/privkey.pem;
+
+  # Block Exploits
+  include conf.d/include/block-exploits.conf;
+
+  # HSTS
+  add_header Strict-Transport-Security $hsts_header always;
+
+  # Force SSL
+  include conf.d/include/force-ssl.conf;
+
+  access_log /data/logs/proxy-host-5_access.log proxy;
+  error_log /data/logs/proxy-host-5_error.log warn;
+
+  # --- API PROXIES ---
+  # Consolidating headers to avoid duplicate proxy_pass from proxy.conf
+  
+  location /rate {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /history {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /status {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /mood-tag {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /moods {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /ratings {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /vote-mood {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+  
+  # --- WEBSOCKET SUPPORT ---
+  location /ws/ {
+    proxy_pass http://192.168.178.211:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+  }
+
+  # --- STREAM PROXY ---
+  location  /stream-proxy/ {
+    add_header Access-Control-Allow-Origin * always;
+    proxy_pass http://192.168.178.210:80;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  # --- WORDPRESS MAIN ---
+  location / {
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_http_version 1.1;
+    include conf.d/include/proxy.conf;
+  }
+
+  # Custom
+  include /data/nginx/custom/server_proxy[.]conf;
+}

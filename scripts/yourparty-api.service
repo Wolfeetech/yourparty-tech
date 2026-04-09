@@ -1,0 +1,25 @@
+[Unit]
+Description=YourParty API (uvicorn)
+After=network.target
+
+[Service]
+User=radioapi
+Group=radioapi
+WorkingDirectory=/opt/radio-api
+Environment="PYTHONPATH=/opt/radio-api"
+Environment="AZURACAST_URL=https://192.168.178.210"
+Environment="AZURACAST_API_KEY=9199dc63da623190:c9f8c3a22e25932753dd3f4d57fa0d9c"
+Environment="MONGO_HOST=192.168.178.222"
+Environment="MONGO_PORT=27017"
+Environment="MONGO_URL=mongodb://192.168.178.222:27017"
+ExecStart=/opt/radio-api/venv/bin/python3 -m uvicorn api.app.main:app --host 0.0.0.0 --port 8080 --log-level info
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=4096
+LimitNPROC=200
+NoNewPrivileges=no
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

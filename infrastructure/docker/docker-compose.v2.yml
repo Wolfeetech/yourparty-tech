@@ -1,0 +1,302 @@
+version: '3.8'
+
+# ============================================================
+# YOURPARTY.TECH V2 STACK
+# "NTS-Style" Decoupled Architecture
+#
+# Components:
+#   - Directus (Headless CMS / Master DB)
+#   - Meilisearch (Search Engine)
+#   - Redis (State/Cache)
+#   - Beets (Library Manager)
+#   - FastAPI Backend (Voting Engine)
+#   - WordPress (Frontend)
+#   - Nginx (API Gateway)
+# ============================================================
+
+services:
+  # ========================================
+  # CORE DATABASES
+  # ========================================
+
+  # MariaDB - WordPress DB
+  db:
+    image: mariadb:10.11
+    container_name: yourparty-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-changeme}
+      - MYSQL_DATABASE=${WP_DB_NAME:-yourparty}
+      - MYSQL_USER=${WP_DB_USER:-yourparty}
+      - MYSQL_PASSWORD=${WP_DB_PASSWORD:-changeme}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - radio-net
+    healthcheck:
+      test: [ "CMD", "mariadb-admin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB - Legacy (Read-Only for migration)
+  mongo-legacy:
+    image: mongo:6.0
+    container_name: yourparty-mongo-legacy
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-changeme}
+    volumes:
+      - mongo_data:/data/db:ro # READ-ONLY during migration!
+    networks:
+      - radio-net
+    profiles:
+      - migration # Only starts with --profile migration
+
+  # PostgreSQL - Directus Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: yourparty-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DIRECTUS_DB_USER:-directus}
+      - POSTGRES_PASSWORD=${DIRECTUS_DB_PASSWORD:-directus_secret}
+      - POSTGRES_DB=${DIRECTUS_DB_NAME:-directus}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - radio-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DIRECTUS_DB_USER:-directus}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Vote State & Caching
+  redis:
+    image: redis:7-alpine
+    container_name: yourparty-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
+    volumes:
+      - redis_data:/data
+    networks:
+      - radio-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # SERVICES LAYER
+  # ========================================
+
+  # Directus - Headless CMS
+  directus:
+    image: directus/directus:10.10
+    container_name: yourparty-directus
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8055:8055"
+    environment:
+      # Database
+      - DB_CLIENT=pg
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DIRECTUS_DB_NAME:-directus}
+      - DB_USER=${DIRECTUS_DB_USER:-directus}
+      - DB_PASSWORD=${DIRECTUS_DB_PASSWORD:-directus_secret}
+
+      # Auth
+      - KEY=${DIRECTUS_KEY:-yourparty-key-change-me}
+      - SECRET=${DIRECTUS_SECRET:-yourparty-secret-change-me}
+      - ADMIN_EMAIL=${DIRECTUS_ADMIN_EMAIL:-admin@yourparty.tech}
+      - ADMIN_PASSWORD=${DIRECTUS_ADMIN_PASSWORD:-admin_secret}
+
+      # Redis Cache
+      - CACHE_ENABLED=true
+      - CACHE_STORE=redis
+      - CACHE_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@yourparty-redis:6379
+
+      # CORS
+      - CORS_ENABLED=true
+      - CORS_ORIGIN=https://yourparty.tech,https://control.yourparty.tech,http://localhost:3000
+
+      # Rate Limiting
+      - RATE_LIMITER_ENABLED=false
+      - RATE_LIMITER_STORE=redis
+      - RATE_LIMITER_REDIS=redis://:${REDIS_PASSWORD:-redis_secret}@yourparty-redis:6379
+      - REDIS_HOST=yourparty-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_secret}
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    networks:
+      - radio-net
+
+  # Meilisearch - Full-Text Search
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: yourparty-meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-meili_master_key_change_me}
+      - MEILI_ENV=production
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - radio-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7700/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Beets - Library Manager
+  beets:
+    image: lscr.io/linuxserver/beets:latest
+    container_name: yourparty-beets
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+    volumes:
+      # Config
+      - ./beets:/config
+      # Inbox (uploads go here)
+      - ${INBOX_PATH:-./inbox}:/downloads
+      # Library (curated output)
+      - ${LIBRARY_PATH:-./library}:/music
+      # Legacy library read-only for migration
+      - ${MUSIC_PATH:-./music}:/music-legacy:ro
+    networks:
+      - radio-net
+
+  # ========================================
+  # APPLICATION LAYER
+  # ========================================
+
+  # FastAPI Backend V2 (runs on 8001 to parallel with V1)
+  backend:
+    build: ../../apps/api
+    container_name: yourparty-api-v2
+    restart: unless-stopped
+    ports:
+      - "8001:8000" # V2 on port 8001, V1 stays on 8000
+    environment:
+      # V2 Services
+      - DIRECTUS_URL=http://directus:8055
+      - DIRECTUS_TOKEN=${DIRECTUS_STATIC_TOKEN:-}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_KEY=${MEILI_MASTER_KEY:-meili_master_key_change_me}
+
+      # Legacy (for migration/fallback)
+      - MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-changeme}@mongo-legacy:27017/?authSource=admin
+
+      # AzuraCast
+      - AZURACAST_URL=${AZURACAST_URL:-https://radio.yourparty.tech}
+      - AZURACAST_API_KEY=${AZURACAST_API_KEY}
+      - AZURACAST_VERIFY_SSL=${AZURACAST_VERIFY_SSL:-true}
+
+      # Feature Flags
+      - FEATURE_V2_DIRECTUS=${FEATURE_V2_DIRECTUS:-false}
+      - FEATURE_V2_REDIS=${FEATURE_V2_REDIS:-false}
+      - FEATURE_MOOD_VOTES=true
+      - FEATURE_MOOD_AUTODJ=true
+
+      # Paths
+      - MUSIC_DIR=/var/radio/music
+      - INBOX_DIR=/var/radio/inbox
+    volumes:
+      - ${LIBRARY_PATH:-./library}:/var/radio/music
+      - ${INBOX_PATH:-./inbox}:/var/radio/inbox
+    depends_on:
+      - redis
+      - directus
+      - meilisearch
+    networks:
+      - radio-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WordPress
+  wordpress:
+    image: wordpress:6.7-php8.2-apache
+    container_name: yourparty-wordpress
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      - WORDPRESS_DB_HOST=db:3306
+      - WORDPRESS_DB_USER=${WP_DB_USER:-yourparty}
+      - WORDPRESS_DB_PASSWORD=${WP_DB_PASSWORD:-changeme}
+      - WORDPRESS_DB_NAME=${WP_DB_NAME:-yourparty}
+      - WORDPRESS_DEBUG=${WP_DEBUG:-false}
+    volumes:
+      - wp_data:/var/www/html
+      - ../../apps/web:/var/www/html/wp-content/themes/yourparty-tech:ro
+    networks:
+      - radio-net
+
+  # ========================================
+  # GATEWAY LAYER
+  # ========================================
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: yourparty-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/v2-upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
+      - ${SSL_CERT_PATH:-./certs}:/etc/ssl/certs:ro
+      - ${SSL_KEY_PATH:-./certs}:/etc/ssl/private:ro
+    depends_on:
+      - backend
+      - wordpress
+      - directus
+    networks:
+      - radio-net
+
+# ========================================
+# VOLUMES
+# ========================================
+volumes:
+  db_data:
+  mongo_data:
+  postgres_data:
+  redis_data:
+  directus_uploads:
+  directus_extensions:
+  meili_data:
+  wp_data:
+
+    # ========================================
+    # NETWORKS
+    # ========================================
+networks:
+  radio-net:
+    driver: bridge
