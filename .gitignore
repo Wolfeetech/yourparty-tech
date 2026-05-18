@@ -1,9 +1,19 @@
 venv/
 __pycache__/
 *.pyc
+
+# Environment files — never commit real configs
 *.env
+*.env.local
+*.env.prod
+*.env.production
+*.env.staging
+*.env.development
 backend/.env
 apps/api/.env
+apps/api/.env.prod
+apps/api/.env.production
+
 node_modules/
 .DS_Store
 .vscode/
@@ -34,6 +44,21 @@ npm_database.sqlite
 # OS files
 Thumbs.db
 .DS_Store
+
+# AI assistant notes
+.gemini_notes.md
+.agent_notes.md
+
+# Binaries — download at deploy time, never commit
+*.phar
+*.bat
+
+# Audit / log output files
+*_results.txt
+*_audit.json
+*_audit.txt
+verify_log.txt
+server_env.txt
 
 # Local config/inventory files
 fstab_source.txt
